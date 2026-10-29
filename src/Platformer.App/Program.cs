@@ -5,7 +5,7 @@ try
 {
     if (args is ["--help"])
     {
-        Console.WriteLine("Simple Platformer: integration preview, not a playable game.\nUsage: Platformer.App [--help | --smoke]\n--smoke: render 3 frames and close automatically.");
+        Console.WriteLine("Simple Platformer: 2D integration preview, not a playable game.\nUsage: Platformer.App [--help | --smoke]\n--smoke: render 3 frames and close automatically.\nEscape: close the focused preview window.");
         return;
     }
     bool smoke = args is ["--smoke"];
@@ -22,6 +22,11 @@ try
     });
     engine.Run(snapshot.Scene, snapshot.Camera, _ =>
     {
+        if (!smoke && engine.Input.WasPressed(InputKey.Escape))
+        {
+            engine.RequestClose();
+            return;
+        }
         if (smoke && engine.RenderedFrames >= 3)
             engine.RequestClose();
     });

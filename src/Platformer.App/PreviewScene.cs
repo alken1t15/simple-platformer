@@ -22,8 +22,8 @@ public static class PreviewScene
 
         var camera = new Camera
         {
-            Position = new Vector3(10f, 7f, 14f),
-            Target = new Vector3(3f, 0.5f, 0f),
+            Position = new Vector3(3f, 1f, 10f),
+            Target = new Vector3(3f, 1f, 0f),
         };
         return new SceneSnapshot(scene, camera);
     }

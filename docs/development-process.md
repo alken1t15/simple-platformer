@@ -1,0 +1,60 @@
+# Разработка и проверки
+
+## Цикл работы
+
+Уточнение задачи → ветка → реализация → локальные проверки → независимое AI-ревью
+по локальному workflow → проверка findings → PR → применимые человеческие одобрения → CI → merge по поручению.
+Если AI-сервис недоступен, фиксировать сбой и продолжать независимую работу;
+не объявлять обязательное ревью успешным и не заменять его другим сервисом молча.
+Личные prompts, логи и ключи находятся за пределами отслеживаемых файлов, в `.local/`.
+
+Для чужих PR нужны два независимых человеческих Approve, автор не учитывается.
+Для собственных PR `alken1t15` reviewer requests должны быть пусты; человеческие Approve не требуются.
+AI-ревью и CI сохраняются. Создание PR не разрешает merge.
+
+## Защита main
+
+Два независимых ruleset применяются к `refs/heads/main`:
+
+1. Обязательный PR, CI `build`, `documents`, `graphics-smoke`, запрет удаления и non-fast-forward.
+   Нет bypass, в том числе для Team Lead.
+2. Два человеческих одобрения. Bypass только для пользователя `alken1t15` и только через PR.
+
+GitHub применяет bypass по пользователю, выполняющему merge. Поэтому Team Lead по процессу
+использует его только для собственного PR; для чужого проверяет два одобрения.
+Правила не отключаются ради одного PR. При начальной подготовке пустого репозитория
+нужно создать первую main до включения защиты; последующие изменения идут через PR.
+Факт применения правил проверяется через GitHub API и записывается в локальный state.
+
+Воспроизводимая настройка через GitHub CLI с правом администрирования репозитория:
+
+```powershell
+pwsh -NoProfile -File scripts/Configure-MainProtection.ps1
+pwsh -NoProfile -File scripts/Configure-MainProtection.ps1 -Apply
+```
+
+Первая команда только показывает payload; вторая создаёт/обновляет два именованных ruleset
+только в `alken1t15/simple-platformer` и проверяет прочитанные обратно правила.
+
+## CI
+
+`build`: Linux и Windows, restore/build/CPU tests; стабильный итоговый job `build`.
+`documents`: обязательные документы, локальные Markdown-ссылки, архитектурные зависимости и pinned submodule.
+`graphics-smoke`: Linux, Xvfb/Mesa, запуск App `--smoke` с таймаутом.
+Все три required checks запускаются на любом PR без path filters. Checkout загружает submodule.
+Движок собирается как зависимость App; полная upstream suite принадлежит репозиторию движка.
+TRX загружаются в artifacts даже при неуспехе CPU-тестов.
+
+## Linux и WSL
+
+Нужны .NET 10 SDK, дисплей и драйвер OpenGL 3.3; для software smoke:
+
+```sh
+sudo apt-get update
+sudo apt-get install -y xvfb xauth libgl1 libgl1-mesa-dri libx11-6 libxcursor1 libxext6 libxi6 libxinerama1 libxrandr2
+LIBGL_ALWAYS_SOFTWARE=true XDG_SESSION_TYPE=x11 xvfb-run -a dotnet run --project src/Platformer.App -c Release --no-build -- --smoke
+```
+
+Для обычного графического запуска в WSLg при проблемах Wayland используйте `XDG_SESSION_TYPE=x11`
+по инструкции движка `external/engine/docs/spikes.md`. Не переносите workaround на все платформы.
+Xvfb проверяет жизненный цикл и показ кадров; внешний вид и FPS целевого GPU проверяются отдельно.

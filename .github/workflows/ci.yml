@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compile:
+    name: compile (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - run: dotnet restore Platformer.sln
+      - run: dotnet build Platformer.sln -c Release --no-restore
+      - run: dotnet test Platformer.sln -c Release --no-build --logger "trx;LogFileName=platformer.trx" --results-directory artifacts/tests
+      - name: Check CLI without a graphics context
+        run: dotnet run --project src/Platformer.App -c Release --no-build -- --help
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: tests-${{ matrix.os }}
+          path: artifacts/tests/*.trx
+          if-no-files-found: warn
+
+  build:
+    name: build
+    needs: compile
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require both platforms
+        env:
+          COMPILE_RESULT: ${{ needs.compile.result }}
+        run: test "$COMPILE_RESULT" = success
+
+  documents:
+    name: documents
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - run: python3 scripts/check_docs.py
+      - run: git diff --check
+
+  graphics-smoke:
+    name: graphics-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      LIBGL_ALWAYS_SOFTWARE: 'true'
+      XDG_SESSION_TYPE: x11
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Install virtual display and software OpenGL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb xauth libgl1 libgl1-mesa-dri libx11-6 libxcursor1 libxext6 libxi6 libxinerama1 libxrandr2
+      - run: dotnet restore Platformer.sln
+      - run: dotnet build Platformer.sln -c Release --no-restore
+      - name: Render three frames and exit
+        timeout-minutes: 2
+        run: timeout 60s xvfb-run -a dotnet run --project src/Platformer.App -c Release --no-build -- --smoke

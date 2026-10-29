@@ -1,0 +1,3 @@
+[submodule "external/engine"]
+	path = external/engine
+	url = https://github.com/alken1t15/simple-3d-engine.git

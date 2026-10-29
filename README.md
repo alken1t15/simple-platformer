@@ -1,8 +1,8 @@
 # Simple Platformer
 
-Учебный платформер на C#/.NET 10 и [Simple 3D Engine](https://github.com/alken1t15/simple-3d-engine).
+Учебный 2D-платформер на C#/.NET 10 и [Simple 3D Engine](https://github.com/alken1t15/simple-3d-engine).
 Сейчас подготовлены структура, техническая сцена из трёх платформ, тесты и CI.
-Управление, персонаж, физика, коллизии и условия победы ещё не реализованы.
+Управление персонажем, физика, коллизии и условия победы ещё не реализованы.
 
 ## Подготовка
 
@@ -21,8 +21,10 @@ git submodule update --init --recursive
 dotnet --version
 ```
 
-Движок закреплён submodule `external/engine` на релизе `v1.0.0`,
-commit `8a71343ba1289cb20911a871d84210b8c6f5d6a1`. Его исходный репозиторий не изменяется.
+Движок закреплён submodule `external/engine` на commit
+`c69f190042cea9649f551c5196780059e892e0be`: база `v1.0.0` с публичным клавиатурным вводом,
+принятым в [PR движка №50](https://github.com/alken1t15/simple-3d-engine/pull/50).
+Изменения движка вносятся отдельным PR; рабочая копия зависимости в игре не редактируется.
 Проверка, сборка и тесты одной командой (PowerShell 7):
 
 ```powershell
@@ -46,7 +48,7 @@ dotnet run --project src/Platformer.App -c Release --no-build
 dotnet run --project src/Platformer.App -c Release --no-build -- --smoke
 ```
 
-Обычный запуск показывает неподвижный макет уровня; закройте окно для выхода.
+Обычный запуск показывает неподвижный макет уровня сбоку; нажмите Escape в активном окне или закройте окно для выхода.
 `--smoke` показывает три кадра и завершает процесс. Это проверка интеграции, не игровая приёмка и не FPS-тест.
 Linux/WSL: [графический запуск](docs/development-process.md#linux-и-wsl).
 

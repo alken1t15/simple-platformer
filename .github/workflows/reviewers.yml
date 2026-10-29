@@ -1,0 +1,30 @@
+name: Assign reviewers
+
+on:
+  pull_request_target:
+    types: [opened, reopened, ready_for_review, edited, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: assign-reviewers-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  assign:
+    if: github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Only protected base code is executed with write permissions, never the PR head.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - uses: actions/github-script@v9
+        with:
+          script: |
+            const { assign } = require('./.github/scripts/assign-reviewers.cjs');
+            await assign({ github, context, core });

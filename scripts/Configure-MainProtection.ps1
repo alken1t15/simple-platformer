@@ -47,7 +47,7 @@ $base = @{
     )
 }
 $approvals = @{
-    name = 'main: two human approvals'
+    name = 'main: reviewer and Team Lead'
     target = 'branch'
     enforcement = 'active'
     conditions = $conditions
@@ -57,7 +57,7 @@ $approvals = @{
         parameters = @{
             required_approving_review_count = 2
             dismiss_stale_reviews_on_push = $false
-            require_code_owner_review = $false
+            require_code_owner_review = $true
             require_last_push_approval = $false
             required_review_thread_resolution = $false
             allowed_merge_methods = @('merge', 'squash', 'rebase')
@@ -75,6 +75,9 @@ $null = Invoke-GitHubJson @('api', "repos/$repository/branches/main")
 $existing = @(Invoke-GitHubJson @('api', "repos/$repository/rulesets", '--paginate'))
 foreach ($payload in @($base, $approvals)) {
     $matches = @($existing | Where-Object name -eq $payload.name)
+    if ($payload.name -eq $approvals.name -and $matches.Count -eq 0) {
+        $matches = @($existing | Where-Object name -eq 'main: two human approvals')
+    }
     if ($matches.Count -gt 1) { throw "Duplicate ruleset name: $($payload.name)" }
     $endpoint = "repos/$repository/rulesets"
     $method = 'POST'
@@ -97,6 +100,10 @@ foreach ($payload in @($base, $approvals)) {
             if ($types -notcontains $type) { throw "Missing base rule: $type" }
         }
         if (@($actual.bypass_actors).Count -ne 0) { throw 'Base protection must have no bypass' }
+        $basePr = @($actual.rules | Where-Object type -eq 'pull_request')
+        if ($basePr.Count -ne 1 -or $basePr[0].parameters.required_approving_review_count -ne 0) {
+            throw 'Base rule must preserve the own Team Lead PR exception; CI has no bypass'
+        }
         $actualChecks = @(($actual.rules | Where-Object type -eq 'required_status_checks').parameters.required_status_checks)
         foreach ($check in $checks) {
             if (@($actualChecks | Where-Object { $_.context -eq $check.context -and $_.integration_id -eq 15368 }).Count -ne 1) {
@@ -107,6 +114,7 @@ foreach ($payload in @($base, $approvals)) {
         $pr = @($actual.rules | Where-Object type -eq 'pull_request')
         $bypass = @($actual.bypass_actors)
         if ($pr.Count -ne 1 -or $pr[0].parameters.required_approving_review_count -ne 2 -or
+            -not $pr[0].parameters.require_code_owner_review -or
             $bypass.Count -ne 1 -or $bypass[0].actor_id -ne $owner.id -or
             $bypass[0].actor_type -ne 'User' -or $bypass[0].bypass_mode -ne 'pull_request') {
             throw 'Approval rule differs from the intended Team Lead exception'

@@ -15,7 +15,7 @@ $conditions = @{ ref_name = @{ include = @('refs/heads/main'); exclude = @() } }
 $pullRequest = @{
     type = 'pull_request'
     parameters = @{
-        required_approving_review_count = 1
+        required_approving_review_count = 0
         dismiss_stale_reviews_on_push = $false
         require_code_owner_review = $false
         require_last_push_approval = $false
@@ -101,8 +101,8 @@ foreach ($payload in @($base, $approvals)) {
         }
         if (@($actual.bypass_actors).Count -ne 0) { throw 'Base protection must have no bypass' }
         $basePr = @($actual.rules | Where-Object type -eq 'pull_request')
-        if ($basePr.Count -ne 1 -or $basePr[0].parameters.required_approving_review_count -ne 1) {
-            throw 'Every PR, including Team Lead PRs, must have an independent approval'
+        if ($basePr.Count -ne 1 -or $basePr[0].parameters.required_approving_review_count -ne 0) {
+            throw 'Base rule must preserve the own Team Lead PR exception; CI has no bypass'
         }
         $actualChecks = @(($actual.rules | Where-Object type -eq 'required_status_checks').parameters.required_status_checks)
         foreach ($check in $checks) {

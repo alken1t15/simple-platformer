@@ -13,7 +13,7 @@
 | Milestone | M1 — Требования и контракты; M2 — Игровая реализация; M3 — Проверка и сдача |
 | Planned owner | Плановый ответственный из согласованного распределения |
 | Assignees | Фактическое назначение GitHub после получения доступа |
-| Reviewer candidates | Один проверяющий + Team Lead; в собственном PR Team Lead — один другой человек |
+| Reviewer candidates | Один проверяющий + Team Lead; для собственных PR Team Lead — без reviewer requests |
 | Depends on | Предшественники; подробные условия начала/завершения в issue |
 
 Milestones не имеют дат: календарь и загрузка ещё не подтверждены. Метка `status:blocked` означает невыполненные зависимости, а не необходимость изменить статус исходной задачи.
@@ -23,7 +23,7 @@ Milestones не имеют дат: календарь и загрузка ещё
 | Issue | Owner | Этап |
 |---|---|---|
 | [#2 — [Requirements] Согласовать правила и критерии приёмки 2D-MVP](https://github.com/alken1t15/simple-platformer/issues/2) | `alken1t15` | M1 — Требования и контракты |
-| [#3 — [Architecture] Зафиксировать игровой API и интеграционные контракты](https://github.com/alken1t15/simple-platformer/issues/3) | `Nickovlev` | M1 — Требования и контракты |
+| [#3 — [Architecture] Зафиксировать игровой API и интеграционные контракты](https://github.com/alken1t15/simple-platformer/issues/3) | `alken1t15` | M1 — Требования и контракты |
 | [#4 — [Core] Реализовать модель, валидацию и начальный уровень](https://github.com/alken1t15/simple-platformer/issues/4) | `ibmpowerpc` | M2 — Игровая реализация |
 | [#5 — [Core] Реализовать движение, прыжок и столкновения персонажа](https://github.com/alken1t15/simple-platformer/issues/5) | `VladimirKhmelev` | M2 — Игровая реализация |
 | [#6 — [App] Подключить игровые команды и фиксированный шаг симуляции](https://github.com/alken1t15/simple-platformer/issues/6) | `Nickovlev` | M2 — Игровая реализация |
@@ -48,6 +48,6 @@ Milestones не имеют дат: календарь и загрузка ещё
 Существующий [PR интеграции ввода №1](https://github.com/alken1t15/simple-platformer/pull/1) является зависимостью ввода. Созданные задачи не означают, что он уже принят.
 
 На PR участника назначаются один проверяющий и `alken1t15`; автор исключается.
-На собственный PR Team Lead назначается один другой проверяющий.
+На собственный PR Team Lead reviewers не назначаются; подготовку и проверку выполняет Team Lead с Codex и CI.
 Team Lead также указывается Assignee каждого PR, чтобы участвовать в организации собственного PR.
 Автоматическое назначение настраивается через `.github/review-policy.json` и workflow Assign reviewers.

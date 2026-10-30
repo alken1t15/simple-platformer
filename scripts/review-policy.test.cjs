@@ -3,10 +3,10 @@ const test = require('node:test');
 const policy = require('../.github/review-policy.json');
 const { chooseReviewers, assign } = require('../.github/scripts/assign-reviewers.cjs');
 
-test('Every member gets one other reviewer plus Team Lead; lead gets one other reviewer', () => {
-  for (const author of Object.keys(policy.byAuthor)) {
+test('Members get one reviewer plus Team Lead; own Team Lead PR has no reviewer requests', () => {
+  for (const author of [...Object.keys(policy.byAuthor), policy.lead]) {
     const actual = chooseReviewers(policy, author);
-    assert.equal(actual.length, author === policy.lead ? 1 : 2);
+    assert.equal(actual.length, author === policy.lead ? 0 : 2);
     assert.ok(!actual.includes(author));
     if (author !== policy.lead) assert.ok(actual.includes(policy.lead));
   }
@@ -19,7 +19,7 @@ test('Issue reviewer is used and actual author is excluded even if they differ f
 });
 
 test('Author exclusion is case insensitive and unknown authors use a valid fallback', () => {
-  assert.deepEqual(chooseReviewers(policy, 'ALKEN1T15'), ['fUS1ONd']);
+  assert.deepEqual(chooseReviewers(policy, 'ALKEN1T15'), []);
   assert.deepEqual(chooseReviewers(policy, 'contributor'), ['fUS1ONd', policy.lead]);
 });
 
@@ -65,7 +65,7 @@ test('Assignment replaces extra reviewer requests and includes Team Lead', async
 test('Team Lead author is assignee and never a requested reviewer', async () => {
   const mock = fakePull(policy.lead);
   await assign(mock.args);
-  assert.deepEqual(mock.pr.requested_reviewers.map(user => user.login), ['VladimirKhmelev']);
+  assert.deepEqual(mock.pr.requested_reviewers.map(user => user.login), []);
   assert.deepEqual(mock.calls[0], ['assign', [policy.lead]]);
 });
 

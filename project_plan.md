@@ -34,7 +34,7 @@
   допустимые диапазоны, допуски, шаг и правила касания/опоры.
 - Зафиксированы обработка фокуса и одноразовых команд, порядок переходов и сброс состояния.
 - Стыки согласованы владельцами Core/App через принятые PR; для PR участника получены Approve
-  одного проверяющего и Team Lead; для собственного PR Team Lead — одного другого человека.
+  одного проверяющего и Team Lead; для собственного PR Team Lead — проверка Codex/AI и CI без reviewer requests.
 
 Готовность отдельных зависимостей позволяет начать соответствующую задачу; календарные даты
 не являются условием закрытия M1 и не придумываются ради перехода к реализации.
@@ -43,8 +43,8 @@
 
 | ID | Задача | Owner | Reviewer-кандидаты | Этап | Зависимости |
 |---|---|---|---|---|---|
-| [T01 — #2](https://github.com/alken1t15/simple-platformer/issues/2) | Согласовать правила и приёмку игрового MVP | alken1t15 | fUS1ONd | M1 | — |
-| [T02 — #3](https://github.com/alken1t15/simple-platformer/issues/3) | Зафиксировать игровой API и стыки модулей | Nickovlev | VladimirKhmelev, alken1t15 | M1 | [T01 — #2](https://github.com/alken1t15/simple-platformer/issues/2) |
+| [T01 — #2](https://github.com/alken1t15/simple-platformer/issues/2) | Согласовать правила и приёмку игрового MVP | alken1t15 | Не назначаются: задача Team Lead | M1 | — |
+| [T02 — #3](https://github.com/alken1t15/simple-platformer/issues/3) | Зафиксировать игровой API и стыки модулей | alken1t15 | Не назначаются: задача Team Lead | M1 | [T01 — #2](https://github.com/alken1t15/simple-platformer/issues/2) |
 | [T03 — #4](https://github.com/alken1t15/simple-platformer/issues/4) | Реализовать модель и валидацию уровня | ibmpowerpc | VladimirKhmelev, alken1t15 | M2 | [T02 — #3](https://github.com/alken1t15/simple-platformer/issues/3) |
 | [T04 — #5](https://github.com/alken1t15/simple-platformer/issues/5) | Реализовать движение, прыжок и 2D-коллизии | VladimirKhmelev | Nickovlev, alken1t15 | M2 | T02, T03 |
 | [T05 — #6](https://github.com/alken1t15/simple-platformer/issues/6) | Реализовать input mapping и фиксированный шаг | Nickovlev | VladimirKhmelev, alken1t15 | M2 | T02, PR1 |
@@ -54,7 +54,7 @@
 | [T09 — #10](https://github.com/alken1t15/simple-platformer/issues/10) | Проверить интеграцию App, ввода и CI | fUS1ONd | Nickovlev, alken1t15 | M3 | T05, T06, T07 |
 | [T10 — #11](https://github.com/alken1t15/simple-platformer/issues/11) | Подготовить ручной чек-лист и провести приёмку | prettysorrow | fUS1ONd, alken1t15 | M3 | T01; прогон после T06, T07, T09 |
 | [T11 — #12](https://github.com/alken1t15/simple-platformer/issues/12) | Проверить запуск из чистого клона на целевых ОС | prettysorrow | fUS1ONd, alken1t15 | M3 | T09, T10 |
-| [T12 — #13](https://github.com/alken1t15/simple-platformer/issues/13) | Подготовить README, вклад участников и сдачу | alken1t15 | fUS1ONd | M3 | T08, T09, T10, T11 |
+| [T12 — #13](https://github.com/alken1t15/simple-platformer/issues/13) | Подготовить README, вклад участников и сдачу | alken1t15 | Не назначаются: задача Team Lead | M3 | T08, T09, T10, T11 |
 
 Задачи T03→T06 одного владельца и T04→T07 одного владельца выполняются последовательно.
 T08 позволяет QA начать с матрицы тестов после API, не ожидая конца всей реализации.

@@ -1,8 +1,13 @@
 {
   "lead": "alken1t15",
-  "fallback": ["fUS1ONd", "prettysorrow", "VladimirKhmelev", "Nickovlev", "ibmpowerpc"],
+  "fallback": [
+    "fUS1ONd",
+    "prettysorrow",
+    "VladimirKhmelev",
+    "Nickovlev",
+    "ibmpowerpc"
+  ],
   "byAuthor": {
-    "alken1t15": "fUS1ONd",
     "Nickovlev": "VladimirKhmelev",
     "VladimirKhmelev": "Nickovlev",
     "ibmpowerpc": "VladimirKhmelev",
@@ -10,8 +15,6 @@
     "prettysorrow": "fUS1ONd"
   },
   "byIssue": {
-    "2": "fUS1ONd",
-    "3": "VladimirKhmelev",
     "4": "VladimirKhmelev",
     "5": "Nickovlev",
     "6": "VladimirKhmelev",
@@ -20,7 +23,6 @@
     "9": "VladimirKhmelev",
     "10": "Nickovlev",
     "11": "fUS1ONd",
-    "12": "fUS1ONd",
-    "13": "fUS1ONd"
+    "12": "fUS1ONd"
   }
 }

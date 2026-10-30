@@ -2,12 +2,13 @@ const fs = require('node:fs');
 
 function chooseReviewers(policy, author, body = '') {
   const same = (a, b) => a.toLowerCase() === b.toLowerCase();
+  if (same(author, policy.lead)) return [];
   const issue = body.match(/\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?|refs?)\s+#(\d+)\b/i)?.[1];
   const authorDefault = Object.entries(policy.byAuthor).find(([login]) => same(login, author))?.[1];
   const candidates = [policy.byIssue[issue], authorDefault, ...policy.fallback].filter(Boolean);
   const reviewer = candidates.find(login => !same(login, author) && !same(login, policy.lead));
   if (!reviewer) throw new Error('No reviewer distinct from author and Team Lead');
-  return same(author, policy.lead) ? [reviewer] : [reviewer, policy.lead];
+  return [reviewer, policy.lead];
 }
 
 async function assign({ github, context, core }) {

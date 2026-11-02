@@ -18,13 +18,13 @@ Platformer.Tests → Core / CPU-часть App
 
 | Модуль | Состояние/ответственность | Владелец реализации |
 |---|---|---|
-| Core/Level | Реализованы неизменяемые LevelDefinition/OBB и данные Training Track; физика/рендер пока не подключены | Роман |
+| Core/Level | Реализованы неизменяемые LevelDefinition/OBB и Training Track; данные используют CPU-физика и 3D-preview | Роман |
 | Core/BallSimulation | Реализованы CPU-шаг, опора/прыжок/boost, sphere/OBB sweep и Path; интеграция App впереди | Владимир |
 | Core/Obstacles | Вращение опасностей по времени симуляции, их OBB, проверка пересечения за шаг | Роман |
 | Core/Session + App/LevelFlow | Core: Running/Failed/LevelComplete, монеты и reset; App: пауза, каталог двух уровней и GameComplete | Владимир |
 | App/Input + Clock | InputSnapshot → GameCommand, фиксированный шаг, фронты и mouse delta, фокус/курсор | Николай |
 | App/Camera | Орбита от третьего лица, pitch clamp, движение относительно yaw, отступ от геометрии | Николай |
-| App/Presenter | Sphere mesh, общий GPU mesh, материалы/скины и 3D-сцена из состояния Core | Роман |
+| App/Presenter | Реализованы процедурные меши, два скина, Apply snapshot/Path и контрактный 3D-preview; полная интеграция ожидает #6/#8 | Роман |
 | App/Menu | Главное меню, уровни, пауза, настройки звука, скины, результаты и единственный HUD/overlay | Николай |
 | App/AudioCoordinator | Идемпотентные команды воспроизведения из событий, настройки громкости и lifecycle | Роман |
 | Tests/QA | Независимые CPU-регрессии, интеграционные, ручные Linux и чистый запуск | Константин / Артём |

@@ -1,0 +1,185 @@
+using System.Collections.ObjectModel;
+using System.Numerics;
+using Engine3D.Core;
+using Platformer.Core;
+
+namespace Platformer.App;
+
+/// <summary>Адаптирует данные Core на потоке окна; не выполняет физику, ввод или HUD.</summary>
+public sealed class GameScenePresenter
+{
+    private readonly LevelDefinition _level;
+    private readonly Dictionary<string, SceneObject> _surfaces = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, SceneObject> _coins = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, SceneObject> _hazards = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _hiddenCoins = new(StringComparer.Ordinal);
+    private Guid _sessionId;
+    private long _tick;
+    private BallState _lastBall;
+
+    public Scene Scene { get; } = new();
+    public SceneObject BallObject { get; }
+    public IReadOnlyDictionary<string, SceneObject> SurfaceObjects { get; }
+    public IReadOnlyDictionary<string, SceneObject> CoinObjects { get; }
+    public IReadOnlyDictionary<string, SceneObject> HazardObjects { get; }
+    public IReadOnlyList<SceneObject> FinishObjects { get; }
+
+    public GameScenePresenter(LevelDefinition level)
+    {
+        ArgumentNullException.ThrowIfNull(level);
+        _level = level;
+        var track = new MaterialData { BaseColor = new ColorRgba(0.72f, 0.75f, 0.8f) };
+        var gold = new MaterialData { BaseColor = new ColorRgba(1f, 0.72f, 0.08f) };
+        var danger = new MaterialData { BaseColor = new ColorRgba(0.9f, 0.08f, 0.06f) };
+        var green = new MaterialData { BaseColor = new ColorRgba(0.08f, 0.85f, 0.25f) };
+        foreach (var surface in level.Surfaces)
+        {
+            var item = Add(GameMeshes.Box, track);
+            SetBounds(item, surface.Bounds);
+            _surfaces.Add(surface.Id, item);
+        }
+        foreach (var coin in level.Coins)
+        {
+            var item = Add(GameMeshes.Coin, gold);
+            item.Transform.Position = coin.Center;
+            item.Transform.Scale = new Vector3(coin.Radius);
+            _coins.Add(coin.Id, item);
+        }
+        foreach (var hazard in level.Hazards)
+        {
+            _hazards.Add(hazard.Id, Add(GameMeshes.Box, danger));
+            // Декоративная ось не добавляет коллайдер, позу самой балки задаёт snapshot
+            var axle = Add(GameMeshes.Box, track);
+            axle.Transform.Position = hazard.Pivot - Vector3.UnitY * 0.25f;
+            axle.Transform.Scale = new Vector3(0.12f, 0.5f, 0.12f);
+        }
+        float thickness = MathF.Min(0.08f, MathF.Min(level.Finish.HalfExtents.X,
+            MathF.Min(level.Finish.HalfExtents.Y, level.Finish.HalfExtents.Z)));
+        var frame = new List<SceneObject>();
+        foreach (int side in new[] { -1, 1 })
+            FramePart(new Vector3(side * level.Finish.HalfExtents.X, 0f, 0f),
+                new Vector3(thickness, level.Finish.HalfExtents.Y * 2f, thickness));
+        FramePart(new Vector3(0f, level.Finish.HalfExtents.Y, 0f),
+            new Vector3(level.Finish.HalfExtents.X * 2f + thickness, thickness, thickness));
+        FinishObjects = frame.AsReadOnly();
+        BallObject = Add(GameMeshes.Sphere, GameSkins.All[0].Material);
+        BallObject.Transform.Position = level.Spawn;
+        BallObject.Transform.Scale = new Vector3(SimulationSettings.Default.BallRadius);
+        SurfaceObjects = new ReadOnlyDictionary<string, SceneObject>(_surfaces);
+        CoinObjects = new ReadOnlyDictionary<string, SceneObject>(_coins);
+        HazardObjects = new ReadOnlyDictionary<string, SceneObject>(_hazards);
+
+        void FramePart(Vector3 localCenter, Vector3 size)
+        {
+            var item = Add(GameMeshes.Box, green);
+            item.Transform.Position = level.Finish.ToWorld(localCenter);
+            item.Transform.Rotation = level.Finish.Orientation;
+            item.Transform.Scale = size;
+            frame.Add(item);
+        }
+    }
+
+    public void Apply(SessionSnapshot snapshot, SkinDefinition skin) => Apply(snapshot, skin, null);
+
+    /// <summary>motionPath — полный путь между прошлым и текущим Apply, если он доступен.</summary>
+    public void Apply(SessionSnapshot snapshot, SkinDefinition skin, IReadOnlyList<MotionSegment>? motionPath)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(skin);
+        skin.Material.Validate();
+        if (!StringComparer.Ordinal.Equals(snapshot.LevelId, _level.Id))
+            throw new ArgumentException("Snapshot относится к другому уровню", nameof(snapshot));
+        bool reset = _sessionId != snapshot.SessionId;
+        if (!reset && snapshot.Tick < _tick)
+            throw new ArgumentException("Порядок snapshot нарушен", nameof(snapshot));
+        if (!reset && (MathF.Abs(snapshot.Ball.Radius - _lastBall.Radius) > 1e-6f
+            || (snapshot.Tick == _tick && snapshot.Ball != _lastBall)))
+            throw new ArgumentException("Радиус сеанса и состояние уже показанного tick неизменяемы", nameof(snapshot));
+        if (snapshot.CollectedCoinIds.Any(id => !_coins.ContainsKey(id))
+            || snapshot.Hazards.Count != _hazards.Count || snapshot.Hazards.Any(pose => !_hazards.ContainsKey(pose.Id)))
+            throw new ArgumentException("Неизвестные или отсутствующие ID объектов", nameof(snapshot));
+
+        Quaternion rotation = reset ? Quaternion.Identity : BallObject.Transform.Rotation;
+        if (!reset && snapshot.Tick > _tick)
+        {
+            if (motionPath is not null) ValidatePath(motionPath, _lastBall.Center, snapshot.Ball.Center);
+            if (_lastBall.Grounded && snapshot.Ball.Grounded)
+            {
+                if (motionPath is null)
+                    rotation = Roll(rotation, snapshot.Ball.Center - _lastBall.Center, snapshot.Ball);
+                else
+                    foreach (var segment in motionPath)
+                        rotation = Roll(rotation, segment.End - segment.Start, snapshot.Ball);
+            }
+        }
+
+        // Валидация завершена до изменения Scene и внутреннего состояния Presenter
+        var collected = new HashSet<string>(snapshot.CollectedCoinIds, StringComparer.Ordinal);
+        foreach (var (id, item) in _coins)
+        {
+            if (collected.Contains(id))
+            {
+                if (_hiddenCoins.Add(id)) Scene.Remove(item);
+            }
+            else if (_hiddenCoins.Remove(id)) Scene.Add(item);
+        }
+        foreach (var pose in snapshot.Hazards) SetBounds(_hazards[pose.Id], pose.Bounds);
+        BallObject.Transform.Position = snapshot.Ball.Center;
+        BallObject.Transform.Scale = new Vector3(snapshot.Ball.Radius);
+        BallObject.Transform.Rotation = rotation;
+        BallObject.Material = skin.Material;
+        _sessionId = snapshot.SessionId;
+        _tick = snapshot.Tick;
+        _lastBall = snapshot.Ball;
+    }
+
+    private SceneObject Add(MeshData mesh, MaterialData material)
+    {
+        var item = new SceneObject(mesh, material);
+        Scene.Add(item);
+        return item;
+    }
+
+    private static void SetBounds(SceneObject item, OrientedBox box)
+    {
+        item.Transform.Position = box.Center;
+        item.Transform.Rotation = box.Orientation;
+        item.Transform.Scale = box.HalfExtents * 2f;
+    }
+
+    private static Quaternion Roll(Quaternion rotation, Vector3 displacement, BallState ball)
+    {
+        Vector3 normal = Vector3.Normalize(ball.GroundNormal);
+        Vector3 tangent = displacement - Vector3.Dot(displacement, normal) * normal;
+        float distance = tangent.Length();
+        if (distance < 1e-7f) return rotation;
+        Vector3 axis = Vector3.Normalize(Vector3.Cross(normal, tangent));
+        float angle = (float)Math.IEEERemainder((double)distance / ball.Radius, Math.Tau);
+        return Quaternion.Normalize(Quaternion.Concatenate(rotation, Quaternion.CreateFromAxisAngle(axis, angle)));
+    }
+
+    private static void ValidatePath(IReadOnlyList<MotionSegment> path, Vector3 start, Vector3 end)
+    {
+        if (path.Count == 0) throw new ArgumentException("Путь пуст", nameof(path));
+        float fraction = 0f;
+        Vector3 point = start;
+        foreach (var segment in path)
+        {
+            if (!ValidPosition(segment.Start) || !ValidPosition(segment.End)
+                || !float.IsFinite(segment.StartFraction) || !float.IsFinite(segment.EndFraction)
+                || segment.StartFraction < 0f
+                || MathF.Abs(segment.StartFraction - fraction) > 1e-5f
+                || segment.EndFraction <= segment.StartFraction || segment.EndFraction > 1f
+                || Vector3.Distance(point, segment.Start) > 1e-4f)
+                throw new ArgumentException("Путь должен непрерывно покрывать [0,1]", nameof(path));
+            point = segment.End;
+            fraction = segment.EndFraction;
+        }
+        if (MathF.Abs(fraction - 1f) > 1e-5f || Vector3.Distance(point, end) > 1e-4f)
+            throw new ArgumentException("Путь не соответствует snapshot", nameof(path));
+    }
+
+    private static bool ValidPosition(Vector3 value) => float.IsFinite(value.X) && float.IsFinite(value.Y)
+        && float.IsFinite(value.Z) && MathF.Abs(value.X) <= 10000f
+        && MathF.Abs(value.Y) <= 10000f && MathF.Abs(value.Z) <= 10000f;
+}

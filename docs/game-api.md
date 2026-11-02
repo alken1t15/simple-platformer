@@ -5,7 +5,10 @@
 `LevelDefinition` реализованы в #4 вместе с данными [Training Track](training-track.md).
 В #5 реализованы `GameCommand`, `BallState`, `SimulationSettings`, `BallSimulator`,
 `BallStepResult` и `MotionSegment` — [CPU-физика шара](ball-physics.md).
-Остальные типы остаются спецификацией будущей реализации. Техническая сцена остаётся прежней.
+В #7 добавлены общие `SessionSnapshot`/`SessionPhase`/`HazardPose` и
+[GameScenePresenter/скины](scene-presenter.md), без логики GameSession из #8.
+Остальные типы остаются спецификацией будущей реализации. Прежняя техническая сцена сохранена;
+3D-представление проверяется отдельным preview.
 
 - [Core: типы, сигнатуры, численные пределы, порядок шага и ошибки](core-contract-v1.md).
 - [App и движок: ввод, камера, меню, overlay, звук и lifecycle](app-engine-contract-v1.md).

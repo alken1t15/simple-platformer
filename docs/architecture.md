@@ -18,7 +18,7 @@ Platformer.Tests → Core / CPU-часть App
 
 | Модуль | Состояние/ответственность | Владелец реализации |
 |---|---|---|
-| Core/Level | Неизменяемый LevelDefinition, OBB поверхностей, spawn/finish/KillY, монеты, описания опасностей | Роман |
+| Core/Level | Реализованы неизменяемые LevelDefinition/OBB и данные Training Track; физика/рендер пока не подключены | Роман |
 | Core/BallSimulation | Сфера, скорость, опора, прыжок, ускорение, разрешение контактов с дорожками/наклонами | Владимир |
 | Core/Obstacles | Вращение опасностей по времени симуляции, их OBB, проверка пересечения за шаг | Роман |
 | Core/Session + App/LevelFlow | Core: Running/Failed/LevelComplete, монеты и reset; App: пауза, каталог двух уровней и GameComplete | Владимир |

@@ -70,6 +70,7 @@ Linux/WSL: [графический запуск](docs/development-process.md#lin
 - [Проект игрового API](docs/game-api.md)
 - [Пробелы и расширения движка](docs/engine-integration.md)
 - [Требования и открытые решения](docs/requirements.md)
+- [Содержание уровней, меню, моделей и звуков](docs/content-design.md)
 - [Объём подготовки и следующие решения](docs/project-scope.md)
 - [Разработка, ревью и защита main](docs/development-process.md)
 - [Сторонние компоненты](THIRD_PARTY.md), [лицензия](LICENSE)

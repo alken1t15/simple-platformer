@@ -82,9 +82,23 @@ jobs:
       - name: Install virtual display and software OpenGL
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends xvfb xauth libgl1 libgl1-mesa-dri libx11-6 libxcursor1 libxext6 libxi6 libxinerama1 libxrandr2
+          sudo apt-get install -y --no-install-recommends xvfb xauth imagemagick libgl1 libgl1-mesa-dri libx11-6 libxcursor1 libxext6 libxi6 libxinerama1 libxrandr2
       - run: dotnet restore Platformer.sln
       - run: dotnet build Platformer.sln -c Release --no-restore
       - name: Render three frames and exit
         timeout-minutes: 2
         run: timeout 60s xvfb-run -a dotnet run --project src/Platformer.App -c Release --no-build -- --smoke
+      - name: Render presenter objects and both skins
+        timeout-minutes: 2
+        run: |
+          timeout 60s xvfb-run -a dotnet run --project src/Platformer.App -c Release --no-build -- --presenter --smoke
+          timeout 60s xvfb-run -a dotnet run --project src/Platformer.App -c Release --no-build -- --presenter --skin orange --overview --smoke
+      - name: Capture presenter scene on Linux
+        timeout-minutes: 2
+        run: timeout 60s xvfb-run -a -s '-screen 0 1280x800x24' bash scripts/capture-presenter.sh
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: presenter-linux
+          path: artifacts/presenter/
+          if-no-files-found: warn

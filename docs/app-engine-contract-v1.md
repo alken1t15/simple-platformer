@@ -9,7 +9,7 @@ Core определён в [core-contract-v1.md](core-contract-v1.md); engine ba
 
 | Тип / метод | Контракт |
 |---|---|
-| `InputRouter.Map(InputSnapshot input, AppScreen screen, float yawRadians)` | Возвращает намерение для активного экрана; gameplay получает GameCommand, меню — UI actions; не двигает шар |
+| `InputFrame InputRouter.Map(InputSnapshot input, AppScreen screen, float yawRadians)` | Возвращает ненулевое значение InputFrame для активного экрана; не двигает шар |
 | `FixedStepRunner.Advance(double frameSeconds, GameCommand latestHeld, Action<GameCommand> step)` | Возвращает число ticks; хранит только последние удержания и OR фронтов Jump/Boost; фронты потребляются первым tick, последующие их не повторяют |
 | `FixedStepRunner.Clear()` | Сбрасывает аккумулятор, удержания и фронты при pause/focus/restart/смене уровня |
 | `CameraRig.Update(Vector2 relativeMouseDelta, Vector3 target, LevelDefinition level, float frameSeconds)` | Один вызов за render frame в Running; yaw затем GameCommand, pitch clamped, позиция с obstruction radius |
@@ -28,6 +28,24 @@ SkinDefinition: Id, DisplayName, материал/опциональный asset
 HUD читает snapshot.CoinCount / level.Coins.Count; собранные ID скрываются тем же Apply.
 
 ### Input и FixedStep
+
+Результат маршрутизации — value types в App (не в Core и не в движке):
+
+```csharp
+public readonly record struct InputFrame(GameCommand Gameplay, bool RestartPressed,
+    bool PausePressed, MenuInput Menu);
+public readonly record struct MenuInput(int HorizontalStep, int VerticalStep,
+    bool ActivatePressed, bool BackPressed, bool PointerPressed, Vector2 PointerPosition);
+```
+
+В Playing Menu=default; в меню Gameplay=default и PausePressed=false.
+RestartPressed разрешён для Playing/Paused/Failed; в остальных экранах false.
+PausePressed — Escape только в Playing. Menu.BackPressed — Escape в меню;
+ArrowUp/Down/Tab дают VerticalStep −1/+1/+1, Left/Right дают HorizontalStep −1/+1,
+противоположные фронты отменяются. PointerPressed — фронт левой кнопки, позиция берётся
+из того же snapshot. Menu.ActivatePressed отражает Enter/Space; выбор цели и подавление
+дублирующего click выполняет UI selection model ниже. При IsFocused=false весь InputFrame=default.
+R/Escape обрабатываются до runner; после перехода текущий InputFrame не передаётся в Step.
 
 W/S задают forward +1/−1, D/A right +1/−1, противоположные направления отменяются.
 При yaw=0 forward=(0,0,−1), right=(1,0,0).

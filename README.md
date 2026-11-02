@@ -59,6 +59,7 @@ Linux/WSL: [графический запуск](docs/development-process.md#lin
 
 ## Документы
 
+- [С чего начать свою задачу и куда отправлять PR](docs/task-guide.md)
 - [Инструкции агентам](AGENTS.md)
 - [Участие и команды](CONTRIBUTING.md)
 - [Архитектура и границы](docs/architecture.md)

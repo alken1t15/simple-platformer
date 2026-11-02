@@ -22,6 +22,7 @@ docs/architecture.md и docs/project-scope.md; остальные докумен
 - `tests/Platformer.Tests`: CPU-тесты без окна; графический smoke запускается отдельно.
 - `external/engine`: закреплённая внешняя зависимость. Не редактируй её и не обновляй gitlink без отдельной задачи.
 - Старую рабочую копию движка и её личный workflow не изменять.
+  Порядок engine PR → merge → game gitlink PR → проверки → интеграция: docs/engine-integration.md#engine-first; ссылки по каждой задаче — docs/task-guide.md.
 - `.local/` — игнорируемые личные инструкции, состояния сессий и AI-протоколы; не публиковать.
 
 Не добавляй прямые `GL.*`, GPU handles, reflection-доступ к окну движка или второе окно для ввода.

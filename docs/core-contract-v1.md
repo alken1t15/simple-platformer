@@ -1,9 +1,11 @@
 # Ball Adventure: контракт реализации Core v1
 
-Подготовленный результат задачи #3, ожидающий приёмки в PR #22. Это спецификация будущего кода, а не реализованные типы.
+Контракт задачи #3 принят в PR #22 (02.11.2026); реализация остаётся задачами команды. Это спецификация будущего кода, а не реализованные типы.
 Имена и формы ниже — общий контракт для задач #4, #5, #8, #9, #20, #21.
 Изменение публичного стыка согласуется с Team Lead и затронутыми исполнителями до merge.
 Все типы — namespace `Platformer.Core`, только стандартная .NET10/System.Numerics.
+
+<a id="data"></a>
 
 ## Данные и создание
 
@@ -38,6 +40,8 @@ Axis конечная ненулевая и нормализуется; Orientat
 `LevelCatalog.Get/GetNextId` для неизвестного непустого ID — `KeyNotFoundException`.
 `GetNextId` возвращает следующий ID в порядке Levels, для последнего — null.
 Для поставляемого каталога это level1 → level2 → null; пустой каталог отклоняется.
+Каталог с одной записью допустим для изолированного теста: GetNextId её ID возвращает null;
+поставляемая игра всё равно содержит минимум две локации.
 Finish/поверхности могут пересекаться (зона финиша над площадкой); пересечение finish и hazard
 не запрещает уровень автоматически, поскольку опасность движется. Безопасность маршрута — проверка контента.
 
@@ -82,6 +86,7 @@ Finish/поверхности могут пересекаться (зона фи
 public sealed class BallSimulator
 {
     public BallSimulator(LevelDefinition level, SimulationSettings settings);
+    public BallState CreateInitialState();
     public BallStepResult Step(BallState before, GameCommand command);
 }
 public sealed class BallStepResult
@@ -94,6 +99,11 @@ public static class HazardMotion
 {
     public static HazardPose Evaluate(HazardDefinition hazard, double simulationSeconds);
 }
+public static class HazardCollision
+{
+    public static bool IntersectsPath(HazardDefinition hazard,
+        IReadOnlyList<MotionSegment> path, double tickStartSeconds, SimulationSettings settings);
+}
 public sealed class GameSession
 {
     public GameSession(LevelDefinition level, SimulationSettings settings);
@@ -103,6 +113,13 @@ public sealed class GameSession
     public void Restart();
 }
 ```
+
+`BallSimulator.CreateInitialState` принадлежит #5: создаёт шар из level.Spawn/settings,
+нулевую скорость/boost/cooldown, вычисляет опору и разрешает начальное проникновение
+не глубже SkinWidth; при более глубоком — ArgumentException с surface ID.
+GameSession (#8) вызывает эту функцию при создании и Restart и не дублирует решатель #5.
+LevelDefinition (#4) проверяет форму данных/конечность spawn; проверка опоры с конкретными
+settings выполняется этим методом при создании сеанса.
 
 `BallSimulator.Step` — чистое преобразование состояния шара со статическими поверхностями;
 оно не зависит от GameSession/счётчика монет/препятствий/окна. `Path` — фактически пройденная
@@ -116,6 +133,22 @@ local orientation → вращение вокруг world axis → translation p
 Нормализованная axis в мировых координатах; центр = pivot + Rotate(centerOffset, axis, angle),
 orientation = исходная ориентация с тем же world rotation. Радиус вращения включает длину centerOffset
 и максимальное расстояние вершины балки от её центра.
+
+`HazardCollision.IntersectsPath` реализуется в #20, вызывается GameSession из #8.
+Это чистая проверка опасности против сферы радиуса settings.BallRadius на полном Path.
+Path содержит прямолинейные отрезки движения **шара**, не дуги движения опасности.
+IntersectsPath сама строит консервативную проверку вращения hazard на этих интервалах;
+Evaluate только в endpoints её не заменяет. GameSession передаёт исходный BallStepResult.Path.
+Для каждой доли f время опасности = tickStartSeconds + f*settings.FixedStepSeconds;
+вызовы Evaluate и проверка дуги относятся к тем же интервалам, что и путь шара.
+TickStartSeconds конечен и ≥0; Path не пуст, копировать/менять его не требуется.
+Проверка валидирует конечные координаты, непрерывность соседних End/Start в пределах
+PositionEpsilon и покрытие долями всего [0,1] без зазоров/перекрытий; неподвижный отрезок допустим.
+Неверный Path — ArgumentException; бюджет из settings, исчерпание — InvalidOperationException
+с hazard ID. Функция не меняет hazard/path/очередь событий; false означает проверенное
+отсутствие контакта, а не «не хватило бюджета». Session коммитит tick только после всех проверок.
+BallSimulator отклоняет BallState.Radius, не совпадающий с settings.BallRadius в пределах
+PositionEpsilon: у физики, Path и hazard query один радиус.
 
 ### Step и приоритеты
 

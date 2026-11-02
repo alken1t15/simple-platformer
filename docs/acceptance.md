@@ -26,6 +26,8 @@ QA добавляет фактический commit/окружение/PASS/FAIL
 | A19 | Без audio device — понятный silent mode; на целевом устройстве эффекты/фон действительно слышны | BA-11,13 |
 | A20 | Чистый clone/submodule/SDK и запуск из другогоcwd находят шрифт/скины/звук, оба уровня проходимы | BA-13 |
 
+<a id="cpu-examples"></a>
+
 ## Аналитические примеры для авторских CPU-тестов
 
 - OBB center0, halfExtents(2,0.5,2), orientationIdentity: верхняя граньY=0.5.

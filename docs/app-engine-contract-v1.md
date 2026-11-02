@@ -1,7 +1,9 @@
 # Ball Adventure: контракты App и расширений движка v1
 
-Подготовленный результат задачи #3, ожидающий приёмки в PR #22. Контракт будущей реализации, не заявление о текущих возможностях.
+Контракт задачи #3 принят в PR #22 (02.11.2026); реализация остаётся задачами команды. Контракт будущей реализации, не заявление о текущих возможностях.
 Core определён в [core-contract-v1.md](core-contract-v1.md); engine base по-прежнему c69f190.
+
+<a id="app"></a>
 
 ## App: команды, шаг и камера
 
@@ -12,12 +14,12 @@ Core определён в [core-contract-v1.md](core-contract-v1.md); engine ba
 | `InputFrame InputRouter.Map(InputSnapshot input, AppScreen screen, float yawRadians)` | Возвращает ненулевое значение InputFrame для активного экрана; не двигает шар |
 | `FixedStepRunner.Advance(double frameSeconds, GameCommand latestHeld, Action<GameCommand> step)` | Возвращает число ticks; хранит только последние удержания и OR фронтов Jump/Boost; фронты потребляются первым tick, последующие их не повторяют |
 | `FixedStepRunner.Clear()` | Сбрасывает аккумулятор, удержания и фронты при pause/focus/restart/смене уровня |
-| `CameraRig.Update(Vector2 relativeMouseDelta, Vector3 target, LevelDefinition level, float frameSeconds)` | Один вызов за render frame в Running; yaw затем GameCommand, pitch clamped, позиция с obstruction radius |
+| `CameraPose CameraRig.Update(Vector2 relativeMouseDelta, Vector3 target, LevelDefinition level, float frameSeconds)` | Один вызов за render frame в Running; yaw затем GameCommand, pitch clamped, позиция с obstruction radius |
 | `LevelFlow.Start(string levelId)` | Новые GameSession/SessionId и Scene; никакого переноса coins/velocity; настройки App сохраняются |
 | `LevelFlow.Next()` | Допустимо после LevelComplete; следующий ID из каталога, после последнего — GameComplete |
 | `LevelFlow.Restart()` | Restart текущего GameSession, очищает runner/mapper/audio; остаётся тот же level ID |
 | `GameScenePresenter.Apply(SessionSnapshot snapshot, SkinDefinition skin)` | Обновляет transforms/visibility; не мутирует Core; spheres/boxes читаются из общего LevelDefinition |
-| `AudioCoordinator.Consume(SessionId, IReadOnlyList<GameEvent>)` | Дедуп по SessionId/Sequence, событие играет один раз; смена SessionId останавливает старые gameplay sources |
+| `void AudioCoordinator.Consume(Guid sessionId, IReadOnlyList<GameEvent> events)` | Дедуп по SessionId/Sequence, событие играет один раз; смена SessionId останавливает старые gameplay sources |
 
 `AppScreen`: MainMenu, LevelSelect, Settings, SkinSelect, Playing, Paused, Failed,
 LevelResult, GameComplete. Core SessionPhase не содержит эти UI-состояния.
@@ -25,7 +27,11 @@ UserSettings: MasterVolume∈[0,1], Muted, выбранный SkinId; всего
 SkinDefinition: Id, DisplayName, материал/опциональный asset ID; не содержит Radius/Mass/Collider.
 Сначала достаточно цветных материалов, отдельная новая текстура необязательна.
 Минимальные SkinId: classic-blue и orange; материалы различаются синим/оранжевым базовым цветом.
-HUD читает snapshot.CoinCount / level.Coins.Count; собранные ID скрываются тем же Apply.
+GameScenePresenter (#7) скрывает собранные ID тем же Apply и отвечает за 3D-объекты.
+UI/HUD (#19) читает тот же snapshot: CoinCount / level.Coins.Count, boost timers; он владеет
+раскладкой и overlay. Presenter не создаёт второй HUD. SkinDefinition использует Engine3D.Core.MaterialData в App.
+CameraPose — App readonly value (Vector3 Position, Vector3 Target, float YawRadians, float PitchRadians);
+Update возвращает позу, из её YawRadians в этом же кадре строится GameCommand.
 
 ### Input и FixedStep
 
@@ -95,6 +101,8 @@ Left/Right — slider с шагом5%, Enter/Space или LeftMousePressed — �
 В menu cursor Normal; в Playing Captured только после явного start/continue.
 Focus loss→Paused, release cursor и pause audio; focus gain не продолжает игру сам.
 
+<a id="input"></a>
+
 ## Engine input/cursor: задача #16
 
 Namespace Engine3D.OpenGL, без публичных OpenTK enum/handles.
@@ -113,6 +121,8 @@ Namespace Engine3D.OpenGL, без публичных OpenTK enum/handles.
 - В snapshot focus loss очищает кнопки/дельту; первое событие после mode/focus change не даёт
   скачка мыши. Уже зажатая клавиша/кнопка при активации требует release/new press.
 - `Engine.Input` доступен только в onUpdate; существующая Run(scene,camera,Action<float>?) совместима.
+
+<a id="overlay"></a>
 
 ## Engine overlay: задача #17
 
@@ -141,6 +151,8 @@ PixelHeight>0, позиции конечны. Вне экрана clipping, не
 чтобы не обещать Unicode; неподдерживаемый символ рисуется как '?'. Источник/лицензия в THIRD_PARTY.
 Overlay рисуется после3D, корректно возвращает depth/blend/viewport; общий размер framebuffer
 и logical client dimensions применяются только на стороне renderer. При свёрнутом окне кадр не рисуется.
+
+<a id="audio"></a>
 
 ## Engine audio: задача #18
 

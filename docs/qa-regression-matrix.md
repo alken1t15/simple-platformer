@@ -13,37 +13,56 @@ FPS и слышимость; для них — QA-чек-лист на Linux (#1
 ## Реализованные проверки
 
 Файлы: [физика](../tests/Platformer.Tests/Regression/PhysicsRegressionTests.cs),
-[уровень](../tests/Platformer.Tests/Regression/LevelRegressionTests.cs).
+[уровень](../tests/Platformer.Tests/Regression/LevelRegressionTests.cs),
+[общие данные и допуски](../tests/Platformer.Tests/Regression/RegressionFixtures.cs).
+
+Допуски и их обоснование:
+
+| Имя | Значение | Обоснование |
+|---|---|---|
+| Зазор опоры | [r−PenetrationSlop, r+SkinWidth+PositionEpsilon] | Контракт Core v1: защитный радиус r+SkinWidth, допустимое проникновение PenetrationSlop |
+| `NormalTolerance` | 1e-5 | Нормаль из нормализованного float-кватерниона: несколько ULP единичного вектора (~1e-7), запас ×100 |
+| `AccumulatedTolerance` | 1e-4 | Высота/скорость после ≤1200 ticks при модулях ≤10: накопление float 1e-6..1e-5; много меньше SkinWidth=1e-3 и шага скорости за tick 1/6 |
+| `DriftTolerance` | 1e-6 | Покой без команды: торможение к нулю даёт точный ноль, остаётся округление позиции около 1 |
+| Непрерывность Path | PositionEpsilon=1e-5 | Контракт Path в Core v1 |
 
 | BA / сценарий | Модуль | Тест | Эталон и допуск |
 |---|---|---|---|
-| BA-07, A07 | SphereGeometry, BallSimulator | `FlatTopFaceGivesUpNormalForAnyEquivalentBoxOrientation` | Одна плита тремя ориентациями OBB: normal +Y (1e-5), центр в [r−PenetrationSlop, r+SkinWidth+PositionEpsilon], 1 с покоя без дрейфа (1e-6) |
-| BA-07, A07 | BallSimulator, Training Track | `TrainingTrackRampNormalAndUphillDirectionFollowTwentyDegreeGeometry` | Рампа из раскладки (2,0)→(5,3·tan20°): normal (−sin20°, cos20°, 0); vy/vx = tan20° (1e-4); |v| ≤ MoveSpeed; расстояние до плоскости в зазоре опоры |
+| BA-07, A07 | SphereGeometry, BallSimulator | `FlatTopFaceGivesUpNormalForAnyEquivalentBoxOrientation` | Одна плита тремя ориентациями OBB: normal +Y, центр в зазоре опоры, 1 с покоя без дрейфа |
+| BA-07, A07 | BallSimulator, Training Track | `TrainingTrackRampNormalAndUphillDirectionFollowTwentyDegreeGeometry` | Рампа из раскладки (2,0)→(5,3·tan20°): normal (−sin20°, cos20°, 0); vy/vx = tan20°; длина скорости ≤ MoveSpeed; расстояние до плоскости в зазоре опоры |
 | BA-07, A07 | BallSimulator | `SupportFlipsAroundConfiguredMaxSlope` | MaxSlope 50°: 49° — опора, 51° — нет |
-| BA-02, A03 | BallSimulator | `JumpApexMatchesClosedFormSemiImplicitEulerSum` | H = dt·(N·v0 − g·dt·N(N+1)/2), N = ⌊v0/(g·dt)⌋; default 0.975 точно; допуск 1e-4 (накопление float за ≤80 ticks); посадка через 2N ticks ±2; повторный фронт Space в воздухе не даёт прыжка. Отдельно `DefaultJumpApexIsExactlyPointNineSevenFive` |
-| BA-03, A04 (часть Core) | BallSimulator | `BoostPressEveryTickActivatesOncePerDurationPlusCooldownAndCapsSpeed` | Фронт BoostPressed каждый tick 10 с: активации на ticks 0, 480, 960; скорость ≤ 8.1, на 119-м tick 8.1, на 479-м 4.5 (1e-4); boost и cooldown не пересекаются. Удержание клавиши → один фронт проверяет App/runner, не Core |
-| BA-02/07, A09 (частично) | SphereGeometry sweep | `MaxFallSpeedNeverTunnelsThroughThinPlateAtAnyTickPhase` | Плита 0.002, падение 30: 37 фаз старта, шар нигде не ниже r−PenetrationSlop, посадка на r (SkinWidth+PositionEpsilon). Горизонтальный boost и рёбра/углы — авторские `MaximumConfiguredBoostCannotTunnelThroughThinWall` и SphereGeometryTests |
-| Контракт Step | BallSimulator | `TrainingTrackRouteReplayIsBitIdenticalForAnySurfaceOrder` | Маршрут с рампой, прыжком, boost: побитовое совпадение Ball и Path при повторе, новом симуляторе и 4 перестановках surfaces |
-| Контракт Path (вход #8/#20) | BallSimulator | `RoutePathIsContinuousCoversWholeTickAndNeverEntersSurfaces` | Path непрерывен (PositionEpsilon), доли покрывают [0,1] без зазоров, 9 точек каждого отрезка вне всех OBB |
-| Контракт ошибок (прокси для Snapshot #8) | BallSimulator | `EarlierResultsSurviveLaterStepsAndFailedTicks` | Исчерпание MaxContactIterations: InvalidOperationException с ID `wall`; прежний результат и Path не меняются, Path read-only, повтор совпадает |
+| BA-02, A03 | BallSimulator | `JumpApexMatchesClosedFormSemiImplicitEulerSum` | H = dt·(N·v0 − g·dt·N(N+1)/2), N = v0/(g·dt); эталоны посчитаны вручную: 0.975 (default), 0.54375, 1.975; посадка — индекс шага 2N−2 ±1 (Σv=0 при 2N−1 шагах); повторный фронт Space в воздухе не даёт прыжка |
+| BA-03, A04 (часть Core) | BallSimulator | `BoostPressEveryTickActivatesOncePerDurationPlusCooldownAndCapsSpeed` | Фронт BoostPressed каждый tick 10 с: активации на ticks 0, 480, 960; скорость ≤ 8.1, на 119-м tick 8.1, на 479-м 4.5; boost и cooldown не пересекаются. Удержание клавиши → один фронт проверяет App/runner, не Core |
+| BA-02/07, A09 (частично) | SphereGeometry sweep | `MaxFallSpeedNeverTunnelsThroughThinPlateAtAnyTickPhase` | Плита 0.002, падение 30: 37 фаз старта, шар нигде не ниже r−PenetrationSlop, посадка в зазоре опоры. Горизонтальный boost и рёбра/углы — авторские `MaximumConfiguredBoostCannotTunnelThroughThinWall` и SphereGeometryTests |
+| Контракт Step | BallSimulator | `TrainingTrackRouteReplayIsBitIdenticalForAnySurfaceOrder` | Маршрут с рампой, прыжком, boost: побитовое совпадение Ball и Path при повторе, новом симуляторе и 4 перестановках surfaces. На Training Track нет одновременных контактов, поэтому сортировку проверяет следующий тест |
+| Независимость порядка surfaces | BallSimulator | `SimultaneousContactBudgetErrorNamesSameSurfaceForAnyOrder` | Пол и стена симметричны, числа точно представимы (dt 1/64, g 16): одновременный контакт; ошибка бюджета называет `wall` при любом порядке списка |
+| Контракт Path (вход #8/#20) | BallSimulator | `RoutePathIsContinuousCoversWholeTickAndNeverEntersSurfaces` | Path непрерывен (PositionEpsilon), доли покрывают [0,1] без зазоров, в 9 точках каждого отрезка расстояние центра до каждого OBB ≥ r−PenetrationSlop |
+| Контракт ошибок (прокси для Snapshot #8) | BallSimulator | `FailedTickLeavesNoHiddenStateAndEarlierPathsStayIntact` | Исчерпание MaxContactIterations: InvalidOperationException с ID `wall`; Path прежнего результата не меняется и read-only, повтор после ошибки совпадает. BallState — значение, его неизменность не проверяется |
 | BA-08, A10 | LevelDefinition, Training Track | `EveryTrainingTrackCoinIsTouchedByBallRestingBelowIt` | Шар, опущенный под монету по реальной физике, касается её: расстояние ≤ r + CoinRadius. Число монет из данных уровня |
 | BA-06, A13 | Training Track | `BallRestingOnFinishPlatformOverlapsFinishVolume` | Шар на финишной площадке пересекает Finish; spawn — нет |
-| Неизменяемость уровня | LevelDefinition | авторский `AllInputListsAreCopiedAndCannotBeMutatedThroughReturnedInterfaces` | Покрыто #4; независимый дубль не добавлялся |
+| Копирование коллекций | LevelDefinition | `SimulationIgnoresLaterChangesOfLevelSourceList` | Чёрный ящик: после Clear/Add исходного списка поведение шара за 1 с то же. Структурная проверка — авторский `AllInputListsAreCopiedAndCannotBeMutatedThroughReturnedInterfaces` |
 | Неизменяемость уровня | TrainingTrack | `TrainingTrackFactoryReturnsIndependentEquivalentLevels` | Два вызова фабрики — разные эквивалентные экземпляры |
 
 ## Результаты прогона
 
 Окружение: Linux, контейнер `mcr.microsoft.com/dotnet/sdk:10.0` (SDK 10.0.403), Release, без дисплея и OpenGL.
-База — main `c8f6032`: весь набор 85 PASS, 0 FAIL, 0 SKIP, из них 16 — регрессии #9.
+Проверяется HEAD ветки `feature/9-independent-regressions` поверх main `c8f6032`;
+SHA итогового commit и вывод фиксируются в описании PR. Весь набор: 86 PASS, 0 FAIL, 0 SKIP,
+из них 17 — регрессии #9.
 
-Локальная проверка чувствительности (мутации не коммитятся, исходник затем восстанавливается
-через `git checkout`): правка в `src/Platformer.Core/BallSimulator.cs`, затем фильтр `Regression`.
+Дефектов в реализованных модулях #4/#5 не выявлено. Дефект, найденный позже, оформляется
+отдельной строкой: минимальное воспроизведение, тест, issue/PR исправления.
 
-| Мутация | Упавшие регрессии |
+Чувствительность проверена мутациями `src/Platformer.Core/BallSimulator.cs` в рабочей копии
+(в commit не входят): правка, `dotnet test ... --filter "FullyQualifiedName~Regression"`,
+обратное применение той же правки.
+
+| Мутация (было → стало) | Упавшие регрессии |
 |---|---|
-| Sweep отключён: `if (false && SphereGeometry.Sweep(...))` | 6: тонкая плита, повтор маршрута, Path, монеты, финиш, бюджет |
-| Cooldown на tick короче: `BoostCooldownSeconds - FixedStepSeconds - excess` | Boost-тест |
-| Порог опоры `Cos(MaxSlopeRadians + 0.09f)` (≈55°) | `SupportFlipsAroundConfiguredMaxSlope(51)` |
+| `if (SphereGeometry.Sweep(` → `if (false && SphereGeometry.Sweep(` | 7: тонкая плита, повтор маршрута, Path, бюджет, одновременный контакт, монеты, финиш |
+| `BoostCooldownSeconds - excess` → `BoostCooldownSeconds - FixedStepSeconds - excess` | Boost-тест |
+| `Cos(settings.MaxSlopeRadians)` → `Cos(settings.MaxSlopeRadians + 0.09f)` (≈55°) | `SupportFlipsAroundConfiguredMaxSlope(51)` |
+| `level.Surfaces.OrderBy(surface => surface.Id, StringComparer.Ordinal).ToArray()` → `level.Surfaces.ToArray()` | `SimultaneousContactBudgetErrorNamesSameSurfaceForAnyOrder`; авторские тесты эту мутацию не ловят |
 
 ## Тест-дизайн, ожидающий реализации
 

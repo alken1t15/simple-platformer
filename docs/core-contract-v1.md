@@ -2,7 +2,10 @@
 
 Контракт задачи #3 принят в PR #22 (02.11.2026); реализация остаётся задачами команды.
 В #4 реализованы OrientedBox, SurfaceDefinition, CoinDefinition, HazardDefinition,
-LevelDefinition и данные [Training Track](training-track.md); остальные типы ниже пока спецификация.
+LevelDefinition и данные [Training Track](training-track.md).
+В #5 реализованы GameCommand, BallState, SimulationSettings, BallSimulator,
+BallStepResult и MotionSegment — [описание физики](ball-physics.md).
+Остальные типы ниже пока спецификация.
 Имена и формы ниже — общий контракт для задач #4, #5, #8, #9, #20, #21.
 Изменение публичного стыка согласуется с Team Lead и затронутыми исполнителями до merge.
 Все типы — namespace `Platformer.Core`, только стандартная .NET10/System.Numerics.

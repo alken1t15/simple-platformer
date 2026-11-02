@@ -3,6 +3,8 @@
 Результат проектирования в задаче #3. Это контракт реализации;
 `OrientedBox`, `SurfaceDefinition`, `CoinDefinition`, `HazardDefinition` и
 `LevelDefinition` реализованы в #4 вместе с данными [Training Track](training-track.md).
+В #5 реализованы `GameCommand`, `BallState`, `SimulationSettings`, `BallSimulator`,
+`BallStepResult` и `MotionSegment` — [CPU-физика шара](ball-physics.md).
 Остальные типы остаются спецификацией будущей реализации. Техническая сцена остаётся прежней.
 
 - [Core: типы, сигнатуры, численные пределы, порядок шага и ошибки](core-contract-v1.md).

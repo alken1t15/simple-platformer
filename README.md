@@ -63,6 +63,8 @@ Linux/WSL: [графический запуск](docs/development-process.md#lin
 - [Участие и команды](CONTRIBUTING.md)
 - [Архитектура и границы](docs/architecture.md)
 - [План разработки и зависимости](project_plan.md)
+- [Даты всех задач](docs/schedule.md)
+- [Сценарии приёмки](docs/acceptance.md)
 - [Команда и роли](docs/team.md)
 - [Доска и распределённые issues](docs/github-project.md)
 - [Проект игрового API](docs/game-api.md)

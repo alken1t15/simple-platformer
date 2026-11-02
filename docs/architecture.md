@@ -19,7 +19,7 @@ Platformer.Tests → Core / CPU-часть App
 | Модуль | Состояние/ответственность | Владелец реализации |
 |---|---|---|
 | Core/Level | Реализованы неизменяемые LevelDefinition/OBB и данные Training Track; физика/рендер пока не подключены | Роман |
-| Core/BallSimulation | Сфера, скорость, опора, прыжок, ускорение, разрешение контактов с дорожками/наклонами | Владимир |
+| Core/BallSimulation | Реализованы CPU-шаг, опора/прыжок/boost, sphere/OBB sweep и Path; интеграция App впереди | Владимир |
 | Core/Obstacles | Вращение опасностей по времени симуляции, их OBB, проверка пересечения за шаг | Роман |
 | Core/Session + App/LevelFlow | Core: Running/Failed/LevelComplete, монеты и reset; App: пауза, каталог двух уровней и GameComplete | Владимир |
 | App/Input + Clock | InputSnapshot → GameCommand, фиксированный шаг, фронты и mouse delta, фокус/курсор | Николай |

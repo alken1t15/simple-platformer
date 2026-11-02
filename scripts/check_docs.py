@@ -15,6 +15,7 @@ required = [
     "scripts/Verify.ps1", ".github/workflows/ci.yml",
     "project_plan.md", "docs/team.md", "docs/game-api.md", "docs/requirements.md",
     "docs/github-project.md",
+    "docs/engine-integration.md",
 ]
 for name in required:
     if not (ROOT / name).is_file():

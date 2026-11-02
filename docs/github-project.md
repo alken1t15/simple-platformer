@@ -1,53 +1,47 @@
-# Доска и задачи игры
+# Ball Adventure — доска и распределение
 
-[Simple Platformer — разработка игры](https://github.com/users/alken1t15/projects/2).
-Это отдельный Project; доска движка и её задачи не изменяются.
+[Доска игры](https://github.com/users/alken1t15/projects/2). Прежний Project движка не изменяется.
 
-## Поля
+## Поля и этапы
 
-| Поле | Значения / назначение |
+| Поле | Назначение |
 |---|---|
-| Status | Todo, In Progress, Done; Done только по приёмке |
-| Priority | Critical, High, Medium, Low |
-| Area | requirements, architecture, core, app, tests, docs |
-| Milestone | M1 — Требования и контракты; M2 — Игровая реализация; M3 — Проверка и сдача |
-| Planned owner | Плановый ответственный из согласованного распределения |
-| Assignees | Фактическое назначение GitHub после получения доступа |
-| Reviewer candidates | Один проверяющий + Team Lead; для собственных PR Team Lead — без reviewer requests |
-| Depends on | Предшественники; подробные условия начала/завершения в issue |
+| Status | Todo / In Progress / Done; переработка описания не означает начало или завершение реализации |
+| Priority / Area | Critical или High; requirements / architecture / core / app / tests / docs |
+| Milestone | M1: контроль08.11; M2: контроль15.11; M3: финальная приёмка22.11 |
+| Planned owner / Assignees | Плановый исполнитель и фактическое назначение GitHub |
+| Reviewer candidates | Один проверяющий + Team Lead; собственные задачи TL без reviewer requests |
+| Depends on | Отдельные условия начала и завершения; номера issues совпадают с телом задачи |
 
-Milestones не имеют дат: календарь и загрузка ещё не подтверждены. Метка `status:blocked` означает невыполненные зависимости, а не необходимость изменить статус исходной задачи.
+Окно проекта02–22.11.2026, готовность не позднее23.11. Этапы — ориентиры; реальную доступность команды нужно сверить. Для стартовых зависимостей есть status:blocked; finish-зависимости не мешают раннему тест-дизайну/подготовке.
 
-## Созданные задачи
+## Задачи
 
-| Issue | Owner | Этап |
+| Issue | Owner | Проверяющие |
 |---|---|---|
-| [#2 — [Requirements] Согласовать правила и критерии приёмки 2D-MVP](https://github.com/alken1t15/simple-platformer/issues/2) | `alken1t15` | M1 — Требования и контракты |
-| [#3 — [Architecture] Зафиксировать игровой API и интеграционные контракты](https://github.com/alken1t15/simple-platformer/issues/3) | `alken1t15` | M1 — Требования и контракты |
-| [#4 — [Core] Реализовать модель, валидацию и начальный уровень](https://github.com/alken1t15/simple-platformer/issues/4) | `ibmpowerpc` | M2 — Игровая реализация |
-| [#5 — [Core] Реализовать движение, прыжок и столкновения персонажа](https://github.com/alken1t15/simple-platformer/issues/5) | `VladimirKhmelev` | M2 — Игровая реализация |
-| [#6 — [App] Подключить игровые команды и фиксированный шаг симуляции](https://github.com/alken1t15/simple-platformer/issues/6) | `Nickovlev` | M2 — Игровая реализация |
-| [#7 — [App] Отобразить уровень, персонажа и боковую камеру](https://github.com/alken1t15/simple-platformer/issues/7) | `ibmpowerpc` | M2 — Игровая реализация |
-| [#8 — [Core] Реализовать правила и переходы игрового сеанса](https://github.com/alken1t15/simple-platformer/issues/8) | `VladimirKhmelev` | M2 — Игровая реализация |
-| [#9 — [Tests] Добавить независимые CPU-регрессии игровых модулей](https://github.com/alken1t15/simple-platformer/issues/9) | `fUS1ONd` | M3 — Проверка и сдача |
-| [#10 — [Tests] Проверить интеграцию игрового цикла, ввода и CI](https://github.com/alken1t15/simple-platformer/issues/10) | `fUS1ONd` | M3 — Проверка и сдача |
-| [#11 — [QA] Подготовить ручной чек-лист и провести игровую приёмку](https://github.com/alken1t15/simple-platformer/issues/11) | `prettysorrow` | M3 — Проверка и сдача |
-| [#12 — [QA] Проверить запуск из чистого клона на согласованных ОС](https://github.com/alken1t15/simple-platformer/issues/12) | `prettysorrow` | M3 — Проверка и сдача |
-| [#13 — [Delivery] Подготовить документацию, учёт вклада и итоговую сдачу](https://github.com/alken1t15/simple-platformer/issues/13) | `alken1t15` | M3 — Проверка и сдача |
+| [#2 — [Requirements] Зафиксировать Ball Adventure: 3D, два уровня, звук и меню](https://github.com/alken1t15/simple-platformer/issues/2) | alken1t15 | Не назначаются: TL |
+| [#3 — [Architecture] Контракты Ball Adventure и расширений движка](https://github.com/alken1t15/simple-platformer/issues/3) | alken1t15 | Не назначаются: TL |
+| [#4 — [Core] 3D-модель уровня и первая локация с мостами и наклонами](https://github.com/alken1t15/simple-platformer/issues/4) | ibmpowerpc | VladimirKhmelev, alken1t15 |
+| [#5 — [Core] Физика 3D-шарика: движение, прыжок, boost и наклоны](https://github.com/alken1t15/simple-platformer/issues/5) | VladimirKhmelev | Nickovlev, alken1t15 |
+| [#6 — [App] WASD/мышь, фиксированный шаг и камера третьего лица](https://github.com/alken1t15/simple-platformer/issues/6) | Nickovlev | VladimirKhmelev, alken1t15 |
+| [#7 — [App] Сфера, скины и 3D-представление Ball Adventure](https://github.com/alken1t15/simple-platformer/issues/7) | ibmpowerpc | Nickovlev, alken1t15 |
+| [#8 — [Core/App] Монеты, финиш, поражение, reset и переходы уровней](https://github.com/alken1t15/simple-platformer/issues/8) | VladimirKhmelev | Nickovlev, alken1t15 |
+| [#9 — [Tests] Независимые регрессии 3D-физики, уровней и сеанса](https://github.com/alken1t15/simple-platformer/issues/9) | fUS1ONd | VladimirKhmelev, alken1t15 |
+| [#10 — [Tests] Интеграция камеры, меню, звука, двух уровней и CI](https://github.com/alken1t15/simple-platformer/issues/10) | fUS1ONd | Nickovlev, alken1t15 |
+| [#11 — [QA] Linux-приёмка Ball Adventure: управление, меню, звук, два уровня](https://github.com/alken1t15/simple-platformer/issues/11) | prettysorrow | fUS1ONd, alken1t15 |
+| [#12 — [QA] Чистый Linux-запуск и репетиция демонстрации Ball Adventure](https://github.com/alken1t15/simple-platformer/issues/12) | prettysorrow | fUS1ONd, alken1t15 |
+| [#13 — [Delivery] Интегрировать Ball Adventure и подготовить показ до 23 ноября](https://github.com/alken1t15/simple-platformer/issues/13) | alken1t15 | Не назначаются: TL |
+| [#16 — [Engine] Публичный ввод WASD/Shift/мыши и захват курсора](https://github.com/alken1t15/simple-platformer/issues/16) | Nickovlev | VladimirKhmelev, alken1t15 |
+| [#17 — [Engine] Минимальный overlay для меню, текста и HUD](https://github.com/alken1t15/simple-platformer/issues/17) | Nickovlev | VladimirKhmelev, alken1t15 |
+| [#18 — [Engine] Аудиосервис для Linux: эффекты, фон, громкость и lifecycle](https://github.com/alken1t15/simple-platformer/issues/18) | VladimirKhmelev | fUS1ONd, alken1t15 |
+| [#19 — [App] Главное меню, пауза, выбор уровней, звука и скина](https://github.com/alken1t15/simple-platformer/issues/19) | Nickovlev | prettysorrow, alken1t15 |
+| [#20 — [Core/App] Вращающиеся препятствия и синхронные столкновения](https://github.com/alken1t15/simple-platformer/issues/20) | ibmpowerpc | VladimirKhmelev, alken1t15 |
+| [#21 — [Content/App] Вторая локация, audio events и полный маршрут двух уровней](https://github.com/alken1t15/simple-platformer/issues/21) | ibmpowerpc | prettysorrow, alken1t15 |
 
-## Доступ и назначения
+## Назначения и проверка
 
-Пятерым участникам отправлены приглашения Write по разрешению Team Lead. Пока приглашение не принято и GitHub не разрешает Assignee, owner сохранён в теле issue и Planned owner на доске. Эти поля не доказывают принятия приглашения. После принятия нужно синхронизировать Assignee с плановым владельцем и прочитать результат обратно.
+Фактический Assignee сверяется с GitHub. Если участник ещё не принял приглашение, Planned owner сохраняет распределение, но это не объявляется предоставленным доступом. Переработка задач сохраняет их обсуждение и номера.
 
-На момент подготовки приглашения ожидают принятия; задачи Team Lead назначены `alken1t15`. Актуальное поле Assignees видно на GitHub. Не назначать все задачи Team Lead ради заполнения поля.
+PR участника: указанный reviewer + alken1t15; автор не может проверять собственный код. Собственные PR TL без reviewer requests, проверка Codex/AI и CI. Team Lead — Assignee всех PR.
 
-## Переход к работе
-
-Начать с задачи требований и проекта API. Чек-лист и тест-дизайн можно готовить после соответствующего контракта; фактическая приёмка ожидает реализации. В issue отдельно указаны условия начала и завершения.
-
-Существующий [PR интеграции ввода №1](https://github.com/alken1t15/simple-platformer/pull/1) является зависимостью ввода. Созданные задачи не означают, что он уже принят.
-
-На PR участника назначаются один проверяющий и `alken1t15`; автор исключается.
-На собственный PR Team Lead reviewers не назначаются; подготовку и проверку выполняет Team Lead с Codex и CI.
-Team Lead также указывается Assignee каждого PR, чтобы участвовать в организации собственного PR.
-Автоматическое назначение настраивается через `.github/review-policy.json` и workflow Assign reviewers.
+Расширение движка отслеживается задачей игры, реализуется отдельным upstream PR и подключается точным gitlink после приёмки. В старой рабочей копии движка изменения не выполняются.

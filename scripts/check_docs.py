@@ -18,6 +18,7 @@ required = [
     "docs/engine-integration.md",
     "docs/core-contract-v1.md", "docs/app-engine-contract-v1.md",
     "docs/acceptance.md", "docs/schedule.md",
+    "docs/content-design.md",
 ]
 for name in required:
     if not (ROOT / name).is_file():

@@ -47,24 +47,18 @@ SetScreen даже при неизменном экране. LevelFlow, ката
 
 ## Граница с закреплённой версией движка
 
-Точное воспроизведение блокера на engine `c69f190042cea9649f551c5196780059e892e0be`:
-`external/engine/src/Engine3D.OpenGL/InputKey.cs` содержит только A/D/Left/Right/Space/R/Escape;
-в `InputSnapshot` нет Pointer, в Engine нет CursorMode. Поэтому код с W/S/Shift,
-mouse delta или захватом по контракту #16 на этом gitlink не компилируется.
+Прежний блокер отсутствия W/S/Shift/Pointer/CursorMode на `c69f190` устранён upstream
+и обновлением зависимости игры до **`b20e9edab6e437aeeb4d48c8908b945e0f9f7d2f`**.
+Расширение принято в [PR движка #52](https://github.com/alken1t15/simple-3d-engine/pull/52);
+используется его merge SHA, не HEAD автора. Порядок следующих обновлений — [engine-first](engine-integration.md#engine-first).
 
-Расширение движка принято в [upstream PR #52](https://github.com/alken1t15/simple-3d-engine/pull/52),
-merge commit `b20e9edab6e437aeeb4d48c8908b945e0f9f7d2f`. Game gitlink этой ветки остаётся
-на `c69f190`: отдельный принятый PR обновления зависимости здесь ещё не подключён.
-Порядок обновления — [engine-first](engine-integration.md#engine-first).
-
-До принятого game gitlink #16 CPU-вход — неизменяемый `AppInputSnapshot` с `AppButtons`, Down,
+Текущий CPU-вход остаётся неизменяемым `AppInputSnapshot` с `AppButtons`, Down,
 Pressed/Released, фокусом и указателем. Это явно обозначенная контрактная граница App,
 а не подмена namespace движка или готовый native adapter. `InputRouter.Map` пока
-принимает этот тип; overload с `Engine3D.OpenGL.InputSnapshot` из App v1 ожидает game gitlink #16.
+принимает этот тип; overload с доступным `Engine3D.OpenGL.InputSnapshot` из App v1 ещё нужно реализовать в #6.
 Нельзя применять числовые cast неподдерживаемых InputKey или читать окно через reflection.
 
-После отдельного принятого game gitlink по
-[engine-first](engine-integration.md#engine-first) остаётся:
+После принятия обновления gitlink остаётся игровая интеграция:
 
 1. В `onUpdate` один раз прочитать `engine.Input`; публичные IsDown/WasPressed/WasReleased,
    IsFocused и Pointer перенести в AppInputSnapshot. Не читать ввод из CPU ticks.
@@ -73,8 +67,8 @@ Pressed/Released, фокусом и указателем. Это явно обо
    `CaptureRequested` само по себе не меняет native cursor.
 3. Связать готовые CPU GameSession/LevelFlow #8 с host: передать Step, выполнять Restart/Next до следующего tick,
    менять экраны по фазе сеанса; передавать CameraPose в публичную Camera и snapshot в Presenter.
-4. Выполнить проверки ниже. Ссылка на upstream PR указана выше; ссылку на отдельный
-   game gitlink PR добавить после его подтверждения.
+4. Выполнить проверки ниже. Upstream PR указан выше; связь с игровым PR обновления
+   зависимости фиксируется в карточках #16/#18 при его публикации/приёмке.
 
 ## Проверки и ограничения
 

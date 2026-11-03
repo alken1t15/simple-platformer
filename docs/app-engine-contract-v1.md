@@ -2,6 +2,11 @@
 
 Контракт задачи #3 принят в PR #22 (02.11.2026); реализация остаётся задачами команды. Контракт будущей реализации, не заявление о текущих возможностях.
 Core определён в [core-contract-v1.md](core-contract-v1.md); engine base по-прежнему c69f190.
+Независимая CPU-часть #6 реализована: [ввод/runner/камера](input-camera.md).
+InputRouter пока принимает AppInputSnapshot; native overload InputSnapshot и cursor adapter
+ожидают принятого game gitlink #16; оконная связь с готовыми CPU GameSession/LevelFlow
+из #8 ещё не подключена. AppScreen используется из LevelFlow, второго объявления нет.
+Ниже сохраняется целевой контракт интеграции.
 В #7 реализованы GameScenePresenter, SkinDefinition/GameSkins и контрактный
 [3D-preview](scene-presenter.md). В #8 добавлены LevelFlow, AppScreen и UserSettings —
 [таблица переходов и callbacks](game-session.md#каталог-и-app). Это CPU-модель с Presenter,

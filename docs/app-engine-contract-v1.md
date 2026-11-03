@@ -3,7 +3,10 @@
 Контракт задачи #3 принят в PR #22 (02.11.2026); реализация остаётся задачами команды. Контракт будущей реализации, не заявление о текущих возможностях.
 Core определён в [core-contract-v1.md](core-contract-v1.md); engine base по-прежнему c69f190.
 В #7 реализованы GameScenePresenter, SkinDefinition/GameSkins и контрактный
-[3D-preview](scene-presenter.md); управление, камера, UI, сеанс и расширения движка ещё ожидают интеграции.
+[3D-preview](scene-presenter.md). В #8 добавлены LevelFlow, AppScreen и UserSettings —
+[таблица переходов и callbacks](game-session.md#каталог-и-app). Это CPU-модель с Presenter,
+не подключённый оконный игровой цикл. Меню/ввод/звук интегрируются владельцами #6/#19/#21,
+hazards — после #20.
 
 <a id="app"></a>
 

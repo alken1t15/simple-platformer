@@ -6,7 +6,10 @@ LevelDefinition и данные [Training Track](training-track.md).
 В #5 реализованы GameCommand, BallState, SimulationSettings, BallSimulator,
 BallStepResult и MotionSegment — [описание физики](ball-physics.md).
 В #7 реализованы общие SessionSnapshot/SessionPhase/HazardPose для
-[Presenter](scene-presenter.md) и будущего сеанса. Остальные типы ниже пока спецификация.
+[Presenter](scene-presenter.md) и сеанса. В #8 реализованы GameSession, GameEvent/Kind
+и LevelCatalog — [CPU-сеанс](game-session.md). HazardMotion/HazardCollision ожидаются
+из #20: временно GameSession явно отклоняет уровни с hazards через NotSupportedException.
+Остальные правила ниже остаются целевым v1.
 Имена и формы ниже — общий контракт для задач #4, #5, #8, #9, #20, #21.
 Изменение публичного стыка согласуется с Team Lead и затронутыми исполнителями до merge.
 Все типы — namespace `Platformer.Core`, только стандартная .NET10/System.Numerics.

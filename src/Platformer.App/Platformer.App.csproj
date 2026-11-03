@@ -9,5 +9,6 @@
     <ProjectReference Include="../Platformer.Core/Platformer.Core.csproj" />
     <ProjectReference Include="../../external/engine/src/Engine3D.Core/Engine3D.Core.csproj" />
     <ProjectReference Include="../../external/engine/src/Engine3D.OpenGL/Engine3D.OpenGL.csproj" />
+    <ProjectReference Include="../../external/engine/src/Engine3D.Audio/Engine3D.Audio.csproj" />
   </ItemGroup>
 </Project>

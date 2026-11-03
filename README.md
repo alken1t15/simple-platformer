@@ -22,8 +22,8 @@
 В App реализована [CPU-часть ввода, фиксированного шага и камеры](docs/input-camera.md)
 из #6: маршрутизация WASD/фронтов, catch-up, орбитальная камера и проверка стен.
 Она проверяется с контрактными снимками и BallSimulator без окна; AppScreen общий
-с принятым LevelFlow из #8. Нативный адаптер мыши/клавиш/курсора ждёт принятого game gitlink
-расширения #16; оконная связь ввода с GameSession/LevelFlow ещё не подключена.
+с принятым LevelFlow из #8. В закреплённом движке доступен native input API #16;
+адаптер мыши/клавиш/курсора и оконная связь ввода с GameSession/LevelFlow ещё не подключены.
 Управление в preview этим изменением не включается.
 
 В App реализован [3D Presenter](docs/scene-presenter.md): шар, скины classic-blue/orange,
@@ -54,8 +54,16 @@ dotnet --version
 ```
 
 Движок закреплён submodule `external/engine` на commit
-`c69f190042cea9649f551c5196780059e892e0be`: база `v1.0.0` с публичным клавиатурным вводом,
-принятым в [PR движка №50](https://github.com/alken1t15/simple-3d-engine/pull/50).
+`b20e9edab6e437aeeb4d48c8908b945e0f9f7d2f`: публичные клавиши/мышь/CursorMode из
+[PR движка №52](https://github.com/alken1t15/simple-3d-engine/pull/52) и аудиосервис из
+[PR №51](https://github.com/alken1t15/simple-3d-engine/pull/51). Используется принятый squash SHA,
+а не HEAD ветки автора. [Возможности и ограничения](docs/engine-integration.md).
+
+App ссылается на `Engine3D.Audio`, поэтому обычная сборка проверяет доступность аудио API.
+Устройство автоматически не создаётся; в preview звука пока нет. Для будущего воспроизведения
+на Debian/Ubuntu/Mint нужна системная `libopenal1`; без устройства доступен диагностируемый
+silent fallback. Silent/null-driver проверки не подтверждают слышимость.
+Overlay ещё требует #17, а игровые input/audio adapters — #6/#21.
 Изменения движка вносятся отдельным PR; рабочая копия зависимости в игре не редактируется.
 Проверка, сборка и тесты одной командой (PowerShell 7):
 

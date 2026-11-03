@@ -1,10 +1,11 @@
 # Ball Adventure: контракты App и расширений движка v1
 
 Контракт задачи #3 принят в PR #22 (02.11.2026); реализация остаётся задачами команды. Контракт будущей реализации, не заявление о текущих возможностях.
-Core определён в [core-contract-v1.md](core-contract-v1.md); engine base по-прежнему c69f190.
+Core определён в [core-contract-v1.md](core-contract-v1.md); engine base —
+`b20e9edab6e437aeeb4d48c8908b945e0f9f7d2f` (input/cursor #52 и audio #51 приняты upstream).
 Независимая CPU-часть #6 реализована: [ввод/runner/камера](input-camera.md).
 InputRouter пока принимает AppInputSnapshot; native overload InputSnapshot и cursor adapter
-ожидают принятого game gitlink #16; оконная связь с готовыми CPU GameSession/LevelFlow
+ещё требуют реализации в App #6; необходимый engine API уже доступен. Оконная связь с готовыми CPU GameSession/LevelFlow
 из #8 ещё не подключена. AppScreen используется из LevelFlow, второго объявления нет.
 Ниже сохраняется целевой контракт интеграции.
 В #7 реализованы GameScenePresenter, SkinDefinition/GameSkins и контрактный
@@ -215,6 +216,8 @@ App удерживает одну loop music voice, при pause приоста�
 
 ## Границы готовности
 
-Эти методы ещё не существуют в закреплённом submodule. Каждое расширение — отдельный upstream PR,
-engine regression tests и новый game gitlink после приёмки. QA проверяет no-device отдельно от слышимости;
+InputSnapshot.Pointer, расширенные InputKey, CursorMode и Engine3D.Audio существуют в закреплённом
+`b20e9ed`; их игровые adapters ещё не подключены. Overlay из раздела UI пока проектируется в #17.
+Для следующих расширений нужны отдельный upstream PR, engine regression tests и точный game gitlink.
+QA проверяет no-device отдельно от слышимости;
 никакая UI/audio/input реализация не должна зависеть от старой рабочей копии проекта.

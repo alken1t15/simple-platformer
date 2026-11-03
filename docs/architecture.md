@@ -2,12 +2,13 @@
 
 Статус: проект реализации, не описание готовой игры. База — три проекта .NET10;
 публичные Engine3D.Core/OpenGL используются через submodule на
-`c69f190042cea9649f551c5196780059e892e0be`. Движок не редактируется внутри submodule.
+`b20e9edab6e437aeeb4d48c8908b945e0f9f7d2f`. Движок не редактируется внутри submodule.
 
 ```text
 Platformer.App → Platformer.Core (только стандартная .NET)
       ├──────→ Engine3D.Core / Engine3D.OpenGL
-      └──────→ публичные API мыши, UI и аудио после отдельных upstream PR
+      ├──────→ Engine3D.Audio (отдельный сервис, без автоматического создания устройства)
+      └──────→ публичный input/cursor API; UI overlay ожидает отдельного upstream PR
 Platformer.Tests → Core / CPU-часть App
 ```
 
@@ -22,7 +23,7 @@ Platformer.Tests → Core / CPU-часть App
 | Core/BallSimulation | Реализованы CPU-шаг, опора/прыжок/boost, sphere/OBB sweep и Path; интеграция App впереди | Владимир |
 | Core/Obstacles | Вращение опасностей по времени симуляции, их OBB, проверка пересечения за шаг | Роман |
 | Core/Session + App/LevelFlow | Реализованы CPU-сеанс, монеты/финиш/KillY/reset/events, каталог/переходы/пауза/GameComplete; hazards и оконная интеграция ожидают зависимостей | Владимир |
-| App/Input + Clock | Реализованы CPU-маршрутизация/runner и порядок кадра с общим AppScreen из LevelFlow; native input/cursor ждут game gitlink #16 и оконной интеграции с сеансом | Николай |
+| App/Input + Clock | Реализованы CPU-маршрутизация/runner и порядок кадра с общим AppScreen из LevelFlow; engine input/cursor API доступен, native adapter и оконная интеграция с сеансом впереди | Николай |
 | App/Camera | Реализованы CPU-орбита, pitch clamp, yaw-relative движение и отступ от OBB; подключение к окну впереди | Николай |
 | App/Presenter | Реализованы процедурные меши, два скина, Apply snapshot/Path и контрактный 3D-preview; полная интеграция ожидает #6/#8 | Роман |
 | App/Menu | Главное меню, уровни, пауза, настройки звука, скины, результаты и единственный HUD/overlay | Николай |

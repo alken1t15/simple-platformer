@@ -1,24 +1,48 @@
 # Движок: возможности и план расширений для Ball Adventure
 
-Аудит исходников закреплённого `c69f190042cea9649f551c5196780059e892e0be`, 02.11.2026.
-Это план, а не утверждение о реализованном расширении.
+Закреплённый SHA: **`b20e9edab6e437aeeb4d48c8908b945e0f9f7d2f`**, обновление 03.11.2026.
+Он включает принятые [input/cursor PR #52](https://github.com/alken1t15/simple-3d-engine/pull/52)
+и [audio PR #51](https://github.com/alken1t15/simple-3d-engine/pull/51).
+Ниже различаются доступное API зависимости и ещё не подключённая игровая реализация.
 
 | Возможность | Что есть | Что требуется / граница |
 |---|---|---|
 | 3D-сцена, depth, текстуры, свет, перспективная камера | Core/OpenGL public API | Переиспользовать; игровая камера в App |
 | Геометрия шара | MeshData принимает произвольные вершины; PrimitiveFactory только cube/plane | Процедурная UV-сфера в App без GL; не требуется новый тип renderer или импорт моделей |
-| Клавиши | A,D,Left,Right,Space,R,Escape, down/pressed/released/focus | Добавить W,S,Shift, Enter/Up/Down для меню, mouse buttons/позицию/delta |
-| Мышь/захват курсора | Публичного API нет | Расширить input и cursor mode: normal/captured, очистка delta/кнопок при фокусе |
+| Клавиши | A/D/W/S, оба Shift, Space/R/Escape, Enter, стрелки, Tab; down/pressed/released/focus | Подключить native adapter к InputRouter/host (#6); после активации удержания требуют release/new press |
+| Мышь/захват курсора | Immutable PointerSnapshot: logical Position/Delta/buttons/edges; CursorMode.Normal/Captured | Подключить adapter на owner thread; focus loss освобождает capture, gain не восстанавливает его автоматически |
 | UI / текст / overlay | Публичного API нет | Минимальный overlay с прямоугольниками, текстом/атласом и картинками; экранные координаты и resize |
-| Звук | Публичного API нет | Универсальный audio service: загрузка коротких PCM WAV, play/stop/pause, master gain/mute, безопасный dispose |
+| Звук | Отдельный Engine3D.Audio: PCM16 WAV mono/stereo 8–48kHz, voices/loop/pause/volume/dispose, silent fallback | Игровые WAV/AudioCoordinator в #21; device создаёт App явно, preview пока не воспроизводит звук |
 | Физика | Не входила в движок | BallSimulation и коллизии реализуются в Platformer.Core, а не в renderer |
 
 ## Изменение зависимости
 
 Исходную рабочую копию движка и её workflow не изменять. Для расширения — изолированный
 checkout, отдельный upstream PR, проверки, review и merge только при поручении; затем отдельное
-изменение gitlink игры на точный принятый SHA. Сейчас новых engine PR и обновления gitlink нет.
+изменение gitlink игры на точный принятый SHA. В этом обновлении выбран squash commit PR #52;
+его предок `29d2028df53915a1fad52509ee792040637e12b9` — принятый audio PR #51.
 Готовность контракта и готовность реализации отмечаются отдельно; не импортировать внутренний NativeWindow.
+
+### Что подключать участникам
+
+- #6: один раз читать `engine.Input` в onUpdate, перенести snapshot в AppInputSnapshot,
+  связать native cursor с CaptureRequested и LevelFlow. Доступность API не заменяет реализацию adapter.
+- #21: использовать публичный Engine3D.Audio; App уже имеет ProjectReference, устройство/ресурсы
+  создаёт и освобождает будущий AppStartup. Игровых WAV/event mapping этим обновлением не добавлено.
+- #17/#19: overlay пока отсутствует; нужны отдельные upstream PR и новое закрепление версии.
+
+Команды upstream-проверок в выбранной зависимости:
+
+```sh
+dotnet build external/engine/samples/InputSample -c Release
+LIBGL_ALWAYS_SOFTWARE=true XDG_SESSION_TYPE=x11 xvfb-run -a python3 external/engine/scripts/check_input_x11.py
+dotnet build external/engine/samples/AudioSample -c Release
+ALSOFT_DRIVERS=unavailable dotnet run --project external/engine/samples/AudioSample -c Release --no-build -- --expect-silent
+```
+
+X11-прогон требует системные Xvfb/libX11/libXtst; воспроизведение аудио — OpenAL Soft.
+На Debian/Ubuntu/Mint это `libopenal1`; для no-device и null-driver результаты отделяются
+от реальной слышимости. Runtime binaries в игру не копируются, лицензии — [THIRD_PARTY](../THIRD_PARTY.md).
 
 <a id="engine-first"></a>
 

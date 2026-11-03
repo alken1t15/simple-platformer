@@ -2,6 +2,9 @@
 
 Реализованы CPU-модули App и авторские тесты. Это **не завершение #6** и не
 игровое управление в окне: engine input #16 и сеанс/LevelFlow #8 ещё не подключены.
+CPU GameSession/LevelFlow из #8 уже приняты в main через PR #29 (`40d3b2a`);
+ветка #6 согласована с ними. Используется единственное общее объявление AppScreen
+в `LevelFlow.cs`; InputFrame больше не объявляет этот enum. Оконного host по-прежнему нет.
 Обычный запуск и `--presenter` сохраняют прежний preview; `--help` и ограниченный
 трёхкадровый `--smoke` сохраняются, smoke не захватывает мышь.
 
@@ -42,20 +45,25 @@ SetScreen даже при неизменном экране. LevelFlow, ката
 не дублируются. Callback Step получает команду; в тестах он вызывает настоящий BallSimulator.
 Камера использует позицию шара на начало кадра, как в принятом порядке App v1.
 
-## Граница с ещё не принятым движком
+## Граница с закреплённой версией движка
 
 Точное воспроизведение блокера на engine `c69f190042cea9649f551c5196780059e892e0be`:
 `external/engine/src/Engine3D.OpenGL/InputKey.cs` содержит только A/D/Left/Right/Space/R/Escape;
 в `InputSnapshot` нет Pointer, в Engine нет CursorMode. Поэтому код с W/S/Shift,
 mouse delta или захватом по контракту #16 на этом gitlink не компилируется.
 
-До принятия #16 CPU-вход — неизменяемый `AppInputSnapshot` с `AppButtons`, Down,
+Расширение движка принято в [upstream PR #52](https://github.com/alken1t15/simple-3d-engine/pull/52),
+merge commit `b20e9edab6e437aeeb4d48c8908b945e0f9f7d2f`. Game gitlink этой ветки остаётся
+на `c69f190`: отдельный принятый PR обновления зависимости здесь ещё не подключён.
+Порядок обновления — [engine-first](engine-integration.md#engine-first).
+
+До принятого game gitlink #16 CPU-вход — неизменяемый `AppInputSnapshot` с `AppButtons`, Down,
 Pressed/Released, фокусом и указателем. Это явно обозначенная контрактная граница App,
 а не подмена namespace движка или готовый native adapter. `InputRouter.Map` пока
-принимает этот тип; overload с `Engine3D.OpenGL.InputSnapshot` из App v1 ожидает #16.
+принимает этот тип; overload с `Engine3D.OpenGL.InputSnapshot` из App v1 ожидает game gitlink #16.
 Нельзя применять числовые cast неподдерживаемых InputKey или читать окно через reflection.
 
-После upstream merge и отдельного принятого game gitlink по
+После отдельного принятого game gitlink по
 [engine-first](engine-integration.md#engine-first) остаётся:
 
 1. В `onUpdate` один раз прочитать `engine.Input`; публичные IsDown/WasPressed/WasReleased,
@@ -63,10 +71,10 @@ Pressed/Released, фокусом и указателем. Это явно обо
 2. Подключить overload InputRouter для принятого InputSnapshot и адаптер cursor mode:
    Normal в меню/focus loss/smoke, Captured только после явного Start/Continue.
    `CaptureRequested` само по себе не меняет native cursor.
-3. С готовым #8 передать GameSession.Step, выполнять Restart/Next до следующего tick,
+3. Связать готовые CPU GameSession/LevelFlow #8 с host: передать Step, выполнять Restart/Next до следующего tick,
    менять экраны по фазе сеанса; передавать CameraPose в публичную Camera и snapshot в Presenter.
-4. Выполнить проверки ниже. Ссылки на upstream PR и game gitlink PR зависимости
-   добавляются после их подтверждения; в текущем результате они не установлены.
+4. Выполнить проверки ниже. Ссылка на upstream PR указана выше; ссылку на отдельный
+   game gitlink PR добавить после его подтверждения.
 
 ## Проверки и ограничения
 

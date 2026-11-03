@@ -7,7 +7,10 @@
 `BallStepResult` и `MotionSegment` — [CPU-физика шара](ball-physics.md).
 В #7 добавлены общие `SessionSnapshot`/`SessionPhase`/`HazardPose` и
 [GameScenePresenter/скины](scene-presenter.md), без логики GameSession из #8.
-Остальные типы остаются спецификацией будущей реализации. Прежняя техническая сцена сохранена;
+В #8 реализованы GameSession/GameEvent/LevelCatalog и App/LevelFlow/UserSettings —
+[сеанс и переходы](game-session.md). Hazards отклоняются до интеграции #20;
+ввод, меню и audio host ещё не подключены. Остальные типы остаются спецификацией.
+Прежняя техническая сцена сохранена;
 3D-представление проверяется отдельным preview.
 
 - [Core: типы, сигнатуры, численные пределы, порядок шага и ошибки](core-contract-v1.md).

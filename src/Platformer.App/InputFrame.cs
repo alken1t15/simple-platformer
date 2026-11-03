@@ -3,11 +3,6 @@ using Platformer.Core;
 
 namespace Platformer.App;
 
-public enum AppScreen
-{
-    MainMenu, LevelSelect, Settings, SkinSelect, Playing, Paused, Failed, LevelResult, GameComplete
-}
-
 public readonly record struct InputFrame(GameCommand Gameplay, bool RestartPressed,
     bool PausePressed, MenuInput Menu);
 

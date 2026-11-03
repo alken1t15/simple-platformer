@@ -6,7 +6,10 @@ LevelDefinition и данные [Training Track](training-track.md).
 В #5 реализованы GameCommand, BallState, SimulationSettings, BallSimulator,
 BallStepResult и MotionSegment — [описание физики](ball-physics.md).
 В #7 реализованы общие SessionSnapshot/SessionPhase/HazardPose для
-[Presenter](scene-presenter.md) и будущего сеанса. Остальные типы ниже пока спецификация.
+[Presenter](scene-presenter.md) и сеанса. В #8 реализованы GameSession, GameEvent/Kind
+и LevelCatalog — [CPU-сеанс](game-session.md). HazardMotion/HazardCollision ожидаются
+из #20: временно GameSession явно отклоняет уровни с hazards через NotSupportedException.
+Остальные правила ниже остаются целевым v1.
 Имена и формы ниже — общий контракт для задач #4, #5, #8, #9, #20, #21.
 Изменение публичного стыка согласуется с Team Lead и затронутыми исполнителями до merge.
 Все типы — namespace `Platformer.Core`, только стандартная .NET10/System.Numerics.
@@ -114,6 +117,7 @@ public sealed class GameSession
 {
     public GameSession(LevelDefinition level, SimulationSettings settings);
     public SessionSnapshot Snapshot { get; }
+    public IReadOnlyList<MotionSegment> LastPath { get; }
     public void Step(GameCommand command);
     public IReadOnlyList<GameEvent> DrainEvents();
     public void Restart();
@@ -194,6 +198,11 @@ Sequence начинается1, монотонен в рамках SessionId; ov
 `Restart()` создаёт новый SessionId, Tick=0, пустой счёт/очередь, phase=Running, восстановлены
 hazard time/boost и ball initial state. Поэтому ключ (SessionId, Sequence) не повторяется после Restart.
 App обязан очистить отложенные commands/frame time и звуковые источники прежнего сеанса.
+
+`LastPath` передаёт полный read-only путь последнего успешно опубликованного tick
+для Presenter. До первого tick и после Restart путь пуст; ошибка Step, terminal no-op
+и DrainEvents сохраняют предыдущий путь. Ранее выданная коллекция не меняется.
+LevelFlow применяет каждый успешный tick через `Apply(snapshot, skin, session.LastPath)`.
 
 ## Поведение ошибок и владение
 

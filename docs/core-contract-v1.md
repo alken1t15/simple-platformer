@@ -117,6 +117,7 @@ public sealed class GameSession
 {
     public GameSession(LevelDefinition level, SimulationSettings settings);
     public SessionSnapshot Snapshot { get; }
+    public IReadOnlyList<MotionSegment> LastPath { get; }
     public void Step(GameCommand command);
     public IReadOnlyList<GameEvent> DrainEvents();
     public void Restart();
@@ -197,6 +198,11 @@ Sequence начинается1, монотонен в рамках SessionId; ov
 `Restart()` создаёт новый SessionId, Tick=0, пустой счёт/очередь, phase=Running, восстановлены
 hazard time/boost и ball initial state. Поэтому ключ (SessionId, Sequence) не повторяется после Restart.
 App обязан очистить отложенные commands/frame time и звуковые источники прежнего сеанса.
+
+`LastPath` передаёт полный read-only путь последнего успешно опубликованного tick
+для Presenter. До первого tick и после Restart путь пуст; ошибка Step, terminal no-op
+и DrainEvents сохраняют предыдущий путь. Ранее выданная коллекция не меняется.
+LevelFlow применяет каждый успешный tick через `Apply(snapshot, skin, session.LastPath)`.
 
 ## Поведение ошибок и владение
 

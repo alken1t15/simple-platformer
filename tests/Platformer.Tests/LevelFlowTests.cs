@@ -210,4 +210,37 @@ public sealed class LevelFlowTests
         Assert.AreSame(presenter, flow.Presenter);
         Assert.AreEqual(AppScreen.Playing, flow.Screen);
     }
+
+    [TestMethod]
+    public void WallSlideRollMatchesPresenterUsingEverySegmentOfTheRealPhysicsPath()
+    {
+        var level = new LevelDefinition("wall-slide", new(0f, 0.501f, 0f), -10f,
+            new OrientedBox(new(40f, 1f, 40f), Vector3.One, Quaternion.Identity),
+            [new("floor", new OrientedBox(new(0f, -0.5f, 0f), new(50f, 0.5f, 50f), Quaternion.Identity)),
+             new("wall", new OrientedBox(new(2f, 1f, 0f), new(0.1f, 2f, 50f), Quaternion.Identity))], [], []);
+        var settings = new SimulationSettings(fixedStepSeconds: 1f / 30f, moveSpeed: 20f,
+            moveAcceleration: 100f, boostMultiplier: 1f, maxFallSpeed: 30f);
+        var flow = new LevelFlow(new LevelCatalog([level]), settings, new UserSettings());
+        var simulator = new BallSimulator(level, settings);
+        var ball = simulator.CreateInitialState();
+        var reference = new GameScenePresenter(level);
+        var skin = GameSkins.Get("classic-blue");
+        flow.Start(level.Id);
+        reference.Apply(flow.Snapshot!, skin);
+        var command = new GameCommand(Vector2.Normalize(Vector2.One), false, false);
+        bool sawWallSlide = false;
+        for (int tick = 1; tick <= 60; tick++)
+        {
+            var result = simulator.Step(ball, command);
+            ball = result.Ball;
+            flow.Step(command);
+            Assert.AreEqual(ball, flow.Snapshot!.Ball, $"Physics must match at tick {tick}");
+            reference.Apply(flow.Snapshot, skin, result.Path);
+            sawWallSlide |= result.Path.Any(segment => segment.End.X > segment.Start.X)
+                && result.Path.Any(segment => segment.End.X == segment.Start.X && segment.End.Z > segment.Start.Z);
+            Assert.AreEqual(1f, MathF.Abs(Quaternion.Dot(reference.BallObject.Transform.Rotation,
+                flow.Presenter!.BallObject.Transform.Rotation)), 1e-6f, $"Rolling must follow Path at tick {tick}");
+        }
+        Assert.IsTrue(sawWallSlide, "The fixture must include movement into the wall followed by sliding");
+    }
 }

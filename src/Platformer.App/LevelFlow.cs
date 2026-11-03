@@ -115,7 +115,7 @@ public sealed class LevelFlow
     {
         if (Screen != AppScreen.Playing) return;
         session!.Step(command);
-        Presenter!.Apply(session.Snapshot, GameSkins.Get(UserSettings.SkinId));
+        Presenter!.Apply(session.Snapshot, GameSkins.Get(UserSettings.SkinId), session.LastPath);
         AppScreen next = session.Snapshot.Phase switch
         {
             SessionPhase.Failed => AppScreen.Failed,

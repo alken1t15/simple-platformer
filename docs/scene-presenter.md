@@ -39,7 +39,7 @@ CPU-проверка ссылок не является измерением п�
 var presenter = new GameScenePresenter(level);
 presenter.Apply(snapshot, GameSkins.Get("classic-blue"));
 // engine.Run(presenter.Scene, camera, onUpdate)
-// внутри onUpdate: presenter.Apply(session.Snapshot, selectedSkin)
+// после успешного session.Step: presenter.Apply(session.Snapshot, selectedSkin, session.LastPath)
 ```
 
 Сначала нужен Apply с исходным snapshot, содержащим позу каждой опасности уровня;
@@ -65,6 +65,8 @@ presenter.Apply(snapshot, skin, ballStepResult.Path);
 на переходах опоры это визуальное приближение, а не независимая контактная симуляция.
 CPU-тест передаёт настоящий `BallSimulator.Step(...).Path` при подъёме Training Track.
 Интеграция #6/#8 должна выбрать этот overload там, где ей доступен путь; основной API v1 сохранён.
+GameSession.LastPath сохраняет путь успешного tick, а LevelFlow передаёт его в этот overload
+после каждого Step. При Start/Restart начальный Apply сбрасывает поворот по новому SessionId.
 
 ## Проверка вручную
 

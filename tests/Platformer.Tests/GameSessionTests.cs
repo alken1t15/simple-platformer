@@ -170,11 +170,13 @@ public sealed class GameSessionTests
         for (int i = 0; i < 60; i++)
         {
             var before = session.Snapshot;
+            var previousPath = session.LastPath;
             try { session.Step(SessionFixtures.Right); }
             catch (InvalidOperationException exception)
             {
                 error = exception;
                 Assert.AreSame(before, session.Snapshot);
+                Assert.AreSame(previousPath, session.LastPath);
                 break;
             }
         }
@@ -194,5 +196,67 @@ public sealed class GameSessionTests
         var unsupported = new LevelDefinition(level.Id, level.Spawn, level.KillY, level.Finish, level.Surfaces, [], [hazard]);
         var error = Assert.ThrowsExactly<NotSupportedException>(() => new GameSession(unsupported, SimulationSettings.Default));
         StringAssert.Contains(error.Message, "beam");
+    }
+
+    [TestMethod]
+    public void LastPathMatchesRealPhysicsAndPreviouslyReturnedPathRemainsImmutable()
+    {
+        var level = SessionFixtures.Level(finishX: 50f);
+        var simulator = new BallSimulator(level, SimulationSettings.Default);
+        var session = new GameSession(level, SimulationSettings.Default);
+        Assert.IsEmpty(session.LastPath);
+        var expected = simulator.Step(simulator.CreateInitialState(), SessionFixtures.Right);
+        session.Step(SessionFixtures.Right);
+        var path = session.LastPath;
+        CollectionAssert.AreEqual(expected.Path.ToArray(), path.ToArray());
+        Assert.ThrowsExactly<NotSupportedException>(() => ((IList<MotionSegment>)path).Clear());
+        var copy = path.ToArray();
+        session.DrainEvents();
+        Assert.AreSame(path, session.LastPath);
+        session.Step(SessionFixtures.Right);
+        Assert.AreNotSame(path, session.LastPath);
+        CollectionAssert.AreEqual(copy, path.ToArray());
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void FailedStepDoesNotPublishItsPath(bool invalidResult)
+    {
+        var level = SessionFixtures.Level(finishX: 50f);
+        var simulator = new BallSimulator(level, SimulationSettings.Default);
+        int calls = 0;
+        var session = new GameSession(level, SimulationSettings.Default, (ball, command) =>
+        {
+            var result = simulator.Step(ball, command);
+            if (++calls != 2) return result;
+            if (!invalidResult) throw new InvalidOperationException("simulation budget");
+            // Физика вернула новый Path, но подготовка snapshot отклоняет результат.
+            return new BallStepResult(result.Ball with { Radius = 0f }, result.Path.ToList());
+        });
+        session.Step(SessionFixtures.Right);
+        var before = session.Snapshot;
+        var path = session.LastPath;
+        if (invalidResult) Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => session.Step(SessionFixtures.Right));
+        else Assert.ThrowsExactly<InvalidOperationException>(() => session.Step(SessionFixtures.Right));
+        Assert.AreSame(before, session.Snapshot);
+        Assert.AreSame(path, session.LastPath);
+    }
+
+    [TestMethod]
+    public void TerminalStepPreservesPathAndUnreadEventsAndRestartClearsOnlyCurrentPath()
+    {
+        var session = new GameSession(SessionFixtures.Level(finishX: 0f), SimulationSettings.Default);
+        session.Step(default);
+        var path = session.LastPath;
+        var copy = path.ToArray();
+        Assert.IsNotEmpty(path);
+        session.Step(default);
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => session.Step(new(new(float.NaN, 0f), false, false)));
+        Assert.AreSame(path, session.LastPath);
+        Assert.AreEqual(GameEventKind.LevelCompleted, session.DrainEvents().Single().Kind);
+        session.Restart();
+        Assert.IsEmpty(session.LastPath);
+        CollectionAssert.AreEqual(copy, path.ToArray());
     }
 }

@@ -3,6 +3,7 @@ namespace Platformer.Core;
 /// <summary>CPU-сеанс: один атомарный tick, одноразовые события и полный reset.</summary>
 public sealed class GameSession
 {
+    private static readonly IReadOnlyList<MotionSegment> EmptyPath = Array.AsReadOnly(Array.Empty<MotionSegment>());
     private readonly LevelDefinition level;
     private readonly SimulationSettings settings;
     private readonly BallSimulator simulator;
@@ -12,6 +13,8 @@ public sealed class GameSession
     private long sequence;
 
     public SessionSnapshot Snapshot { get; private set; }
+    /// <summary>Полный read-only Path последнего успешного tick; пуст до первого Step и после Restart.</summary>
+    public IReadOnlyList<MotionSegment> LastPath { get; private set; } = EmptyPath;
 
     public GameSession(LevelDefinition level, SimulationSettings settings) : this(level, settings, null) { }
 
@@ -80,6 +83,7 @@ public sealed class GameSession
             queue[events.Length + i] = new GameEvent(before.SessionId, sequence + i + 1, tick, pending[i].Kind, pending[i].Id);
         // Ни одна наблюдаемая часть состояния не меняется до успешной подготовки tick.
         Snapshot = next;
+        LastPath = result.Path;
         sequence = nextSequence;
         events = queue;
     }
@@ -95,6 +99,7 @@ public sealed class GameSession
     {
         var initial = Initial();
         Snapshot = initial;
+        LastPath = EmptyPath;
         sequence = 0;
         events = [];
     }

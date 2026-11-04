@@ -175,11 +175,11 @@ public sealed class LevelFlowTests
     }
 
     [TestMethod]
-    public void UnsupportedNextLevelPreservesCompletedAttemptAndDoesNotResetAdapters()
+    public void InvalidHazardBudgetOnNextPreservesCompletedAttemptAndDoesNotResetAdapters()
     {
         var first = SessionFixtures.Level(finishX: 0f);
         var hazard = new HazardDefinition("beam", Vector3.Zero, Vector3.UnitY, Vector3.Zero,
-            Vector3.One, Quaternion.Identity, 1f, 0f);
+            Vector3.One, Quaternion.Identity, 10000f, 0f);
         var second = new LevelDefinition("level2", first.Spawn, first.KillY, first.Finish, first.Surfaces, [], [hazard]);
         int resets = 0;
         var flow = new LevelFlow(new LevelCatalog([first, second]), SimulationSettings.Default,
@@ -188,7 +188,7 @@ public sealed class LevelFlowTests
         flow.Step(default);
         var before = flow.Snapshot;
         int calls = resets;
-        Assert.ThrowsExactly<NotSupportedException>(flow.Next);
+        Assert.ThrowsExactly<ArgumentException>(flow.Next);
         Assert.AreSame(before, flow.Snapshot);
         Assert.AreEqual(AppScreen.LevelResult, flow.Screen);
         Assert.IsEmpty(flow.CompletedLevels);

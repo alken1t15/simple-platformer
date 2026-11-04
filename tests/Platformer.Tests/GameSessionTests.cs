@@ -189,12 +189,12 @@ public sealed class GameSessionTests
     }
 
     [TestMethod]
-    public void HazardsAreExplicitlyRejectedUntilDependency20IsIntegrated()
+    public void HazardMotionExceedingTheConfiguredBudgetIsRejectedWithItsId()
     {
         var level = SessionFixtures.Level();
-        var hazard = new HazardDefinition("beam", Vector3.Zero, Vector3.UnitY, Vector3.Zero, Vector3.One, Quaternion.Identity, 1f, 0f);
+        var hazard = new HazardDefinition("beam", Vector3.Zero, Vector3.UnitY, Vector3.Zero, Vector3.One, Quaternion.Identity, 10000f, 0f);
         var unsupported = new LevelDefinition(level.Id, level.Spawn, level.KillY, level.Finish, level.Surfaces, [], [hazard]);
-        var error = Assert.ThrowsExactly<NotSupportedException>(() => new GameSession(unsupported, SimulationSettings.Default));
+        var error = Assert.ThrowsExactly<ArgumentException>(() => new GameSession(unsupported, SimulationSettings.Default));
         StringAssert.Contains(error.Message, "beam");
     }
 

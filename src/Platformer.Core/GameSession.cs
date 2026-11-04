@@ -9,6 +9,7 @@ public sealed class GameSession
     private readonly BallSimulator simulator;
     private readonly Func<BallState, GameCommand, BallStepResult> simulate;
     private readonly CoinDefinition[] coins;
+    private readonly HazardDefinition[] hazards;
     private GameEvent[] events = [];
     private long sequence;
 
@@ -24,13 +25,13 @@ public sealed class GameSession
     {
         ArgumentNullException.ThrowIfNull(level);
         ArgumentNullException.ThrowIfNull(settings);
-        if (level.Hazards.Count != 0)
-            throw new NotSupportedException($"Уровень '{level.Id}' содержит опасность '{level.Hazards[0].Id}': требуется интеграция #20");
         this.level = level;
         this.settings = settings;
         simulator = new BallSimulator(level, settings);
         this.simulate = simulate ?? simulator.Step;
         coins = level.Coins.OrderBy(coin => coin.Id, StringComparer.Ordinal).ToArray();
+        hazards = level.Hazards.OrderBy(hazard => hazard.Id, StringComparer.Ordinal).ToArray();
+        ValidateHazardBudget();
         Snapshot = Initial();
     }
 
@@ -51,9 +52,9 @@ public sealed class GameSession
             pending.Add((GameEventKind.Jumped, null));
         var collected = new HashSet<string>(before.CollectedCoinIds, StringComparer.Ordinal);
         var phase = SessionPhase.Running;
-        // HazardCollision.IntersectsPath займёт это место после принятия #20.
-        // Конструктор пока явно запрещает hazards, а не пропускает опасные столкновения.
-        if ((double)result.Ball.Center.Y + result.Ball.Radius < level.KillY)
+        bool hazardHit = hazards.Any(hazard =>
+            HazardCollision.IntersectsPath(hazard, result.Path, before.SimulationSeconds, settings));
+        if ((double)result.Ball.Center.Y + result.Ball.Radius < level.KillY || hazardHit)
         {
             phase = SessionPhase.Failed;
             pending.Add((GameEventKind.Failed, null));
@@ -74,7 +75,7 @@ public sealed class GameSession
         }
         long nextSequence = AdvanceCounter(sequence, pending.Count);
         var next = new SessionSnapshot(before.SessionId, level.Id, tick, seconds, phase,
-            result.Ball, collected.ToArray(), []);
+            result.Ball, collected.ToArray(), HazardPoses(seconds));
         long queueLength = AdvanceCounter(events.Length, pending.Count);
         if (queueLength > int.MaxValue) throw new InvalidOperationException("Переполнение очереди событий");
         var queue = new GameEvent[(int)queueLength];
@@ -105,7 +106,24 @@ public sealed class GameSession
     }
 
     private SessionSnapshot Initial() => new(Guid.NewGuid(), level.Id, 0, 0d, SessionPhase.Running,
-        simulator.CreateInitialState(), [], []);
+        simulator.CreateInitialState(), [], HazardPoses(0d));
+
+    private HazardPose[] HazardPoses(double seconds) =>
+        hazards.Select(hazard => HazardMotion.Evaluate(hazard, seconds)).ToArray();
+
+    private void ValidateHazardBudget()
+    {
+        double horizontal = (double)settings.MoveSpeed * settings.BoostMultiplier;
+        double ballTravel = Math.Sqrt(horizontal * horizontal + (double)settings.MaxFallSpeed * settings.MaxFallSpeed)
+            * settings.FixedStepSeconds;
+        foreach (var hazard in hazards)
+        {
+            double reach = (double)hazard.CenterOffset.Length() + hazard.HalfExtents.Length();
+            double beamTravel = Math.Abs((double)hazard.AngularSpeed) * settings.FixedStepSeconds * reach;
+            if (Math.Ceiling((ballTravel + beamTravel) / (settings.BallRadius / 4d)) > settings.MaxCollisionSubsteps)
+                throw new ArgumentException($"Бюджет подшагов не покрывает движение шара и опасности '{hazard.Id}'", nameof(level));
+        }
+    }
 
     internal static long AdvanceCounter(long value, int count)
     {

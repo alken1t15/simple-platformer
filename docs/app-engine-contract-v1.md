@@ -11,8 +11,8 @@ InputRouter пока принимает AppInputSnapshot; native overload InputS
 В #7 реализованы GameScenePresenter, SkinDefinition/GameSkins и контрактный
 [3D-preview](scene-presenter.md). В #8 добавлены LevelFlow, AppScreen и UserSettings —
 [таблица переходов и callbacks](game-session.md#каталог-и-app). Это CPU-модель с Presenter,
-не подключённый оконный игровой цикл. Меню/ввод/звук интегрируются владельцами #6/#19/#21,
-hazards — после #20.
+не подключённый оконный игровой цикл. Опасности #20 подключены к сеансу и Presenter;
+меню/ввод/звук интегрируются владельцами #6/#19/#21.
 
 <a id="app"></a>
 

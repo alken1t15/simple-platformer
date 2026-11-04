@@ -3,7 +3,8 @@
 Реализована CPU-часть [задачи #8](https://github.com/alken1t15/simple-platformer/issues/8):
 GameSession, события, статические триггеры, LevelCatalog и App/LevelFlow.
 Program по-прежнему показывает техническую сцену/Presenter preview. Ввод/runner (#6),
-меню (#19), опасности (#20), Turning Maze и AudioCoordinator (#21) подключаются отдельно.
+меню (#19), Turning Maze и AudioCoordinator (#21) подключаются отдельно.
+Опасности (#20) подключены к CPU-сеансу и Presenter через snapshot.
 Engine и закреплённый gitlink не изменены.
 
 ## Core
@@ -12,16 +13,18 @@ GameSession использует BallSimulator.CreateInitialState/Step и гот
 Running переходит в Failed/LevelComplete. Команда проверяется даже в terminal phase;
 валидный Step после завершения — no-op. Время равно Tick * FixedStepSeconds.
 
-Порядок tick: физика и полный Path → принятые BoostStarted/Jumped → KillY →
-несобранные монеты в ordinal-порядке ID → Finish. Если Center.Y + Radius < KillY,
-создаётся Failed, монеты/финиш tick пропускаются. Монеты не являются условием финиша.
-HazardCollision должен проверяться до монет/финиша после интеграции #20.
-Snapshot, sequence и очередь заменяются только после подготовки всего результата;
-ошибка физики/бюджета/переполнения не оставляет частичного обновления.
+Порядок tick: физика и полный Path → принятые BoostStarted/Jumped → проверка опасностей
+и KillY → несобранные монеты в ordinal-порядке ID → Finish.
+Если Center.Y + Radius < KillY или есть контакт с опасностью, создаётся одно Failed,
+монеты/финиш tick пропускаются, прежние собранные монеты сохраняются. Несколько контактов
+не создают дополнительные Failed. Монеты не являются условием финиша.
+Snapshot с позами опасностей, LastPath, sequence и очередь заменяются только после
+подготовки всего результата; ошибка физики/бюджета/позы/переполнения не оставляет частичного
+обновления. Непрочитанные события предыдущих ticks сохраняются при ошибке.
 
 Событие имеет ключ SessionId/Sequence; Sequence начинается с 1. DrainEvents возвращает
 отделённую read-only коллекцию и опустошает очередь. Restart создаёт новый SessionId,
-Tick=0, SimulationSeconds=0, исходный шар/опору/boost, пустые монеты/события.
+Tick=0, SimulationSeconds=0, исходный шар/опору/boost и фазы опасностей, пустые монеты/события.
 Предыдущие snapshot и выданные события остаются неизменными.
 
 LastPath хранит полный read-only путь последнего успешного tick и публикуется вместе
@@ -36,11 +39,19 @@ AABB ориентированного box: между пересечениями
 Учитываются неподвижный путь, начальное перекрытие и касания грани/ребра/угла.
 Расширенный AABB и прямая хорда между endpoints не подменяют точную геометрию/Path.
 
-**Зависимость #20:** пока GameSession явно отклоняет непустой Hazards через
-NotSupportedException с ID уровня/опасности. Фиктивной проверки, всегда возвращающей
-false, нет. После принятия #20 нужны HazardCollision.IntersectsPath с теми же
-Path/tickStartSeconds/settings, согласованные HazardPose и reset фазы опасности.
-До этого #8 не закрывается; Training Track без hazards доступен.
+Опасности проверяются принятым `HazardCollision.IntersectsPath` из #20 на исходном
+BallStepResult.Path с tickStartSeconds = временем предыдущего snapshot и тем же settings.
+Порядок проверки — ordinal по ID, первая подтверждённая опасность завершает поиск контакта.
+Вращение учитывается и на неподвижных участках Path. В Snapshot.Hazards включены все позы
+из `HazardMotion.Evaluate` на новом SimulationSeconds, а в исходном snapshot и после
+Restart — на времени 0. Поэтому время физики и изображения балки согласовано.
+Начальное пересечение с hazard приводит к Failed при первом Step.
+
+Конструктор отклоняет несовместимый бюджет через ArgumentException с ID опасности:
+ceil((максимальный путь шара + путь наиболее удалённой точки балки за tick) / (BallRadius/4))
+не должен превышать MaxCollisionSubsteps. Эта предварительная оценка не гарантирует
+разрешение любого касания: фактический сложный Path или почти касательный контакт могут
+исчерпать бюджет IntersectsPath; исключение передаётся клиенту с сохранением прежнего состояния.
 
 ## Каталог и App
 
@@ -68,7 +79,7 @@ MasterVolume (finite [0,1]), Muted и SkinId из GameSkins; сохраняет�
 | MainMenu | Сеанс/результаты сняты, настройки сохранены |
 
 Недопустимый переход — InvalidOperationException. Start/Next готовят новый сеанс
-до изменения прежнего маршрута и вызова callbacks. Ошибка ID, spawn или неподдерживаемый
+до изменения прежнего маршрута и вызова callbacks. Ошибка ID, spawn, позы или бюджета
 hazard сохраняет прежнее состояние. Повторный Next из GameComplete отклоняется.
 Start сразу level2 не приписывает монеты level1; Retry заменяет текущую попытку,
 сохраняя результаты пройденных локаций. Старые события не переносятся в новый сеанс.
@@ -100,6 +111,9 @@ UserSettings — общая модель процесса, UI настроек �
 Path против хорды/endpoint, thin/rotated finish, касания, KillY, разовые ID/events,
 rollback, reset, pause, маршрут и настройки. Внутренний simulate-стык служит для
 аналитического Path и воспроизводимого сбоя; публичный GameSession всегда использует BallSimulator.
+GameSessionHazardTests/LevelFlowHazardTests проверяют приоритет поражения над монетой/финишем,
+контакт между крайними позами на втором tick, Path вместо хорды, одноразовые события,
+реальные ошибки бюджета, неизменность snapshot/очереди, позы Presenter, паузу и Restart.
 Маршрут Start→Failed→Retry→Finish→Next→GameComplete проверяется с настоящей физикой
 и Presenter на двух контролируемых тестовых уровнях, которые не заменяют Turning Maze.
 Независимое QA #9 остаётся отдельным от авторских тестов.

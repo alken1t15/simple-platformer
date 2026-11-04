@@ -22,7 +22,7 @@ Platformer.Tests → Core / CPU-часть App
 | Core/Level | Реализованы неизменяемые LevelDefinition/OBB и Training Track; данные используют CPU-физика и 3D-preview | Роман |
 | Core/BallSimulation | Реализованы CPU-шаг, опора/прыжок/boost, sphere/OBB sweep и Path; интеграция App впереди | Владимир |
 | Core/Obstacles | Вращение опасностей по времени симуляции, их OBB, проверка пересечения за шаг | Роман |
-| Core/Session + App/LevelFlow | Реализованы CPU-сеанс, монеты/финиш/KillY/reset/events, каталог/переходы/пауза/GameComplete; hazards и оконная интеграция ожидают зависимостей | Владимир |
+| Core/Session + App/LevelFlow | Реализованы CPU-сеанс, монеты/финиш/KillY/hazards/reset/events, каталог/переходы/пауза/GameComplete; оконная интеграция впереди | Владимир |
 | App/Input + Clock | Реализованы CPU-маршрутизация/runner и порядок кадра с общим AppScreen из LevelFlow; engine input/cursor API доступен, native adapter и оконная интеграция с сеансом впереди | Николай |
 | App/Camera | Реализованы CPU-орбита, pitch clamp, yaw-relative движение и отступ от OBB; подключение к окну впереди | Николай |
 | App/Presenter | Реализованы процедурные меши, два скина, Apply snapshot/Path и контрактный 3D-preview; полная интеграция ожидает #6/#8 | Роман |

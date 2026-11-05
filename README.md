@@ -55,16 +55,20 @@ dotnet --version
 ```
 
 Движок закреплён submodule `external/engine` на commit
-`b20e9edab6e437aeeb4d48c8908b945e0f9f7d2f`: публичные клавиши/мышь/CursorMode из
+`7d097269004ad59fc014cdeb707ccd9911c63841`: публичные клавиши/мышь/CursorMode из
 [PR движка №52](https://github.com/alken1t15/simple-3d-engine/pull/52) и аудиосервис из
-[PR №51](https://github.com/alken1t15/simple-3d-engine/pull/51). Используется принятый squash SHA,
+[PR №51](https://github.com/alken1t15/simple-3d-engine/pull/51), overlay из
+[PR №53](https://github.com/alken1t15/simple-3d-engine/pull/53). Используется принятый squash SHA,
 а не HEAD ветки автора. [Возможности и ограничения](docs/engine-integration.md).
 
 App ссылается на `Engine3D.Audio`, поэтому обычная сборка проверяет доступность аудио API.
 Устройство автоматически не создаётся; в preview звука пока нет. Для будущего воспроизведения
 на Debian/Ubuntu/Mint нужна системная `libopenal1`; без устройства доступен диагностируемый
 silent fallback. Silent/null-driver проверки не подтверждают слышимость.
-Overlay ещё требует #17, а игровые input/audio adapters — #6/#21.
+OverlayFrame/SetOverlay доступны для меню и HUD задачи #19; игровые экраны ещё не реализованы.
+Встроенный ASCII-атлас и его лицензия поставляются движком; меню проектируется на английском.
+Реальный HiDPI с framebuffer≠client ещё не проверен; synthetic GPU scale=2 этого не подтверждает.
+Игровые input/audio adapters остаются задачами #6/#21.
 Изменения движка вносятся отдельным PR; рабочая копия зависимости в игре не редактируется.
 Проверка, сборка и тесты одной командой (PowerShell 7):
 

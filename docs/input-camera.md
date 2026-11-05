@@ -48,9 +48,11 @@ SetScreen даже при неизменном экране. LevelFlow, ката
 ## Граница с закреплённой версией движка
 
 Прежний блокер отсутствия W/S/Shift/Pointer/CursorMode на `c69f190` устранён upstream
-и обновлением зависимости игры до **`b20e9edab6e437aeeb4d48c8908b945e0f9f7d2f`**.
+и обновлением зависимости игры сначала до `b20e9ed`, затем до
+**`7d097269004ad59fc014cdeb707ccd9911c63841`** с overlay API #53.
 Расширение принято в [PR движка #52](https://github.com/alken1t15/simple-3d-engine/pull/52);
-используется его merge SHA, не HEAD автора. Порядок следующих обновлений — [engine-first](engine-integration.md#engine-first).
+Его потомок — принятый squash [overlay PR #53](https://github.com/alken1t15/simple-3d-engine/pull/53),
+не HEAD автора. Порядок следующих обновлений — [engine-first](engine-integration.md#engine-first).
 
 Текущий CPU-вход остаётся неизменяемым `AppInputSnapshot` с `AppButtons`, Down,
 Pressed/Released, фокусом и указателем. Это явно обозначенная контрактная граница App,

@@ -32,9 +32,10 @@ KillY, события, reset и CPU-переходы с сохранением �
 Подготовка требований/архитектуры/API принята в PR #22, макет содержания — в PR #23.
 Независимая часть #6 добавляет [CPU-ввод, фиксированный шаг и камеру](input-camera.md)
 с авторскими тестами и стыком к BallSimulator. Используется общее объявление AppScreen
-из принятого LevelFlow #8. Движок закреплён на `b20e9ed` с input/cursor и отдельным audio API;
-native adapters и оконная связь с GameSession/LevelFlow ещё не подключены. Overlay пока отсутствует;
-preview остаётся сценарным, наличие API не означает выполненные #6/#19/#21.
+из принятого LevelFlow #8. Движок закреплён на `7d097269` с input/cursor, отдельным audio API
+и OverlayFrame/SetOverlay из upstream #53. Native adapters, меню/HUD и оконная связь с
+GameSession/LevelFlow ещё не подключены. Preview остаётся сценарным, наличие API не означает
+выполненные #6/#19/#21. Реальный framebuffer≠client HiDPI ещё не проверен.
 
 Текущий этап — реализация участниками по [карте задач](task-guide.md) и интеграция Team Lead.
 Ни реализация механик за участников, ни изменение engine submodule сюда не входят.

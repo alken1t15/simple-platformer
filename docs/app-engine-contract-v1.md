@@ -2,7 +2,7 @@
 
 Контракт задачи #3 принят в PR #22 (02.11.2026); реализация остаётся задачами команды. Контракт будущей реализации, не заявление о текущих возможностях.
 Core определён в [core-contract-v1.md](core-contract-v1.md); engine base —
-`b20e9edab6e437aeeb4d48c8908b945e0f9f7d2f` (input/cursor #52 и audio #51 приняты upstream).
+`7d097269004ad59fc014cdeb707ccd9911c63841` (input/cursor #52, audio #51 и overlay #53 приняты upstream).
 Независимая CPU-часть #6 реализована: [ввод/runner/камера](input-camera.md).
 InputRouter пока принимает AppInputSnapshot; native overload InputSnapshot и cursor adapter
 ещё требуют реализации в App #6; необходимый engine API уже доступен. Оконная связь с готовыми CPU GameSession/LevelFlow
@@ -137,7 +137,8 @@ Namespace Engine3D.OpenGL, без публичных OpenTK enum/handles.
 
 ## Engine overlay: задача #17
 
-Универсальные immutable данные; пример формы API (не реализованные методы):
+Универсальные immutable данные, реализованные в закреплённом движке из
+[upstream PR #53](https://github.com/alken1t15/simple-3d-engine/pull/53):
 
 ```csharp
 public readonly record struct UiRect(float X, float Y, float Width, float Height);
@@ -148,6 +149,9 @@ public sealed class OverlayFrame
 {
     public OverlayFrame(IReadOnlyList<OverlayPanel> panels,
         IReadOnlyList<OverlayImage> images, IReadOnlyList<OverlayText> texts);
+    public ReadOnlySpan<OverlayPanel> Panels { get; }
+    public ReadOnlySpan<OverlayImage> Images { get; }
+    public ReadOnlySpan<OverlayText> Texts { get; }
 }
 // Engine: public void SetOverlay(OverlayFrame? frame);
 ```
@@ -162,6 +166,9 @@ PixelHeight>0, позиции конечны. Вне экрана clipping, не
 чтобы не обещать Unicode; неподдерживаемый символ рисуется как '?'. Источник/лицензия в THIRD_PARTY.
 Overlay рисуется после3D, корректно возвращает depth/blend/viewport; общий размер framebuffer
 и logical client dimensions применяются только на стороне renderer. При свёрнутом окне кадр не рисуется.
+Refresh рисует последний установленный слой без дополнительного onUpdate; null очищает его.
+API доступен, но игровые layout/hit-test/экраны/HUD остаются #19. Проверки scale=1/2 на GPU
+не заменяют пока не выполненный native HiDPI-прогон с framebuffer≠client.
 
 <a id="audio"></a>
 
@@ -217,7 +224,8 @@ App удерживает одну loop music voice, при pause приоста�
 ## Границы готовности
 
 InputSnapshot.Pointer, расширенные InputKey, CursorMode и Engine3D.Audio существуют в закреплённом
-`b20e9ed`; их игровые adapters ещё не подключены. Overlay из раздела UI пока проектируется в #17.
+`7d097269`; их игровые adapters ещё не подключены. OverlayFrame/SetOverlay существуют,
+но игровые меню/HUD из #19 ещё не подключены; HiDPI-проверка #16/#17 остаётся открытой.
 Для следующих расширений нужны отдельный upstream PR, engine regression tests и точный game gitlink.
 QA проверяет no-device отдельно от слышимости;
 никакая UI/audio/input реализация не должна зависеть от старой рабочей копии проекта.

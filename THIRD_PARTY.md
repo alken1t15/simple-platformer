@@ -8,6 +8,8 @@
 | libX11 | Системная `libX11.so.6` для физического keyboard rearm Linux/X11; binary не включён | https://gitlab.freedesktop.org/xorg/lib/libx11 | MIT/X11-варианты и notices системного пакета; `external/engine/THIRD_PARTY.md` |
 | Microsoft.NET.Test.Sdk | 18.0.1 | https://github.com/microsoft/vstest | MIT |
 | MSTest.TestAdapter / TestFramework | 4.0.2 | https://github.com/microsoft/testfx | MIT |
+| Skill `code-review` (Matt Pocock), адаптирован в `docs/review-skill.md` | mattpocock-skills 1.3.2 | https://github.com/mattpocock/skills | MIT |
+| Плагин `code-review` (Anthropic), изменён и адаптирован в `docs/review-skill.md` | 1.0.1 | https://github.com/anthropics/claude-plugins-official | Apache-2.0 |
 
 Транзитивные OpenTK, GLFW и StbImageSharp перечислены вместе с лицензиями в
 `external/engine/THIRD_PARTY.md`. Сохраняйте исходные notices при распространении.

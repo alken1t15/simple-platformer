@@ -1,8 +1,9 @@
 # Движок: возможности и план расширений для Ball Adventure
 
-Закреплённый SHA: **`b20e9edab6e437aeeb4d48c8908b945e0f9f7d2f`**, обновление 03.11.2026.
+Закреплённый SHA: **`7d097269004ad59fc014cdeb707ccd9911c63841`**, обновление 06.11.2026.
 Он включает принятые [input/cursor PR #52](https://github.com/alken1t15/simple-3d-engine/pull/52)
-и [audio PR #51](https://github.com/alken1t15/simple-3d-engine/pull/51).
+и [audio PR #51](https://github.com/alken1t15/simple-3d-engine/pull/51),
+а также [overlay PR #53](https://github.com/alken1t15/simple-3d-engine/pull/53).
 Ниже различаются доступное API зависимости и ещё не подключённая игровая реализация.
 
 | Возможность | Что есть | Что требуется / граница |
@@ -11,7 +12,7 @@
 | Геометрия шара | MeshData принимает произвольные вершины; PrimitiveFactory только cube/plane | Процедурная UV-сфера в App без GL; не требуется новый тип renderer или импорт моделей |
 | Клавиши | A/D/W/S, оба Shift, Space/R/Escape, Enter, стрелки, Tab; down/pressed/released/focus | Подключить native adapter к InputRouter/host (#6); после активации удержания требуют release/new press |
 | Мышь/захват курсора | Immutable PointerSnapshot: logical Position/Delta/buttons/edges; CursorMode.Normal/Captured | Подключить adapter на owner thread; focus loss освобождает capture, gain не восстанавливает его автоматически |
-| UI / текст / overlay | Публичного API нет | Минимальный overlay с прямоугольниками, текстом/атласом и картинками; экранные координаты и resize |
+| UI / текст / overlay | Immutable OverlayFrame с panels/images/texts и Engine.SetOverlay(frame/null); logical client pixels, ASCII-атлас, clipping/resize/Refresh | Меню/HUD/layout/hit-test реализуются в App (#19); реальный framebuffer≠client HiDPI не проверен |
 | Звук | Отдельный Engine3D.Audio: PCM16 WAV mono/stereo 8–48kHz, voices/loop/pause/volume/dispose, silent fallback | Игровые WAV/AudioCoordinator в #21; device создаёт App явно, preview пока не воспроизводит звук |
 | Физика | Не входила в движок | BallSimulation и коллизии реализуются в Platformer.Core, а не в renderer |
 
@@ -19,8 +20,9 @@
 
 Исходную рабочую копию движка и её workflow не изменять. Для расширения — изолированный
 checkout, отдельный upstream PR, проверки, review и merge только при поручении; затем отдельное
-изменение gitlink игры на точный принятый SHA. В этом обновлении выбран squash commit PR #52;
-его предок `29d2028df53915a1fad52509ee792040637e12b9` — принятый audio PR #51.
+изменение gitlink игры на точный принятый SHA. В этом обновлении выбран squash commit PR #53;
+его предки `b20e9edab6e437aeeb4d48c8908b945e0f9f7d2f` и
+`29d2028df53915a1fad52509ee792040637e12b9` — принятые input #52 и audio #51.
 Готовность контракта и готовность реализации отмечаются отдельно; не импортировать внутренний NativeWindow.
 
 ### Что подключать участникам
@@ -29,13 +31,21 @@ checkout, отдельный upstream PR, проверки, review и merge то
   связать native cursor с CaptureRequested и LevelFlow. Доступность API не заменяет реализацию adapter.
 - #21: использовать публичный Engine3D.Audio; App уже имеет ProjectReference, устройство/ресурсы
   создаёт и освобождает будущий AppStartup. Игровых WAV/event mapping этим обновлением не добавлено.
-- #17/#19: overlay пока отсутствует; нужны отдельные upstream PR и новое закрепление версии.
+- #19: собирать OverlayFrame из модели меню/HUD и вызывать SetOverlay до Run или в onUpdate
+  на owner thread; null очищает слой. Раскладка/hit-test остаются в App, не в движке.
+- #16/#17: native HiDPI с framebuffer≠client ещё не проверен; synthetic GPU scale=2 и обычный
+  X11-прогон 1:1 не закрывают этот пункт. Авторский Mint/Cinnamon mouse/Alt-Tab-протокол —
+  в [проверках overlay движка](../external/engine/docs/overlay-testing.md).
 
 Команды upstream-проверок в выбранной зависимости:
 
 ```sh
 dotnet build external/engine/samples/InputSample -c Release
 LIBGL_ALWAYS_SOFTWARE=true XDG_SESSION_TYPE=x11 xvfb-run -a python3 external/engine/scripts/check_input_x11.py
+
+dotnet build external/engine/samples/OverlaySample -c Release
+LIBGL_ALWAYS_SOFTWARE=true XDG_SESSION_TYPE=x11 xvfb-run -a dotnet run --project external/engine/samples/OverlaySample -c Release --no-build -- --smoke
+LIBGL_ALWAYS_SOFTWARE=true XDG_SESSION_TYPE=x11 xvfb-run -a python3 external/engine/scripts/check_overlay_x11.py
 dotnet build external/engine/samples/AudioSample -c Release
 ALSOFT_DRIVERS=unavailable dotnet run --project external/engine/samples/AudioSample -c Release --no-build -- --expect-silent
 ```

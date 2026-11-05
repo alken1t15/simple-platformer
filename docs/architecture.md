@@ -2,13 +2,13 @@
 
 Статус: проект реализации, не описание готовой игры. База — три проекта .NET10;
 публичные Engine3D.Core/OpenGL используются через submodule на
-`b20e9edab6e437aeeb4d48c8908b945e0f9f7d2f`. Движок не редактируется внутри submodule.
+`7d097269004ad59fc014cdeb707ccd9911c63841`. Движок не редактируется внутри submodule.
 
 ```text
 Platformer.App → Platformer.Core (только стандартная .NET)
       ├──────→ Engine3D.Core / Engine3D.OpenGL
       ├──────→ Engine3D.Audio (отдельный сервис, без автоматического создания устройства)
-      └──────→ публичный input/cursor API; UI overlay ожидает отдельного upstream PR
+      └──────→ публичные input/cursor API и OverlayFrame/SetOverlay
 Platformer.Tests → Core / CPU-часть App
 ```
 
@@ -33,6 +33,8 @@ Platformer.Tests → Core / CPU-часть App
 Требования, архитектура, контракты, настройка CI/репозитория, интеграционные решения и сдача —
 Team Lead с Codex. Таблица описывает реализацию согласованных контрактов участниками.
 Engine-расширения имеют собственные PR/тесты и фиксированный commit до подключения в игре.
+Overlay API из upstream #53 доступен в закреплённой версии; меню/HUD и hit-test #19 ещё
+не реализованы. Реальный HiDPI с framebuffer≠client остаётся отдельной непроведённой проверкой.
 
 ## Цикл кадра и владение
 

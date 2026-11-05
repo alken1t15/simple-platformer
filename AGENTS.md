@@ -32,9 +32,11 @@ docs/architecture.md и docs/project-scope.md; остальные докумен
 Обязательны две локации с переходами, WASD/Space/Shift/R, мышь, монеты, наклоны,
 вращающиеся препятствия, звук, меню уровней/громкости/скинов; цель — Linux.
 Параметры проектирования и готовность реализации различай по docs/requirements.md.
-Engine snapshot `b20e9edab6e437aeeb4d48c8908b945e0f9f7d2f` поддерживает клавиши/мышь/CursorMode
-и отдельный Engine3D.Audio (upstream PR #52/#51). Overlay пока отсутствует (#17).
-Игровые input/cursor/audio adapters ещё не подключены; доступный API не означает готовую игру.
+Engine snapshot `7d097269004ad59fc014cdeb707ccd9911c63841` поддерживает клавиши/мышь/CursorMode,
+отдельный Engine3D.Audio и OverlayFrame/SetOverlay (upstream PR #52/#51/#53).
+Игровые input/cursor/audio adapters и меню/HUD ещё не подключены; доступный API не означает готовую игру.
+Overlay использует logical client pixels и встроенный ASCII-атлас; реальный framebuffer≠client
+HiDPI остаётся непроверенным, synthetic scale=2 не заменяет такую проверку.
 Новые расширения следуют docs/engine-integration.md и требуют upstream PR и точного gitlink.
 Сохраняй Y вверх, правую систему координат и матричные соглашения движка.
 

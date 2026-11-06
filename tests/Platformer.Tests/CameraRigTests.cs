@@ -12,6 +12,20 @@ public sealed class CameraRigTests
         new OrientedBox(new Vector3(20f, 0f, 0f), Vector3.One, Quaternion.Identity), surfaces, [], []);
 
     [TestMethod]
+    [DataRow(-100f, 1f)]
+    [DataRow(100f, -1f)]
+    public void VerticalMouseMovesViewInSameDirection(float mouseY, float expectedViewSign)
+    {
+        var rig = new CameraRig();
+        var before = rig.Update(Vector2.Zero, Vector3.Zero, Level(), 0f);
+        var after = rig.Update(new(0f, mouseY), Vector3.Zero, Level(), 0f);
+        Vector3 beforeView = Vector3.Normalize(before.Target - before.Position);
+        Vector3 afterView = Vector3.Normalize(after.Target - after.Position);
+        Assert.IsGreaterThan(0f, (afterView.Y - beforeView.Y) * expectedViewSign,
+            "Мышь вверх должна поднимать взгляд, мышь вниз — опускать.");
+    }
+
+    [TestMethod]
     public void DefaultsMouseSignsAndPitchClampMatchContract()
     {
         var rig = new CameraRig();
@@ -22,9 +36,9 @@ public sealed class CameraRigTests
         Assert.IsTrue(pose.Position.Y > target.Y && pose.Position.Z > target.Z);
         pose = rig.Update(new(100f, -100f), target, Level(), 0f);
         Assert.AreEqual(-0.3f, pose.YawRadians, 1e-6f);
-        Assert.AreEqual(0.7f, pose.PitchRadians, 1e-6f);
-        Assert.AreEqual(1.2f, rig.Update(new(0f, -10000f), target, Level(), 1f).PitchRadians);
-        Assert.AreEqual(-0.35f, rig.Update(new(0f, 10000f), target, Level(), 1f).PitchRadians);
+        Assert.AreEqual(0.1f, pose.PitchRadians, 1e-6f);
+        Assert.AreEqual(-0.35f, rig.Update(new(0f, -10000f), target, Level(), 1f).PitchRadians);
+        Assert.AreEqual(1.2f, rig.Update(new(0f, 10000f), target, Level(), 1f).PitchRadians);
     }
 
     [TestMethod]
@@ -43,7 +57,7 @@ public sealed class CameraRigTests
     {
         var wall = new SurfaceDefinition("wall", new OrientedBox(new(0f, 0f, 3f), new(10f, 10f, 0.001f), Quaternion.Identity));
         var rig = new CameraRig();
-        CameraPose pose = rig.Update(new(0f, CameraRig.DefaultPitch / CameraRig.MouseSensitivity), Vector3.Zero, Level(wall), 0f);
+        CameraPose pose = rig.Update(new(0f, -CameraRig.DefaultPitch / CameraRig.MouseSensitivity), Vector3.Zero, Level(wall), 0f);
         Assert.AreEqual(2.749f, rig.Distance, 0.0001f);
         Assert.IsLessThan(3f, pose.Position.Z);
         Assert.IsGreaterThanOrEqualTo(0.249f, Vector3.Distance(pose.Position, wall.Bounds.ClosestPoint(pose.Position)));
@@ -59,7 +73,7 @@ public sealed class CameraRigTests
     {
         var box = new SurfaceDefinition("corner", new OrientedBox(new(1.15f, 1.15f, 3f), Vector3.One, Quaternion.Identity));
         var rig = new CameraRig();
-        rig.Update(new(0f, CameraRig.DefaultPitch / CameraRig.MouseSensitivity), Vector3.Zero, Level(box), 0f);
+        rig.Update(new(0f, -CameraRig.DefaultPitch / CameraRig.MouseSensitivity), Vector3.Zero, Level(box), 0f);
         Assert.AreEqual(6f, rig.Distance, 0.001f);
     }
 

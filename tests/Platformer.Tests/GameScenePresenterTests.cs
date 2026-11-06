@@ -9,6 +9,43 @@ namespace Platformer.Tests;
 [TestClass]
 public sealed class GameScenePresenterTests
 {
+    [TestMethod]
+    public void TrainingTrackCompletesAtGateInsteadOfPlatformEntrance()
+    {
+        var track = TrainingTrack.Create();
+        float top = track.Surfaces.Single(surface => surface.Id == "finish-platform").Bounds.Center.Y + 0.2f;
+        var level = new LevelDefinition(track.Id, new(-2.5f, top + 0.501f, 15f), track.KillY,
+            track.Finish, track.Surfaces, track.Coins, track.Hazards);
+        var session = new GameSession(level, SimulationSettings.Default);
+        for (int tick = 0; tick < 200 && session.Snapshot.Phase == SessionPhase.Running; tick++)
+        {
+            session.Step(new(-Vector2.UnitX, false, false));
+            float gateDistance = MathF.Abs(session.Snapshot.Ball.Center.X - level.Finish.Center.X);
+            if (gateDistance > session.Snapshot.Ball.Radius + 0.2f)
+                Assert.AreEqual(SessionPhase.Running, session.Snapshot.Phase,
+                    "Финиш не должен срабатывать на входе на площадку до зелёного проёма.");
+        }
+        Assert.AreEqual(SessionPhase.LevelComplete, session.Snapshot.Phase);
+        Assert.IsLessThanOrEqualTo(session.Snapshot.Ball.Radius + 0.2f,
+            MathF.Abs(session.Snapshot.Ball.Center.X - level.Finish.Center.X));
+    }
+
+    [TestMethod]
+    public void TrainingTrackFinishOpeningFacesFinalApproach()
+    {
+        var level = TrainingTrack.Create();
+        var presenter = new GameScenePresenter(level);
+        var straight = level.Surfaces.Single(surface => surface.Id == "boost-straight");
+        Vector3 direction = level.Finish.Center - straight.Bounds.Center;
+        direction.Y = 0f;
+        direction = Vector3.Normalize(direction);
+        Vector3 openingNormal = Vector3.Transform(Vector3.UnitZ, presenter.FinishObjects[0].Transform.Rotation);
+        Assert.AreEqual(1f, MathF.Abs(Vector3.Dot(direction, openingNormal)), 1e-6f,
+            "Проём финиша должен стоять поперёк последнего прямого участка.");
+        foreach (var part in presenter.FinishObjects)
+            Assert.AreEqual(level.Finish.Center.X, part.Transform.Position.X, 1e-5f);
+    }
+
     private static readonly Guid Session = Guid.Parse("07000000-0000-0000-0000-000000000001");
     private static BallState Ball(Vector3 center, bool grounded = true, Vector3? normal = null) =>
         new(center, Vector3.Zero, 0.5f, grounded, normal ?? (grounded ? Vector3.UnitY : Vector3.Zero), 0f, 0f);

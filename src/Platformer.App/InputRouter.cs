@@ -5,6 +5,9 @@ namespace Platformer.App;
 
 public sealed class InputRouter
 {
+    public InputFrame Map(Engine3D.OpenGL.InputSnapshot input, AppScreen screen, float yawRadians) =>
+        Map(NativeInputAdapter.Map(input), screen, yawRadians);
+
     private bool _focused = true;
     private AppButtons _blocked;
 

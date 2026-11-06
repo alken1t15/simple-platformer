@@ -8,7 +8,7 @@
 Platformer.App → Platformer.Core (только стандартная .NET)
       ├──────→ Engine3D.Core / Engine3D.OpenGL
       ├──────→ Engine3D.Audio (отдельный сервис, без автоматического создания устройства)
-      └──────→ публичные input/cursor API и OverlayFrame/SetOverlay
+      └──────→ публичный input/cursor API; UI overlay доступен, меню/HUD подключаются в #19
 Platformer.Tests → Core / CPU-часть App
 ```
 
@@ -20,12 +20,12 @@ Platformer.Tests → Core / CPU-часть App
 | Модуль | Состояние/ответственность | Владелец реализации |
 |---|---|---|
 | Core/Level | Реализованы неизменяемые LevelDefinition/OBB и Training Track; данные используют CPU-физика и 3D-preview | Роман |
-| Core/BallSimulation | Реализованы CPU-шаг, опора/прыжок/boost, sphere/OBB sweep и Path; интеграция App впереди | Владимир |
+| Core/BallSimulation | Реализованы CPU-шаг, опора/прыжок/boost, sphere/OBB sweep и Path; физика подключена к --play | Владимир |
 | Core/Obstacles | Вращение опасностей по времени симуляции, их OBB, проверка пересечения за шаг | Роман |
-| Core/Session + App/LevelFlow | Реализованы CPU-сеанс, монеты/финиш/KillY/hazards/reset/events, каталог/переходы/пауза/GameComplete; оконная интеграция впереди | Владимир |
-| App/Input + Clock | Реализованы CPU-маршрутизация/runner и порядок кадра с общим AppScreen из LevelFlow; engine input/cursor API доступен, native adapter и оконная интеграция с сеансом впереди | Николай |
-| App/Camera | Реализованы CPU-орбита, pitch clamp, yaw-relative движение и отступ от OBB; подключение к окну впереди | Николай |
-| App/Presenter | Реализованы процедурные меши, два скина, Apply snapshot/Path и контрактный 3D-preview; полная интеграция ожидает #6/#8 | Роман |
+| Core/Session + App/LevelFlow | Реализованы CPU-сеанс, монеты/финиш/KillY/hazards/reset/events, каталог/переходы/пауза/GameComplete; оконный host --play подключён | Владимир |
+| App/Input + Clock | Реализованы CPU-маршрутизация/runner, native adapter и host --play с общим AppScreen из LevelFlow; меню/HUD отдельно в #19 | Николай |
+| App/Camera | Реализованы орбита, pitch clamp, yaw-relative движение и отступ от OBB; поза передаётся в публичную Camera оконного host | Николай |
+| App/Presenter | Реализованы процедурные меши, два скина, Apply snapshot/Path и контрактный 3D-preview; snapshot настоящего сеанса отображается в --play; полный маршрут ещё требует меню/level2 | Роман |
 | App/Menu | Главное меню, уровни, пауза, настройки звука, скины, результаты и единственный HUD/overlay | Николай |
 | App/AudioCoordinator | Идемпотентные команды воспроизведения из событий, настройки громкости и lifecycle | Роман |
 | Tests/QA | Независимые CPU-регрессии, интеграционные, ручные Linux и чистый запуск | Константин / Артём |
@@ -33,8 +33,6 @@ Platformer.Tests → Core / CPU-часть App
 Требования, архитектура, контракты, настройка CI/репозитория, интеграционные решения и сдача —
 Team Lead с Codex. Таблица описывает реализацию согласованных контрактов участниками.
 Engine-расширения имеют собственные PR/тесты и фиксированный commit до подключения в игре.
-Overlay API из upstream #53 доступен в закреплённой версии; меню/HUD и hit-test #19 ещё
-не реализованы. Реальный HiDPI с framebuffer≠client остаётся отдельной непроведённой проверкой.
 
 ## Цикл кадра и владение
 
@@ -56,6 +54,10 @@ WASD преобразуется в нормализованный вектор X
 на согласованном потоке Engine.Create. Engine владеет и освобождает GPU/UI-ресурсы.
 App владеет игровыми данными и отдельным AudioDevice; при завершении App вызывает его Dispose,
 а AudioDevice освобождает свои voices/buffers/context до завершения приложения. Пауза останавливает игровые эффекты/музыку по контракту, меню остаётся доступным.
+Оконный стенд `--play` из #6 пока не создаёт AudioCoordinator и не подменяет полноценное меню #19.
+Его host переносит объекты текущего Presenter в один Scene, переданный Engine.Run;
+Start/Next не создают второго окна. Terminal tick запрашивает отложенный сброс runner,
+который прекращает catch-up после текущего Step без рекурсивного Clear.
 Кэш меша сферы общий, скин меняет материал/текстуру, не ColliderRadius и не массу.
 
 ## Физика и камера

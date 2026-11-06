@@ -2,8 +2,9 @@
 
 Реализована CPU-часть [задачи #8](https://github.com/alken1t15/simple-platformer/issues/8):
 GameSession, события, статические триггеры, LevelCatalog и App/LevelFlow.
-Program по-прежнему показывает техническую сцену/Presenter preview. Ввод/runner (#6),
-меню (#19), Turning Maze и AudioCoordinator (#21) подключаются отдельно.
+Program сохраняет техническую сцену/Presenter preview и добавляет оконный стенд
+`--play` из #6 с вводом/runner/камерой. Меню (#19), Turning Maze и AudioCoordinator (#21)
+подключаются отдельно. [Проверки host](input-camera-testing.md).
 Опасности (#20) подключены к CPU-сеансу и Presenter через snapshot.
 Engine и закреплённый gitlink не изменены.
 
@@ -117,4 +118,6 @@ GameSessionHazardTests/LevelFlowHazardTests проверяют приорите�
 Маршрут Start→Failed→Retry→Finish→Next→GameComplete проверяется с настоящей физикой
 и Presenter на двух контролируемых тестовых уровнях, которые не заменяют Turning Maze.
 Независимое QA #9 остаётся отдельным от авторских тестов.
-Графический smoke прежнего App не подтверждает управление или прохождение двух локаций.
+Графический smoke не подтверждает ручное управление или прохождение двух локаций.
+GameplayHostTests проверяют стык LevelFlow/runner/Presenter: завершение останавливает catch-up
+после одного terminal tick через RequestClear, без рекурсивного Clear и fault runner.

@@ -31,7 +31,7 @@ public sealed class GameplayFrameRunnerTests
             4 * runner.Clock.FixedStepSeconds, Vector3.Zero, EmptyLevel, commands.Add);
         Assert.AreEqual(4, result.Ticks);
         Assert.AreEqual(-MathF.PI / 2f, runner.Camera.YawRadians, 1e-6f);
-        Assert.AreEqual(0.55f, runner.Camera.PitchRadians, 1e-6f);
+        Assert.AreEqual(0.25f, runner.Camera.PitchRadians, 1e-6f);
         Assert.IsTrue(commands.All(c => Vector2.Distance(Vector2.UnitX, c.MoveWorldXZ) < 1e-6f));
         Assert.AreEqual(1, commands.Count(c => c.JumpPressed));
     }

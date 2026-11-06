@@ -9,6 +9,29 @@ namespace Platformer.Tests;
 public sealed class FixedStepRunnerTests
 {
     [TestMethod]
+    public void TransitionCallbackRequestsClearWithoutRecursionOrFurtherCatchUp()
+    {
+        var runner = new FixedStepRunner(SimulationSettings.Default);
+        int calls = 0;
+        int ticks = runner.Advance(0.1d, new(Vector2.UnitX, true, true), _ =>
+        {
+            calls++;
+            // Воспроизведение несовместимого прямого подключения LevelFlow callback.
+            Assert.ThrowsExactly<InvalidOperationException>(runner.Clear);
+            runner.RequestClear();
+        });
+        Assert.AreEqual(1, ticks);
+        Assert.AreEqual(1, calls);
+        Assert.AreEqual(0d, runner.AccumulatedSeconds);
+        Assert.IsFalse(runner.IsFaulted);
+        runner.Advance(runner.FixedStepSeconds, default, command => Assert.AreEqual(default, command));
+        runner.Advance(runner.FixedStepSeconds / 2, new(Vector2.Zero, true, true), _ => Assert.Fail());
+        runner.RequestClear();
+        Assert.AreEqual(0d, runner.AccumulatedSeconds);
+        runner.Advance(runner.FixedStepSeconds, default, command => Assert.AreEqual(default, command));
+    }
+
+    [TestMethod]
     public void ZeroOneAndMultipleTicksKeepEdgesButUseLatestHeld()
     {
         var runner = new FixedStepRunner(SimulationSettings.Default);

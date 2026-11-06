@@ -42,7 +42,8 @@ public sealed class CameraRig
 
         // Эквивалентный угол сохраняет точность sin/cos после длительного вращения.
         YawRadians = (float)Math.IEEERemainder((double)YawRadians - relativeMouseDelta.X * (double)MouseSensitivity, Math.Tau);
-        PitchRadians = (float)Math.Clamp((double)PitchRadians - relativeMouseDelta.Y * (double)MouseSensitivity,
+        // Pitch задаёт высоту орбиты: его уменьшение поднимает взгляд на target.
+        PitchRadians = (float)Math.Clamp((double)PitchRadians + relativeMouseDelta.Y * (double)MouseSensitivity,
             MinimumPitch, MaximumPitch);
         Vector3 direction = new(MathF.Sin(YawRadians) * MathF.Cos(PitchRadians),
             MathF.Sin(PitchRadians), MathF.Cos(YawRadians) * MathF.Cos(PitchRadians));

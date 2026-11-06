@@ -40,7 +40,7 @@ public static class TrainingTrack
             new("coin-boost-2", new Vector3(0f, height + 0.8f, 15f), 0.2f),
         ];
         var finish = new OrientedBox(new Vector3(-5f, height + 0.75f, 15f),
-            new Vector3(1.5f, 0.75f, 1.5f), Quaternion.Identity);
+            new Vector3(1.5f, 0.75f, 0.1f), Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 2f));
         return new LevelDefinition("level1", new Vector3(-1f, 0.501f, 0f), -5.4f,
             finish, surfaces, coins, Array.Empty<HazardDefinition>());
     }

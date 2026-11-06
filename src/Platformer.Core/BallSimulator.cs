@@ -115,14 +115,19 @@ public sealed class BallSimulator
     {
         double time = start;
         int contacts = 0;
+        Span<Vector3> planes = stackalloc Vector3[settings.MaxContactIterations];
+        Span<int> planeSurfaces = stackalloc int[settings.MaxContactIterations];
+        int planeCount = 0;
         while (time < end)
         {
             Vector3 displacement = velocity * (float)((end - time) * settings.FixedStepSeconds);
             double firstFraction = 1d;
             Vector3 normal = Vector3.Zero;
             SurfaceDefinition? blocking = null;
-            foreach (var surface in surfaces)
+            int blockingIndex = -1;
+            for (int surfaceIndex = 0; surfaceIndex < surfaces.Length; surfaceIndex++)
             {
+                var surface = surfaces[surfaceIndex];
                 if (SphereGeometry.Sweep(surface.Bounds, center, displacement, settings.BallRadius + ContactPadding(center, surface.Bounds),
                     out double fraction, out Vector3 candidateNormal)
                     && Dot(velocity, candidateNormal) < 0d
@@ -131,6 +136,7 @@ public sealed class BallSimulator
                     firstFraction = fraction;
                     normal = candidateNormal;
                     blocking = surface;
+                    blockingIndex = surfaceIndex;
                 }
             }
             if (blocking is null)
@@ -145,10 +151,74 @@ public sealed class BallSimulator
             double hitTime = time + (end - time) * firstFraction;
             Vector3 hit = center + displacement * (float)firstFraction;
             Append(path, center, hit, time, hitTime);
+            // Несколько ударов в одной точке должны удовлетворять всем уже найденным
+            // нормалям: скольжение только по последней может снова вдавить шар в соседний край.
+            if (Vector3.DistanceSquared(center, hit) > settings.PositionEpsilon * settings.PositionEpsilon)
+                planeCount = 0;
             center = hit;
-            velocity = Slide(velocity, normal);
+            int planeIndex = planeSurfaces[..planeCount].IndexOf(blockingIndex);
+            if (planeIndex < 0) { planeIndex = planeCount++; planeSurfaces[planeIndex] = blockingIndex; }
+            planes[planeIndex] = normal;
+            velocity = ConstrainVelocity(velocity, planes[..planeCount]);
             time = hitTime;
         }
+    }
+
+    private static Vector3 ConstrainVelocity(Vector3 velocity, ReadOnlySpan<Vector3> planes)
+    {
+        if (planes.Length == 1) return Slide(velocity, planes[0]);
+        // В 3D ближайшая допустимая скорость лежит на одной плоскости, линии
+        // пересечения двух плоскостей либо в начале координат (полный упор).
+        Vector3 best = Vector3.Zero;
+        double bestChange = Dot(velocity, velocity);
+        for (int first = 0; first < planes.Length; first++)
+        {
+            ChooseVelocity(velocity, Slide(velocity, planes[first]), planes, ref best, ref bestChange);
+            for (int second = 0; second < first; second++)
+            {
+                Vector3 crease = Vector3.Cross(planes[first], planes[second]);
+                double lengthSquared = Dot(crease, crease);
+                if (lengthSquared <= 1e-20d) continue;
+                Vector3 candidate = crease * (float)(Dot(velocity, crease) / lengthSquared);
+                ChooseVelocity(velocity, candidate, planes, ref best, ref bestChange);
+            }
+        }
+        return best;
+    }
+
+    private static void ChooseVelocity(Vector3 original, Vector3 candidate, ReadOnlySpan<Vector3> planes,
+        ref Vector3 best, ref double bestChange)
+    {
+        // Cross/float могут оставить несколько ULP входящей скорости на стыке OBB.
+        // Исправляем только округление, не принимая геометрически недопустимый вариант.
+        float magnitude = MathF.Max(1f, MathF.Max(MathF.Abs(candidate.X), MathF.Max(MathF.Abs(candidate.Y), MathF.Abs(candidate.Z))));
+        double rounding = 8d * (MathF.BitIncrement(magnitude) - magnitude);
+        foreach (Vector3 plane in planes)
+            if (Dot(candidate, plane) < -rounding) return;
+        Vector3 outward = Vector3.Zero;
+        foreach (Vector3 plane in planes) outward += plane;
+        for (int repair = 0; repair < 8; repair++)
+        {
+            bool valid = true;
+            double correction = 0d;
+            foreach (Vector3 plane in planes)
+            {
+                double incoming = Dot(candidate, plane);
+                if (incoming >= 0d) continue;
+                double away = Dot(outward, plane);
+                if (away <= 0d) return;
+                correction = Math.Max(correction, -incoming / away);
+                valid = false;
+            }
+            if (valid)
+            {
+                double change = Dot(candidate - original, candidate - original);
+                if (change < bestChange) { best = candidate; bestChange = change; }
+                return;
+            }
+            candidate += outward * MathF.BitIncrement((float)correction);
+        }
+        // Нулевая скорость всегда допустима; непредставимую касательную не направляем в стену.
     }
 
     private void Append(List<MotionSegment> path, Vector3 start, Vector3 end, double startTime, double endTime)
@@ -164,19 +234,29 @@ public sealed class BallSimulator
     {
         Vector3 normal = Vector3.Zero;
         float nearest = float.PositiveInfinity;
+        Span<Vector3> supports = stackalloc Vector3[Math.Min(surfaces.Length, settings.MaxContactIterations)];
+        int supportCount = 0;
         foreach (var surface in surfaces)
         {
             var contact = SphereGeometry.Contact(surface.Bounds, center, settings.BallRadius);
             if (contact.Separation >= -settings.PenetrationSlop
                 && contact.Separation <= ContactPadding(center, surface.Bounds) + settings.PositionEpsilon
-                && contact.Normal.Y >= minimumGroundY
-                && Vector3.Dot(velocity, contact.Normal) <= settings.PositionEpsilon
-                && contact.Separation < nearest - settings.PositionEpsilon)
+                && Vector3.Dot(velocity, contact.Normal) <= settings.PositionEpsilon)
             {
-                normal = contact.Normal;
-                nearest = contact.Separation;
+                if (contact.Normal.Y >= minimumGroundY && contact.Separation < nearest - settings.PositionEpsilon)
+                {
+                    normal = contact.Normal;
+                    nearest = contact.Separation;
+                }
+                if (contact.Normal.Y > 0f && supportCount < supports.Length)
+                    supports[supportCount++] = contact.Normal;
             }
         }
+        // Два края могут вместе удерживать шар от падения, хотя каждый контакт
+        // отдельно слишком крут. Такая опора должна разрешать прыжок, а не ловушку в щели.
+        if (normal == Vector3.Zero && supportCount > 1
+            && ConstrainVelocity(-Vector3.UnitY, supports[..supportCount]).LengthSquared() <= 1e-12f)
+            return Vector3.UnitY;
         return normal;
     }
 

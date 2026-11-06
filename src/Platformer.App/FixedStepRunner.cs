@@ -13,6 +13,7 @@ public sealed class FixedStepRunner
     public bool IsFaulted { get; private set; }
     private GameCommand _pending;
     private bool _advancing;
+    private bool _clearRequested;
 
     public FixedStepRunner(SimulationSettings settings)
     {
@@ -46,9 +47,16 @@ public sealed class FixedStepRunner
             while (AccumulatedSeconds >= FixedStepSeconds && ticks < MaximumTicksPerFrame)
             {
                 step(_pending);
+                ticks++;
+                if (_clearRequested)
+                {
+                    _pending = default;
+                    AccumulatedSeconds = 0d;
+                    _clearRequested = false;
+                    return ticks;
+                }
                 _pending = _pending with { JumpPressed = false, BoostPressed = false };
                 AccumulatedSeconds -= FixedStepSeconds;
-                ticks++;
             }
             double dropped = Math.Floor(AccumulatedSeconds / FixedStepSeconds) * FixedStepSeconds;
             DroppedSeconds += dropped;
@@ -62,7 +70,14 @@ public sealed class FixedStepRunner
             _pending = default;
             throw;
         }
-        finally { _advancing = false; }
+        finally { _advancing = false; _clearRequested = false; }
+    }
+
+    /// <summary>Callback перехода LevelFlow: внутри Step остановит catch-up после текущего tick.</summary>
+    public void RequestClear()
+    {
+        if (_advancing) _clearRequested = true;
+        else Clear();
     }
 
     /// <summary>Сбрасывает очередь и fault; после ошибки сначала восстановить сеанс. Диагностика накопительная.</summary>
@@ -72,5 +87,6 @@ public sealed class FixedStepRunner
         AccumulatedSeconds = 0d;
         _pending = default;
         IsFaulted = false;
+        _clearRequested = false;
     }
 }

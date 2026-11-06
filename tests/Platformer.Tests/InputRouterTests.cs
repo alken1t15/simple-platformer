@@ -8,10 +8,17 @@ namespace Platformer.Tests;
 public sealed class InputRouterTests
 {
     [TestMethod]
+    public void DefaultNativeSnapshotMapsToUnfocusedEmptyFrame()
+    {
+        Assert.AreEqual(default, NativeInputAdapter.Map(default));
+        Assert.AreEqual(default, new InputRouter().Map(default(Engine3D.OpenGL.InputSnapshot), AppScreen.Playing, 0f));
+    }
+
+    [TestMethod]
     public void MovementUsesHorizontalYawAndNormalizesDiagonals()
     {
         var router = new InputRouter();
-        Vector2 Move(AppButtons held, float yaw = 0f) => router.Map(new(true, held), AppScreen.Playing, yaw).Gameplay.MoveWorldXZ;
+        Vector2 Move(AppButtons held, float yaw = 0f) => router.Map(new AppInputSnapshot(true, held), AppScreen.Playing, yaw).Gameplay.MoveWorldXZ;
         Assert.AreEqual(-Vector2.UnitY, Move(AppButtons.W));
         Assert.AreEqual(Vector2.UnitX, Move(AppButtons.D));
         Assert.AreEqual(Vector2.Zero, Move(AppButtons.W | AppButtons.S | AppButtons.A | AppButtons.D));
@@ -52,7 +59,7 @@ public sealed class InputRouterTests
         Assert.AreEqual(0, menu.VerticalStep);
         Assert.IsTrue(menu.PointerPressed);
         Assert.AreEqual(input.PointerPosition, menu.PointerPosition);
-        Assert.AreEqual(1, router.Map(new(true, Pressed: AppButtons.Tab), AppScreen.MainMenu, 0f).Menu.VerticalStep);
+        Assert.AreEqual(1, router.Map(new AppInputSnapshot(true, Pressed: AppButtons.Tab), AppScreen.MainMenu, 0f).Menu.VerticalStep);
     }
 
     [TestMethod]
@@ -64,7 +71,7 @@ public sealed class InputRouterTests
         Assert.AreEqual(default, router.Map(held with { IsFocused = false }, AppScreen.Playing, 0f));
         Assert.AreEqual(default, router.Map(held, AppScreen.Playing, 0f));
         Assert.AreEqual(default, router.Map(held with { Pressed = AppButtons.None }, AppScreen.Playing, 0f));
-        router.Map(new(true), AppScreen.Playing, 0f);
+        router.Map(new AppInputSnapshot(true), AppScreen.Playing, 0f);
         var fresh = router.Map(held, AppScreen.Playing, 0f);
         Assert.IsTrue(fresh.Gameplay.JumpPressed && fresh.Gameplay.BoostPressed);
         Assert.AreEqual(-Vector2.UnitY, fresh.Gameplay.MoveWorldXZ);

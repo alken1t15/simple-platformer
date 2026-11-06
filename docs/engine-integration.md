@@ -10,8 +10,8 @@
 |---|---|---|
 | 3D-сцена, depth, текстуры, свет, перспективная камера | Core/OpenGL public API | Переиспользовать; игровая камера в App |
 | Геометрия шара | MeshData принимает произвольные вершины; PrimitiveFactory только cube/plane | Процедурная UV-сфера в App без GL; не требуется новый тип renderer или импорт моделей |
-| Клавиши | A/D/W/S, оба Shift, Space/R/Escape, Enter, стрелки, Tab; down/pressed/released/focus | Подключить native adapter к InputRouter/host (#6); после активации удержания требуют release/new press |
-| Мышь/захват курсора | Immutable PointerSnapshot: logical Position/Delta/buttons/edges; CursorMode.Normal/Captured | Подключить adapter на owner thread; focus loss освобождает capture, gain не восстанавливает его автоматически |
+| Клавиши | A/D/W/S, оба Shift, Space/R/Escape, Enter, стрелки, Tab; down/pressed/released/focus | Native adapter подключён к InputRouter/host (#6); после активации удержания требуют release/new press |
+| Мышь/захват курсора | Immutable PointerSnapshot: logical Position/Delta/buttons/edges; CursorMode.Normal/Captured | Adapter подключён на owner thread; focus loss освобождает capture, gain не восстанавливает его автоматически |
 | UI / текст / overlay | Immutable OverlayFrame с panels/images/texts и Engine.SetOverlay(frame/null); logical client pixels, ASCII-атлас, clipping/resize/Refresh | Меню/HUD/layout/hit-test реализуются в App (#19); реальный framebuffer≠client HiDPI не проверен |
 | Звук | Отдельный Engine3D.Audio: PCM16 WAV mono/stereo 8–48kHz, voices/loop/pause/volume/dispose, silent fallback | Игровые WAV/AudioCoordinator в #21; device создаёт App явно, preview пока не воспроизводит звук |
 | Физика | Не входила в движок | BallSimulation и коллизии реализуются в Platformer.Core, а не в renderer |
@@ -27,8 +27,9 @@ checkout, отдельный upstream PR, проверки, review и merge то
 
 ### Что подключать участникам
 
-- #6: один раз читать `engine.Input` в onUpdate, перенести snapshot в AppInputSnapshot,
-  связать native cursor с CaptureRequested и LevelFlow. Доступность API не заменяет реализацию adapter.
+- #6: `--play` читает `engine.Input` один раз в onUpdate, NativeInputAdapter переносит snapshot
+  в AppInputSnapshot; GameplayHost связывает native cursor с CaptureRequested и LevelFlow.
+  Меню/HUD подключаются отдельно в #19.
 - #21: использовать публичный Engine3D.Audio; App уже имеет ProjectReference, устройство/ресурсы
   создаёт и освобождает будущий AppStartup. Игровых WAV/event mapping этим обновлением не добавлено.
 - #19: собирать OverlayFrame из модели меню/HUD и вызывать SetOverlay до Run или в onUpdate

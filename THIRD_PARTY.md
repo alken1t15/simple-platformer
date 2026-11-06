@@ -7,6 +7,7 @@
 | OpenTK.Audio.OpenAL | 4.9.4, транзитивно через Engine3D.Audio | https://github.com/opentk/opentk | MIT; подробности в `external/engine/THIRD_PARTY.md` |
 | OpenAL Soft | Системная Linux-библиотека `libopenal.so.1` (`libopenal1`); binary не включён | https://github.com/kcat/openal-soft | LGPL-2.0-or-later; upstream notices в `external/engine/THIRD_PARTY.md` |
 | libX11 | Системная `libX11.so.6` для физического keyboard rearm Linux/X11; binary не включён | https://gitlab.freedesktop.org/xorg/lib/libx11 | MIT/X11-варианты и notices системного пакета; `external/engine/THIRD_PARTY.md` |
+| libXtst (XTest) | Системная `libXtst.so.6`, только Python-драйвер native X11-проверок; binary не включён | https://gitlab.freedesktop.org/xorg/lib/libxtst | MIT/X11; notices системного пакета |
 | Microsoft.NET.Test.Sdk | 18.0.1 | https://github.com/microsoft/vstest | MIT |
 | MSTest.TestAdapter / TestFramework | 4.0.2 | https://github.com/microsoft/testfx | MIT |
 

@@ -1,98 +1,108 @@
-# Ввод, фиксированный шаг и камера: независимая часть #6
+# Ввод, фиксированный шаг и камера (#6)
 
-Реализованы CPU-модули App и авторские тесты. Это **не завершение #6** и не
-игровое управление в окне: engine input #16 и сеанс/LevelFlow #8 ещё не подключены.
-CPU GameSession/LevelFlow из #8 уже приняты в main через PR #29 (`40d3b2a`);
-ветка #6 согласована с ними. Используется единственное общее объявление AppScreen
-в `LevelFlow.cs`; InputFrame больше не объявляет этот enum. Оконного host по-прежнему нет.
-Обычный запуск и `--presenter` сохраняют прежний preview; `--help` и ограниченный
-трёхкадровый `--smoke` сохраняются, smoke не захватывает мышь.
+Реализованы CPU-модули App и оконный стенд `--play`: нативные WASD/Space/Shift/R,
+мышь, захват курсора, GameSession/LevelFlow, Presenter и публичная камера движка.
+Это частичная интеграция Ball Adventure. Полноценные меню/HUD (#19), звук и
+вторая локация (#21) ещё не подключены; физическая мышь и ручное прохождение
+не объявляются проверенными. Обычный запуск и `--presenter` сохраняют preview.
 
-## Модули и порядок кадра
+## Публичный ввод и порядок кадра
 
-- `InputFrame`, `MenuInput`, `AppScreen` соответствуют [App v1](app-engine-contract-v1.md#app).
-  `InputRouter` маршрутизирует WASD относительно yaw, Space/Shift как фронты,
-  R/Escape как переходы, клавиатуру и указатель меню. Pitch не участвует в движении.
-  После смены экрана/фокуса удерживаемые кнопки требуют release/new press.
-- `FixedStepRunner` использует `SimulationSettings.FixedStepSeconds`. При нуле ticks
-  сохраняет OR фронтов, обновляет удержания; первый tick потребляет Jump/Boost,
-  остальные получают только движение. Frame ограничен 0.1 с, бюджет — 8 ticks,
-  лишние полные ticks отбрасываются, дробный остаток сохраняется.
-  Накопительный `DroppedSeconds` учитывает и frame clamp, и превышение бюджета;
-  `Clear` очищает очередь/время/fault, но сохраняет этот счётчик диагностики.
-  Невалидное время отклоняется до изменения состояния. Ошибка callback блокирует
-  дальнейший Advance до явного восстановления сеанса и Clear; рекурсивный вызов запрещён.
-- `CameraRig.Update` вызывается один раз на render frame. Target передаёт вызывающий:
-  `ball.Center + (0, 0.3, 0)`. Defaults: distance 6, pitch 0.4; pitch clamp [-0.35, 1.2].
-  Mouse delta применяется без умножения на время: yaw/pitch -= delta * 0.003.
-  Yaw свободно вращается; эквивалентный угол приводится к периоду для точности sin/cos.
-  Sphere cast радиуса 0.2 использует точное расстояние до статических OBB и
-  conservative advancement; отступ от первого контакта — 0.05. Сокращение немедленное,
-  восстановление экспоненциальное по времени кадра (коэффициент 8 с⁻¹).
-  Эти численные параметры реализации не добавляют требований к игре.
-- `GameplayFrameRunner` связывает CPU-модули: сначала focus и R/Escape, затем мышь,
-  команда с новым yaw, затем ticks. В меню ticks отсутствуют. Потеря фокуса переводит
-  Playing в Paused; возврат фокуса не продолжает игру. `SetScreen(Playing)` — явный
-  вызов будущего Start/Continue; захват выражен только свойством `CaptureRequested`.
-  Первый mouse delta после перехода игнорируется, чтобы исключить скачок.
-  В smoke запрос capture всегда false. Ошибка Step переводит координатор в Failed
-  и снимает capture; состояние Core восстанавливает владелец сеанса.
+Движок закреплён на **`7d097269004ad59fc014cdeb707ccd9911c63841`**:
+[input PR #52](https://github.com/alken1t15/simple-3d-engine/pull/52),
+[overlay PR #53](https://github.com/alken1t15/simple-3d-engine/pull/53),
+[game gitlink PR #35](https://github.com/alken1t15/simple-platformer/pull/35).
+Исходники движка и gitlink в этой реализации #6 не меняются.
 
-При R результат содержит `RestartPressed`, ticks этого кадра равны нулю, очередь
-очищена. Вызывающий обязан выполнить Restart сеанса до следующего Advance, затем
-`SetScreen(Playing, resetCamera: true)`. При Next/Start нового уровня также вызвать
-SetScreen даже при неизменном экране. LevelFlow, каталог, монеты, UI и физика здесь
-не дублируются. Callback Step получает команду; в тестах он вызывает настоящий BallSimulator.
-Камера использует позицию шара на начало кадра, как в принятом порядке App v1.
+`Program` читает `engine.Input` один раз внутри onUpdate на потоке Create.
+`NativeInputAdapter.Map` явно сопоставляет все публичные InputKey, Down/Pressed/Released,
+фокус и левую кнопку/позицию/дельту указателя с независимым `AppInputSnapshot`.
+Неактивный snapshot становится default. Числовые cast, OpenTK/GL, reflection и второе окно
+в игровом коде отсутствуют. `InputRouter.Map` принимает как CPU-, так и native snapshot.
 
-## Граница с закреплённой версией движка
+`GameplayHost` связывает принятый LevelFlow с `GameplayFrameRunner`:
 
-Прежний блокер отсутствия W/S/Shift/Pointer/CursorMode на `c69f190` устранён upstream
-и обновлением зависимости игры сначала до `b20e9ed`, затем до
-**`7d097269004ad59fc014cdeb707ccd9911c63841`** с overlay API #53.
-Расширение принято в [PR движка #52](https://github.com/alken1t15/simple-3d-engine/pull/52);
-Его потомок — принятый squash [overlay PR #53](https://github.com/alken1t15/simple-3d-engine/pull/53),
-не HEAD автора. Порядок следующих обновлений — [engine-first](engine-integration.md#engine-first).
+1. Потеря фокуса вызывает LoseFocus; фокус/переход очищает очередь и время.
+2. Router проверяет R/Escape до камеры и до Step. Перезапуск выполняется один раз,
+   ticks этого кадра отсутствуют. Pause не накапливает время.
+3. Mouse delta применяется один раз за кадр без умножения на deltaSeconds.
+   Команда строится с новым yaw того же кадра; pitch не меняет движение X/Z.
+4. FixedStepRunner вызывает LevelFlow.Step с фиксированным шагом settings.
+   LevelFlow обновляет Core и Presenter. Terminal tick останавливает catch-up.
+5. Host согласует AppScreen, переносит CameraPose в публичную Camera,
+   актуальные объекты Presenter — в постоянную Scene, переданную Engine.Run.
+6. Program задаёт CursorMode по CaptureRequested: Normal в меню/паузе/без фокуса,
+   Captured только после явного Start/Continue/Retry. Движок рисует тот же кадр.
 
-Текущий CPU-вход остаётся неизменяемым `AppInputSnapshot` с `AppButtons`, Down,
-Pressed/Released, фокусом и указателем. Это явно обозначенная контрактная граница App,
-а не подмена namespace движка или готовый native adapter. `InputRouter.Map` пока
-принимает этот тип; overload с доступным `Engine3D.OpenGL.InputSnapshot` из App v1 ещё нужно реализовать в #6.
-Нельзя применять числовые cast неподдерживаемых InputKey или читать окно через reflection.
+`AppScreen` объявлен только в LevelFlow. Host не дублирует физику, монеты,
+переходы или владение ресурсами движка. Один Engine.Run обслуживает весь процесс;
+смена Presenter/уровня не создаёт другого окна. Удаление монеты из Presenter
+отражается в Scene; Restart восстанавливает её. Настройки принадлежат LevelFlow.
+CameraPose использует позицию шара на начало кадра, как в принятом App v1.
 
-После принятия обновления gitlink остаётся игровая интеграция:
+## Runner и переходы
 
-1. В `onUpdate` один раз прочитать `engine.Input`; публичные IsDown/WasPressed/WasReleased,
-   IsFocused и Pointer перенести в AppInputSnapshot. Не читать ввод из CPU ticks.
-2. Подключить overload InputRouter для принятого InputSnapshot и адаптер cursor mode:
-   Normal в меню/focus loss/smoke, Captured только после явного Start/Continue.
-   `CaptureRequested` само по себе не меняет native cursor.
-3. Связать готовые CPU GameSession/LevelFlow #8 с host: передать Step, выполнять Restart/Next до следующего tick,
-   менять экраны по фазе сеанса; передавать CameraPose в публичную Camera и snapshot в Presenter.
-4. Выполнить проверки ниже. Upstream PR указан выше; связь с игровым PR обновления
-   зависимости фиксируется в карточках #16/#18 при его публикации/приёмке.
+`FixedStepRunner` хранит последние удержания и OR фронтов Jump/Boost до первого tick.
+Первый tick потребляет фронты; остальные catch-up ticks получают только движение.
+Шаг берётся из `SimulationSettings.FixedStepSeconds`, frame clamp — 0.1 с,
+бюджет — 8 ticks. Полные лишние ticks отбрасываются, дробный остаток сохраняется;
+`DroppedSeconds` учитывает frame clamp и превышение бюджета.
 
-## Проверки и ограничения
+`Clear` очищает очередь/время/fault вне Step; диагностика DroppedSeconds накопительная.
+`RequestClear` нужен callback `LevelFlow.resetTransientState`: LevelFlow вызывает его
+и при terminal phase прямо внутри Step. В этом случае сброс откладывается до окончания
+текущего tick, catch-up немедленно прекращается, остаток/команды очищаются.
+Host вызывает SetScreen после возврата Advance, когда рекурсивного Clear уже нет.
+Вне Step RequestClear действует как Clear. Это предотвращает повторные no-op ticks
+завершённого сеанса и исключение Clear внутри Advance.
 
-CPU-тесты: `InputRouterTests`, `FixedStepRunnerTests`, `CameraRigTests`,
-`GameplayFrameRunnerTests`. Покрывают 0/1/несколько ticks, фронты и последние удержания,
-clamp/budget/остаток/ошибки callback, R/Escape до Step, pause/restart/next/focus,
-release/new press, меню/указатель, yaw0 и поворот в том же кадре, pitch clamp,
-тонкую/повёрнутую стену, наклон, круглое ребро и embedded target. Сценарий с BallSimulator
-на Training Track сравнивает итоговое состояние при 1/2/5 ticks на render frame.
+Start/Restart/Next сбрасывают камеру; Continue сохраняет yaw/pitch, но первый mouse delta
+после перехода игнорируется. При смене экрана/фокуса удерживаемые клавиши требуют
+отпускания и нового нажатия. Возврат фокуса сам не продолжает игру.
+Невалидное время отклоняется до изменения runner. Исключение Step прекращает кадр,
+runner становится faulted, GameplayFrameRunner снимает capture; Program завершает Run,
+движок освобождает курсор в finally. Повреждённый сеанс автоматически не продолжается.
 
-`TargetObstructed` диагностирует target внутри препятствия или ближе radius к нему:
-дистанция становится нулевой, Position остаётся у target, направление взгляда ненулевое.
-Если сам target внутри стены, свободная от пересечений позиция не гарантируется;
-fallback предотвращает NaN и перескок через стену, но не исправляет некорректный spawn/target.
-`CastBudgetLimited` означает консервативную остановку после 128 итераций почти касательного
-cast. Она может сократить дистанцию сильнее необходимого, но не разрешает проход через стену.
-Вращающиеся опасности не входят в static obstruction по контракту.
+## Камера
 
-После подключения зависимостей нужен отдельный ручной Linux-прогон: Start/Continue и
-свободный курсор меню, WASD/Space/оба Shift/R, мышь без зависимости от FPS,
-Alt-Tab с удержанными кнопками и без автоматического Continue, resize/DPI,
-камера на мосту/наклоне/у стен лабиринта. Эти проверки сейчас **не выполнены**;
-CPU-тесты и графический smoke не заменяют их. Issue остаётся открытой до интеграции.
+Target — `ball.Center + (0, 0.3, 0)`. Defaults: distance 6, pitch 0.4,
+clamp pitch [-0.35, 1.2], yaw -= delta.X * 0.003, pitch += delta.Y * 0.003 рад/логический пиксель.
+Вертикаль без инверсии: мышь вверх поднимает взгляд, мышь вниз опускает.
+Yaw приводится к эквивалентному периоду для точности sin/cos.
+При yaw0 W идёт к −Z, D к +X; диагональ нормализуется.
 
-Новых пакетов, ассетов и лицензируемых ресурсов не добавлено; THIRD_PARTY не меняется.
+Sphere cast радиуса 0.2 против статических OBB использует точное расстояние
+и conservative advancement, зазор перед контактом — 0.05. Сокращение немедленное,
+восстановление экспоненциальное по времени кадра (8 с⁻¹). Это параметры реализации,
+не дополнительные требования преподавателя. Вращающиеся hazards не входят в static obstruction.
+
+`TargetObstructed` диагностирует target внутри объёма/защитного радиуса: Distance=0,
+Position у target, LookAt остаётся ненулевым. Fallback предотвращает NaN,
+но не делает неправильный spawn свободным от стены. `CastBudgetLimited` означает
+консервативную остановку после 128 итераций почти касательного cast;
+она может сократить расстояние сильнее нужного, но не пропускает камеру через стену.
+
+## Стенд и проверки
+
+Команда: `dotnet run --project src/Platformer.App -c Release --no-build -- --play`.
+Enter/Space запускает Training Track, продолжает паузу, повторяет Failed или
+вызывает Next после финиша; после единственной локации получается GameComplete.
+Escape — пауза/возврат на старт/выход со старта. Это клавиатурный стенд с подсказками
+в терминале, не реализация меню #19. Production-каталог содержит только готовую
+Training Track: тестовые вторые уровни не подменяют Turning Maze.
+
+`--help` работает без окна. Любой `--smoke` ограничен тремя кадрами;
+`--play --smoke` показывает Training Track без ввода, Step и capture.
+`--trace-input` вместе с `--play` выводит JSON-диагностику снимка и игрового кадра
+для X11-драйвера; по умолчанию поток диагностики отключён.
+
+Авторские CPU-тесты: InputRouterTests, FixedStepRunnerTests, CameraRigTests,
+GameplayFrameRunnerTests и GameplayHostTests. Последние проверяют реальный сеанс,
+Scene/Camera, terminal catch-up, переходы, pause/focus/rearm, reset и монеты.
+Отдельные аналитические тесты камеры проверяют стены/наклоны/рёбра/embedded target;
+тесты с BallSimulator сравнивают результат при 1/2/5 ticks за render frame.
+
+Команды X11 и границы ручной приёмки — [input-camera-testing.md](input-camera-testing.md).
+CPU-тесты и автоматический native-прогон не заменяют физическую мышь, настоящий Alt-Tab,
+HiDPI и прохождение обоих игровых уровней. Issue #6 не закрывается автоматически.
+Новых runtime-пакетов/ассетов нет; test-only XTest указан в THIRD_PARTY.

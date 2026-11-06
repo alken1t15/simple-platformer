@@ -5,7 +5,7 @@ namespace Platformer.App;
 
 public readonly record struct GameplayFrameResult(InputFrame Input, CameraPose? Camera, int Ticks);
 
-/// <summary>CPU-порядок кадра для будущих onUpdate/LevelFlow; не реализует сеанс или UI.</summary>
+/// <summary>CPU-порядок кадра для onUpdate/LevelFlow; не реализует сеанс или UI.</summary>
 public sealed class GameplayFrameRunner
 {
     public InputRouter Router { get; } = new();

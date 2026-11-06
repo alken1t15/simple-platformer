@@ -1,17 +1,15 @@
 # Ball Adventure: контракты App и расширений движка v1
 
 Контракт задачи #3 принят в PR #22 (02.11.2026); реализация остаётся задачами команды. Контракт будущей реализации, не заявление о текущих возможностях.
-Core определён в [core-contract-v1.md](core-contract-v1.md); engine base —
-`7d097269004ad59fc014cdeb707ccd9911c63841` (input/cursor #52, audio #51 и overlay #53 приняты upstream).
-Независимая CPU-часть #6 реализована: [ввод/runner/камера](input-camera.md).
-InputRouter пока принимает AppInputSnapshot; native overload InputSnapshot и cursor adapter
-ещё требуют реализации в App #6; необходимый engine API уже доступен. Оконная связь с готовыми CPU GameSession/LevelFlow
-из #8 ещё не подключена. AppScreen используется из LevelFlow, второго объявления нет.
-Ниже сохраняется целевой контракт интеграции.
+Core определён в [core-contract-v1.md](core-contract-v1.md); принятый engine gitlink — 7d09726.
+В #6 реализованы [ввод/runner/камера и оконный host](input-camera.md): NativeInputAdapter
+переносит публичный InputSnapshot в CPU-границу AppInputSnapshot, InputRouter имеет оба overload.
+`--play` связывает GameSession/LevelFlow с окном и курсором; AppScreen используется из LevelFlow.
+Полные меню/HUD/звук и вторая локация ещё требуют отдельных задач.
 В #7 реализованы GameScenePresenter, SkinDefinition/GameSkins и контрактный
 [3D-preview](scene-presenter.md). В #8 добавлены LevelFlow, AppScreen и UserSettings —
 [таблица переходов и callbacks](game-session.md#каталог-и-app). Это CPU-модель с Presenter,
-не подключённый оконный игровой цикл. Опасности #20 подключены к сеансу и Presenter;
+оконный стенд подключён в #6, полный игровой маршрут ещё не реализован. Опасности #20 подключены к сеансу и Presenter;
 меню/ввод/звук интегрируются владельцами #6/#19/#21.
 
 <a id="app"></a>
@@ -24,7 +22,8 @@ InputRouter пока принимает AppInputSnapshot; native overload InputS
 |---|---|
 | `InputFrame InputRouter.Map(InputSnapshot input, AppScreen screen, float yawRadians)` | Возвращает ненулевое значение InputFrame для активного экрана; не двигает шар |
 | `FixedStepRunner.Advance(double frameSeconds, GameCommand latestHeld, Action<GameCommand> step)` | Возвращает число ticks; хранит только последние удержания и OR фронтов Jump/Boost; фронты потребляются первым tick, последующие их не повторяют |
-| `FixedStepRunner.Clear()` | Сбрасывает аккумулятор, удержания и фронты при pause/focus/restart/смене уровня |
+| `FixedStepRunner.Clear()` | Сбрасывает аккумулятор, удержания и фронты вне Step при pause/focus/restart/смене уровня |
+| `FixedStepRunner.RequestClear()` | Callback LevelFlow: внутри Step откладывает очистку до конца текущего tick и прекращает catch-up; вне Step вызывает Clear |
 | `CameraPose CameraRig.Update(Vector2 relativeMouseDelta, Vector3 target, LevelDefinition level, float frameSeconds)` | Один вызов за render frame в Running; yaw затем GameCommand, pitch clamped, позиция с obstruction radius |
 | `LevelFlow.Start(string levelId)` | Новые GameSession/SessionId и Scene; никакого переноса coins/velocity; настройки App сохраняются |
 | `LevelFlow.Next()` | Допустимо после LevelComplete; следующий ID из каталога, после последнего — GameComplete |
@@ -72,7 +71,8 @@ Pitch не влияет на направление движения. R и Escap
 не повторяются в каждом tick; LeftShift/RightShift агрегируются в один BoostPressed.
 
 Mouse delta измеряется в логических пикселях client area; положительный X — поворот вправо:
-yaw -= delta.X*0.003 рад/пиксель, pitch -= delta.Y*0.003.
+yaw -= delta.X*0.003 рад/пиксель, pitch += delta.Y*0.003.
+Вертикаль без инверсии: мышь вверх (delta.Y < 0) поднимает взгляд, мышь вниз опускает.
 Положение камеры: target + (sin(yaw)*cos(pitch), sin(pitch), cos(yaw)*cos(pitch))*distance.
 Default pitch=0.4 рад, clamp[-0.35,1.2], distance6, target=ball.Center+(0,0.3,0).
 Pitch меняет высоту камеры, соглашение forward соответствует взгляду камеры на target.
@@ -224,8 +224,9 @@ App удерживает одну loop music voice, при pause приоста�
 ## Границы готовности
 
 InputSnapshot.Pointer, расширенные InputKey, CursorMode и Engine3D.Audio существуют в закреплённом
-`7d097269`; их игровые adapters ещё не подключены. OverlayFrame/SetOverlay существуют,
-но игровые меню/HUD из #19 ещё не подключены; HiDPI-проверка #16/#17 остаётся открытой.
+`7d09726`; native input/cursor adapter подключён в #6, игровой audio adapter ещё впереди.
+Overlay из раздела UI принят в upstream #53 и game gitlink PR #35; меню/HUD подключаются в #19.
+Настоящий HiDPI с framebuffer≠client остаётся непроверенным в #16/#17.
 Для следующих расширений нужны отдельный upstream PR, engine regression tests и точный game gitlink.
 QA проверяет no-device отдельно от слышимости;
 никакая UI/audio/input реализация не должна зависеть от старой рабочей копии проекта.

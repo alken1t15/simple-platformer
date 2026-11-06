@@ -9,7 +9,7 @@ public readonly record struct InputFrame(GameCommand Gameplay, bool RestartPress
 public readonly record struct MenuInput(int HorizontalStep, int VerticalStep,
     bool ActivatePressed, bool BackPressed, bool PointerPressed, Vector2 PointerPosition);
 
-/// <summary>CPU-граница App до принятия engine input #16. Это не расширение Engine.InputKey.</summary>
+/// <summary>Независимые от окна кнопки CPU-части App; native adapter явно сопоставляет InputKey.</summary>
 [Flags]
 public enum AppButtons
 {

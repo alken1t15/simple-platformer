@@ -1,16 +1,17 @@
 # Ball Adventure: контракты App и расширений движка v1
 
 Контракт задачи #3 принят в PR #22 (02.11.2026); реализация остаётся задачами команды. Контракт будущей реализации, не заявление о текущих возможностях.
-Core определён в [core-contract-v1.md](core-contract-v1.md); принятый engine gitlink — 7d09726.
+Core определён в [core-contract-v1.md](core-contract-v1.md); принятый engine gitlink — `7d097269004ad59fc014cdeb707ccd9911c63841` (overlay PR53/game PR35).
 В #6 реализованы [ввод/runner/камера и оконный host](input-camera.md): NativeInputAdapter
 переносит публичный InputSnapshot в CPU-границу AppInputSnapshot, InputRouter имеет оба overload.
 `--play` связывает GameSession/LevelFlow с окном и курсором; AppScreen используется из LevelFlow.
-Полные меню/HUD/звук и вторая локация ещё требуют отдельных задач.
+Меню/HUD #19 подключены через [MenuController/MenuOverlayAdapter](menu.md);
+игровые WAV/AudioCoordinator и вторая локация ещё требуют #21.
 В #7 реализованы GameScenePresenter, SkinDefinition/GameSkins и контрактный
 [3D-preview](scene-presenter.md). В #8 добавлены LevelFlow, AppScreen и UserSettings —
 [таблица переходов и callbacks](game-session.md#каталог-и-app). Это CPU-модель с Presenter,
 оконный стенд подключён в #6, полный игровой маршрут ещё не реализован. Опасности #20 подключены к сеансу и Presenter;
-меню/ввод/звук интегрируются владельцами #6/#19/#21.
+ввод и UI интегрированы в #6/#19; игровые звук/данные level2 остаются #21.
 
 <a id="app"></a>
 
@@ -137,8 +138,8 @@ Namespace Engine3D.OpenGL, без публичных OpenTK enum/handles.
 
 ## Engine overlay: задача #17
 
-Универсальные immutable данные, реализованные в закреплённом движке из
-[upstream PR #53](https://github.com/alken1t15/simple-3d-engine/pull/53):
+Публичные immutable DTO/API приняты в engine PR53 и закреплены game PR35.
+MenuOverlayAdapter использует их в обычном запуске:
 
 ```csharp
 public readonly record struct UiRect(float X, float Y, float Width, float Height);
@@ -167,8 +168,6 @@ PixelHeight>0, позиции конечны. Вне экрана clipping, не
 Overlay рисуется после3D, корректно возвращает depth/blend/viewport; общий размер framebuffer
 и logical client dimensions применяются только на стороне renderer. При свёрнутом окне кадр не рисуется.
 Refresh рисует последний установленный слой без дополнительного onUpdate; null очищает его.
-API доступен, но игровые layout/hit-test/экраны/HUD остаются #19. Проверки scale=1/2 на GPU
-не заменяют пока не выполненный native HiDPI-прогон с framebuffer≠client.
 
 <a id="audio"></a>
 
@@ -201,8 +200,8 @@ Namespace Engine3D.Audio в отдельном проекте без Core-зав
 не получают прямые AL вызовы. Backend выбирается и проверяется spike, публичный namespace
 и формы методов сохраняются. Инициализация не происходит автоматически при Engine.Create.
 AudioDevice создаётся App на том же основном потоке, ownerthread проверяется до backend вызова.
-AppStartup создаёт один AudioDevice и загружает clips до показа MainMenu; затем создаёт
-AudioCoordinator. Устройство живёт до завершения приложения, не пересоздаётся при Next/Restart.
+Program уже создаёт один AudioDevice до MainMenu и связывает master gain с меню.
+По целевому контракту #21 AppStartup загружает clips и создаёт AudioCoordinator до MainMenu. Устройство живёт до завершения приложения, не пересоздаётся при Next/Restart.
 Начальная MasterVolume берётся из UserSettings; настройки доступны уже в первом меню.
 PCM WAV: RIFF/WAVE, integer16bit little-endian, mono/stereo, sample rate8–48kHz; неподдерживаемый
 формат→InvalidDataException с path, missingfile→FileNotFoundException.
@@ -218,14 +217,14 @@ AllowSilentFallback=true и нет устройства: IsSilent=true/Diagnosti
 чужой/освобождённый clip отклоняется. Clip.Dispose останавливает связанные voices,
 Device.Dispose останавливает/удаляет voices, затем buffers, context/device; повторный Dispose безопасен.
 Stop/Dispose voice повторяемы; после Dispose остальные методы→ObjectDisposedException.
-App удерживает одну loop music voice, при pause приостанавливает её, resume не создаёт вторую.
+По целевому контракту App удерживает одну loop music voice, при pause приостанавливает её, resume не создаёт вторую.
 Нативные пакеты и лицензии подтверждаются spike до принятия реализации #18.
 
 ## Границы готовности
 
 InputSnapshot.Pointer, расширенные InputKey, CursorMode и Engine3D.Audio существуют в закреплённом
-`7d09726`; native input/cursor adapter подключён в #6, игровой audio adapter ещё впереди.
-Overlay из раздела UI принят в upstream #53 и game gitlink PR #35; меню/HUD подключаются в #19.
+`7d09726` вместе с OverlayFrame/SetOverlay. Native input/cursor и меню/HUD подключены в #6/#19;
+master gain связан с AudioDevice. Игровые клипы/AudioCoordinator ещё впереди.
 Настоящий HiDPI с framebuffer≠client остаётся непроверенным в #16/#17.
 Для следующих расширений нужны отдельный upstream PR, engine regression tests и точный game gitlink.
 QA проверяет no-device отдельно от слышимости;

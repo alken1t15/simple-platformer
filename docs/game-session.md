@@ -2,9 +2,9 @@
 
 Реализована CPU-часть [задачи #8](https://github.com/alken1t15/simple-platformer/issues/8):
 GameSession, события, статические триггеры, LevelCatalog и App/LevelFlow.
-Program сохраняет техническую сцену/Presenter preview и добавляет оконный стенд
-`--play` из #6 с вводом/runner/камерой. Меню (#19), Turning Maze и AudioCoordinator (#21)
-подключаются отдельно. [Проверки host](input-camera-testing.md).
+Program открывает графическое меню и игровой host #6/#19 с вводом/runner/камерой.
+Техническая сцена и Presenter сохранены отдельными preview; Turning Maze и AudioCoordinator
+из #21 ещё требуют интеграции. [Меню и HUD](menu.md). [Проверки host](input-camera-testing.md).
 Опасности (#20) подключены к CPU-сеансу и Presenter через snapshot.
 Engine и закреплённый gitlink не изменены.
 
@@ -121,3 +121,8 @@ GameSessionHazardTests/LevelFlowHazardTests проверяют приорите�
 Графический smoke не подтверждает ручное управление или прохождение двух локаций.
 GameplayHostTests проверяют стык LevelFlow/runner/Presenter: завершение останавливает catch-up
 после одного terminal tick через RequestClear, без рекурсивного Clear и fault runner.
+
+В интеграции #19 LevelFlow также предоставляет OpenLevelSelect/OpenSettings/OpenSkins/Back.
+Подменю возвращается на исходный экран; Settings из Paused сохраняет паузу, Escape в
+Paused вызывает Continue. Escape в MainMenu не закрывает приложение — используется Exit.
+Эти переходы очищают ввод через тот же callback host, не создавая другого сеанса.

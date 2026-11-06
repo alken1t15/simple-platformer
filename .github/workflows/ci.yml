@@ -85,7 +85,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends xvfb xauth imagemagick libgl1 libgl1-mesa-dri libx11-6 libxtst6 libxcursor1 libxext6 libxi6 libxinerama1 libxrandr2
       - run: dotnet restore Platformer.sln
       - run: dotnet build Platformer.sln -c Release --no-restore
-      - name: Render three frames and exit
+      - name: Render main menu without input and exit
         timeout-minutes: 2
         run: timeout 60s xvfb-run -a dotnet run --project src/Platformer.App -c Release --no-build -- --smoke
       - name: Render presenter objects and both skins
@@ -93,10 +93,12 @@ jobs:
         run: |
           timeout 60s xvfb-run -a dotnet run --project src/Platformer.App -c Release --no-build -- --presenter --smoke
           timeout 60s xvfb-run -a dotnet run --project src/Platformer.App -c Release --no-build -- --presenter --skin orange --overview --smoke
-      - name: Render input and camera host without capture
+      - name: Render gameplay alias and legacy preview without capture
         timeout-minutes: 2
-        run: timeout 60s xvfb-run -a dotnet run --project src/Platformer.App -c Release --no-build -- --play --smoke
-      - name: Check native game input and camera on X11
+        run: |
+          timeout 60s xvfb-run -a dotnet run --project src/Platformer.App -c Release --no-build -- --play --smoke
+          timeout 60s xvfb-run -a dotnet run --project src/Platformer.App -c Release --no-build -- --legacy --smoke
+      - name: Check native input, menus, HUD and camera on X11
         timeout-minutes: 2
         run: timeout 60s xvfb-run -a -s '-screen 0 1280x800x24' python3 scripts/check_gameplay_x11.py
       - name: Capture presenter scene on Linux

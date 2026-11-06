@@ -6,23 +6,26 @@ namespace Platformer.App;
 
 /// <summary>
 /// Связывает ввод, LevelFlow, runner и публичные Scene/Camera на потоке окна.
-/// Клавиатурный стенд #6; полноценные меню/HUD принадлежат #19.
+/// MenuController владеет выбором и переходами; host — временем, камерой и сценой.
 /// </summary>
 public sealed class GameplayHost
 {
     private readonly LevelCatalog _catalog;
     private readonly GameScenePresenter _preview;
     private bool _resetRequested;
-    private bool _wasFocused;
+    private bool _resetMenuPointer = true;
 
     public LevelFlow Flow { get; }
     public GameplayFrameRunner Frames { get; }
+    public MenuController Menu { get; }
+    public MenuView View { get; private set; }
     public Scene Scene { get; } = new();
     public Camera Camera { get; } = new() { NearPlane = 0.05f, FarPlane = 150f };
-    public bool CloseRequested { get; private set; }
+    public bool CloseRequested => Menu.CloseRequested;
     public bool CaptureRequested => !CloseRequested && Flow.Screen == AppScreen.Playing && Frames.CaptureRequested;
 
-    public GameplayHost(LevelCatalog catalog, SimulationSettings settings, UserSettings userSettings, bool smoke = false)
+    public GameplayHost(LevelCatalog catalog, SimulationSettings settings, UserSettings userSettings, bool smoke = false,
+        Action<float>? applyMasterVolume = null)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         _catalog = catalog;
@@ -33,46 +36,30 @@ public sealed class GameplayHost
             Frames.Clock.RequestClear();
             _resetRequested = true;
         });
+        Menu = new MenuController(Flow, catalog, applyMasterVolume);
+        View = Menu.BuildView(960f, 640f);
         _preview = new GameScenePresenter(catalog.Levels[0]);
         ApplyCamera(Frames.Camera.Update(Vector2.Zero, Target, CurrentLevel, 0f));
         SynchronizeScene();
     }
 
-    public GameplayFrameResult Advance(AppInputSnapshot input, double frameSeconds)
+    public GameplayFrameResult Advance(AppInputSnapshot input, double frameSeconds,
+        float clientWidth = 960f, float clientHeight = 640f)
     {
         if (!double.IsFinite(frameSeconds) || frameSeconds < 0d)
             throw new ArgumentOutOfRangeException(nameof(frameSeconds));
+        MenuLayout.ValidateSize(clientWidth, clientHeight);
         if (CloseRequested) return default;
-        if (!input.IsFocused && _wasFocused) Flow.LoseFocus();
-        _wasFocused = input.IsFocused;
+        bool wasPlaying = Flow.Screen == AppScreen.Playing;
+        if (_resetMenuPointer && !wasPlaying && input.IsFocused)
+        {
+            Menu.ResetPointerPosition(input.PointerPosition);
+            _resetMenuPointer = false;
+        }
 
         GameplayFrameResult result = Frames.Advance(input, frameSeconds, Target, CurrentLevel, Flow.Step);
-        bool resetCamera = false;
-        if (input.IsFocused)
-        {
-            if (result.Input.PausePressed) Flow.Pause();
-            else if (result.Input.RestartPressed)
-            {
-                Flow.Restart();
-                resetCamera = true;
-            }
-            else if (result.Input.Menu.ActivatePressed)
-            {
-                switch (Flow.Screen)
-                {
-                    case AppScreen.MainMenu: Flow.Start(_catalog.Levels[0].Id); resetCamera = true; break;
-                    case AppScreen.Paused: Flow.Continue(); break;
-                    case AppScreen.Failed: Flow.Restart(); resetCamera = true; break;
-                    case AppScreen.LevelResult: Flow.Next(); resetCamera = true; break;
-                    case AppScreen.GameComplete: Flow.MainMenu(); resetCamera = true; break;
-                }
-            }
-            else if (result.Input.Menu.BackPressed)
-            {
-                if (Flow.Screen == AppScreen.MainMenu) CloseRequested = true;
-                else { Flow.MainMenu(); resetCamera = true; }
-            }
-        }
+        bool resetCamera = Menu.Handle(result.Input, clientWidth, clientHeight, input.IsFocused).ResetCamera;
+        if (wasPlaying && Flow.Screen != AppScreen.Playing) _resetMenuPointer = true;
         if (_resetRequested || Frames.Screen != Flow.Screen)
         {
             Frames.SetScreen(Flow.Screen, resetCamera);
@@ -81,8 +68,12 @@ public sealed class GameplayHost
         if (resetCamera) ApplyCamera(Frames.Camera.Update(Vector2.Zero, Target, CurrentLevel, 0f));
         else if (result.Camera is { } pose) ApplyCamera(pose);
         SynchronizeScene();
+        RefreshView(clientWidth, clientHeight);
         return result;
     }
+
+    /// <summary>Resize/smoke обновляют UI без игрового ввода и ticks.</summary>
+    public void RefreshView(float clientWidth, float clientHeight) => View = Menu.BuildView(clientWidth, clientHeight);
 
     private LevelDefinition CurrentLevel => Flow.Snapshot is { } snapshot
         ? _catalog.Get(snapshot.LevelId) : _catalog.Levels[0];
@@ -99,6 +90,7 @@ public sealed class GameplayHost
         // Engine.Run удерживает один Scene весь lifecycle. Presenter меняется при Start/Next,
         // его объекты и удаление собранных монет переносим через публичный Scene API.
         Scene source = (Flow.Presenter ?? _preview).Scene;
+        _preview.BallObject.Material = GameSkins.Get(Flow.UserSettings.SkinId).Material;
         if (Scene.Objects.SequenceEqual(source.Objects)) return;
         var desired = new HashSet<SceneObject>(source.Objects);
         foreach (var item in Scene.Objects.ToArray())

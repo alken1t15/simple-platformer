@@ -26,6 +26,14 @@ public sealed class GameplayHostTests
         host.Advance(new(true), 0d);
     }
 
+    private static void Click(GameplayHost host, string id)
+    {
+        host.Advance(new(true), 0d);
+        var bounds = host.View.Controls.Single(control => control.Id == id).Bounds;
+        host.Advance(new(true, AppButtons.PointerLeft, AppButtons.PointerLeft,
+            PointerPosition: new(bounds.X + bounds.Width / 2f, bounds.Y + bounds.Height / 2f)), 0d);
+    }
+
     [TestMethod]
     public void StartMouseMovementAndPresenterUseRealSessionAndStableScene()
     {
@@ -166,7 +174,7 @@ public sealed class GameplayHostTests
         Assert.IsFalse(host.CaptureRequested);
         Assert.AreEqual(0, host.Advance(new(true, AppButtons.W), 10d).Ticks);
         Assert.AreEqual(0d, host.Frames.Clock.AccumulatedSeconds);
-        Press(host, AppButtons.Enter);
+        Click(host, "main-menu");
         Assert.AreEqual(AppScreen.MainMenu, host.Flow.Screen);
     }
 
@@ -196,9 +204,11 @@ public sealed class GameplayHostTests
         Assert.IsFalse(host.CaptureRequested);
         Press(host, AppButtons.Escape);
         Assert.AreEqual(AppScreen.Paused, host.Flow.Screen);
-        Press(host, AppButtons.Escape);
+        Click(host, "main-menu");
         Assert.AreEqual(AppScreen.MainMenu, host.Flow.Screen);
         Press(host, AppButtons.Escape);
+        Assert.IsFalse(host.CloseRequested);
+        Click(host, "exit");
         Assert.IsTrue(host.CloseRequested);
         Assert.IsFalse(host.CaptureRequested);
     }

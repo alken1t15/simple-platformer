@@ -19,6 +19,7 @@ public sealed class LevelFlow
     private readonly Action stopGameplayAudio;
     private readonly Action<bool> setAudioPaused;
     private GameSession? session;
+    private AppScreen returnScreen = AppScreen.MainMenu;
     private readonly List<LevelResult> completed = [];
 
     public UserSettings UserSettings { get; }
@@ -93,6 +94,52 @@ public sealed class LevelFlow
         resetTransientState();
         setAudioPaused(false);
         Screen = AppScreen.Playing;
+    }
+
+    public void OpenLevelSelect()
+    {
+        Require(AppScreen.MainMenu, AppScreen.Failed, AppScreen.GameComplete);
+        OpenMenu(AppScreen.LevelSelect);
+    }
+
+    public void OpenSettings()
+    {
+        Require(AppScreen.MainMenu, AppScreen.Paused);
+        OpenMenu(AppScreen.Settings);
+    }
+
+    public void OpenSkins()
+    {
+        Require(AppScreen.MainMenu);
+        OpenMenu(AppScreen.SkinSelect);
+    }
+
+    /// <summary>Settings сохраняет паузу; Escape в MainMenu не закрывает приложение.</summary>
+    public void Back()
+    {
+        switch (Screen)
+        {
+            case AppScreen.MainMenu: return;
+            case AppScreen.LevelSelect:
+            case AppScreen.Settings:
+            case AppScreen.SkinSelect:
+                resetTransientState();
+                Screen = returnScreen;
+                return;
+            case AppScreen.Paused: Continue(); return;
+            case AppScreen.Failed:
+            case AppScreen.LevelResult:
+            case AppScreen.GameComplete: MainMenu(); return;
+            default: throw new InvalidOperationException($"Возврат недоступен из {Screen}");
+        }
+    }
+
+    private void OpenMenu(AppScreen screen)
+    {
+        // Не сбрасываем audio pause при переходе Paused -> Settings -> Paused.
+        resetTransientState();
+        returnScreen = Screen;
+        Screen = screen;
     }
 
     /// <summary>Потеря фокуса приостанавливает Playing; активация окна сама игру не продолжает.</summary>

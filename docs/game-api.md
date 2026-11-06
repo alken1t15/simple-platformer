@@ -9,7 +9,8 @@
 [GameScenePresenter/скины](scene-presenter.md), без логики GameSession из #8.
 В #8 реализованы GameSession/GameEvent/LevelCatalog и App/LevelFlow/UserSettings —
 [сеанс и переходы](game-session.md). Опасности #20 подключены к Step/reset и Presenter
-через snapshot; ввод и оконный host подключены в `--play` (#6); меню и audio host ещё не подключены.
+через snapshot; ввод и оконный host подключены в `--play` (#6); меню/HUD подключены через [MenuController и overlay adapter](menu.md);
+master gain связан с AudioDevice, игровые звуки/AudioCoordinator ещё не подключены.
 Остальные типы остаются спецификацией.
 Прежняя техническая сцена сохранена;
 3D-представление проверяется отдельным preview.

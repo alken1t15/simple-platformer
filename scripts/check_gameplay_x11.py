@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Нативный X11/XTest-прогон игрового стенда #6 (адаптация engine check_input_x11.py, MIT). Запускать на отдельном тестовом дисплее.
+"""Нативный X11/XTest-прогон управления и меню #6/#19 (адаптация engine check_input_x11.py, MIT). Запускать на отдельном тестовом дисплее.
 
 Требует собранный Platformer.App, DISPLAY, libX11 и libXtst; Python-пакеты не нужны.
 Синтезирует ввод и переключает фокус; это не ручная проверка устройства/WM/HiDPI.
@@ -176,15 +176,15 @@ def main():
 
     try:
         assembly = Path(__file__).resolve().parents[1] / "src/Platformer.App/bin/Release/net10.0/Platformer.App.dll"
-        env = dict(os.environ, XDG_SESSION_TYPE="x11")
+        env = dict(os.environ, XDG_SESSION_TYPE="x11", ALSOFT_DRIVERS="null")
         env.pop("WAYLAND_DISPLAY", None)
         process = subprocess.Popen(["dotnet", str(assembly), "--play", "--trace-input"], stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT, text=True, env=env)
         reader = threading.Thread(target=read_lines, daemon=True)
         reader.start()
         until(lambda f: f.get("frame", 0) >= 3, "startup/render")
-        native = find_window(root, "Ball Adventure - input/camera test")
-        assert native, "Окно стенда #6 не найдено."
+        native = find_window(root, "Ball Adventure")
+        assert native, "Окно Ball Adventure не найдено."
         x.XMapRaised(display, native)
         focus(native)
         until(lambda f: f["focused"], "focus")
@@ -199,6 +199,32 @@ def main():
             time.sleep(0.05)
             key(symbol, False)
 
+        def latest():
+            frames = collect(0.05)
+            return frames[-1] if frames else receive(1)
+
+        def click_control(control_id, screen):
+            frame = latest()
+            control = next(control for control in frame["controls"] if control["id"] == control_id)
+            px, py = int(control["x"] + control["width"] / 2), int(control["y"] + control["height"] / 2)
+            x.XWarpPointer(display, 0, native, 0, 0, 0, 0, px, py)
+            x.XFlush(display)
+            until(lambda f: abs(f["pointerX"] - px) < 1 and abs(f["pointerY"] - py) < 1, "hover " + control_id)
+            button(1, True)
+            clicked = until(lambda f: has(f, "pressed", "PointerLeft"), "click " + control_id)
+            button(1, False)
+            # Exit завершает Run в этом callback: следующий snapshot уже не обязан появиться.
+            if clicked["screen"] == screen:
+                return clicked
+            return until(lambda f: f["screen"] == screen, "screen after " + control_id)
+
+        def capture(name):
+            if not shutil.which("import"):
+                return
+            frame = latest()
+            until(lambda f: f["frame"] >= frame["frame"] + 2, "render before " + name)
+            subprocess.run(["import", "-window", str(native), str(output / (name + ".png"))], check=True)
+
         for symbol, name in [("w", "W"), ("a", "A"), ("s", "S"), ("d", "D"),
                              ("Shift_L", "LeftShift"), ("Shift_R", "RightShift"),
                              ("Up", "Up"), ("Down", "Down"), ("Left", "Left"),
@@ -208,17 +234,48 @@ def main():
             assert f["screen"] == "MainMenu" and f["tick"] is None and f["cursor"] == "Normal"
             key(symbol, False)
             until(lambda f: has(f, "released", name), name + " up")
-        x.XWarpPointer(display, 0, native, 0, 0, 0, 0, 300, 250)
+        x.XWarpPointer(display, 0, native, 0, 0, 0, 0, 100, 100)
         x.XFlush(display)
-        until(lambda f: abs(f["pointerX"] - 300) < 1 and abs(f["pointerY"] - 250) < 1, "pointer mapping")
+        until(lambda f: abs(f["pointerX"] - 100) < 1 and abs(f["pointerY"] - 100) < 1, "pointer mapping")
         button(1, True)
         until(lambda f: has(f, "pressed", "PointerLeft"), "pointer press")
         button(1, False)
         until(lambda f: has(f, "released", "PointerLeft"), "pointer release")
         print("PASS: native adapter, клавиши/фронты/указатель; меню без ticks/capture")
 
-        press("Return")
-        start = until(lambda f: f["screen"] == "Playing" and f["cursor"] == "Captured", "start/capture")
+        capture("main-menu")
+        levels = click_control("levels", "LevelSelect")
+        assert len([control for control in levels["controls"] if control["id"].startswith("level:")]) == 1
+        x.XResizeWindow(display, native, 640, 480)
+        x.XFlush(display)
+        until(lambda f: f["clientWidth"] == 640 and f["clientHeight"] == 480, "menu resize logical geometry")
+        capture("level-select")
+        click_control("back", "MainMenu")
+        click_control("settings", "Settings")
+        click_control("volume", "Settings")
+        until(lambda f: abs(f["audioVolume"] - 0.5) < 0.02, "volume slider -> AudioDevice")
+        press("Left")
+        until(lambda f: abs(f["audioVolume"] - 0.45) < 0.02, "keyboard volume -> AudioDevice")
+        click_control("mute", "Settings")
+        until(lambda f: f["muted"] and f["audioVolume"] == 0, "mute -> AudioDevice")
+        click_control("mute", "Settings")
+        until(lambda f: not f["muted"] and abs(f["audioVolume"] - 0.45) < 0.02, "unmute restores volume")
+        capture("settings")
+        click_control("back", "MainMenu")
+        click_control("skins", "SkinSelect")
+        click_control("skin:orange", "SkinSelect")
+        click_control("select", "SkinSelect")
+        until(lambda f: f["skin"] == "orange", "apply skin")
+        capture("skins")
+        click_control("back", "MainMenu")
+        x.XResizeWindow(display, native, 960, 640)
+        x.XFlush(display)
+        until(lambda f: f["clientWidth"] == 960 and f["clientHeight"] == 640, "restore menu size")
+        print("PASS: видимые MainMenu/LevelSelect/Settings/Skins, resize hit-test, master volume/mute и skin")
+
+        start = click_control("play", "Playing")
+        assert start["cursor"] == "Captured"
+        assert any(text.startswith("Coins ") for text in start["uiTexts"]), "HUD не подключён"
         key("w", True)
         until(lambda f: f["z"] < start["z"] - 0.03 and f["moveZ"] < -0.9, "W movement")
         key("w", False)
@@ -250,6 +307,10 @@ def main():
         press("Escape")
         paused = until(lambda f: f["screen"] == "Paused" and f["cursor"] == "Normal", "pause")
         assert all(f["tick"] == paused["tick"] for f in collect(0.15)), "Пауза продвигает время"
+        capture("paused")
+        click_control("settings", "Settings")
+        assert all(f["tick"] == paused["tick"] for f in collect(0.1)), "Настройки сняли паузу"
+        click_control("back", "Paused")
         key("w", True)
         until(lambda f: has(f, "down", "W"), "W held in pause")
         press("Return")
@@ -314,13 +375,13 @@ def main():
         focus_sink = None
         x.XSync(display, False)
         collect()
-        if shutil.which("import"):
-            subprocess.run(["import", "-window", str(native), str(output / "training-track.png")], check=True)
+        capture("training-track")
         press("Escape")
         until(lambda f: f["screen"] == "Paused", "final pause")
+        click_control("main-menu", "MainMenu")
         press("Escape")
-        until(lambda f: f["screen"] == "MainMenu" and f["cursor"] == "Normal", "back to start")
-        press("Escape")
+        assert all(f["screen"] == "MainMenu" for f in collect()), "Escape закрыл MainMenu"
+        click_control("exit", "MainMenu")
         assert process.wait(timeout=5) == 0, "Нештатный exit"
         reader.join(timeout=2)
         print("PASS: возврат к старту, release capture и штатный exit")

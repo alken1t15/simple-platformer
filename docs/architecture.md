@@ -7,8 +7,8 @@
 ```text
 Platformer.App → Platformer.Core (только стандартная .NET)
       ├──────→ Engine3D.Core / Engine3D.OpenGL
-      ├──────→ Engine3D.Audio (отдельный сервис, без автоматического создания устройства)
-      └──────→ публичный input/cursor API; UI overlay доступен, меню/HUD подключаются в #19
+      ├──────→ Engine3D.Audio (Program создаёт устройство; MenuController задаёт master gain)
+      └──────→ публичные input/cursor API и OverlayFrame/SetOverlay
 Platformer.Tests → Core / CPU-часть App
 ```
 
@@ -23,16 +23,18 @@ Platformer.Tests → Core / CPU-часть App
 | Core/BallSimulation | Реализованы CPU-шаг, опора/прыжок/boost, sphere/OBB sweep и Path; физика подключена к --play | Владимир |
 | Core/Obstacles | Вращение опасностей по времени симуляции, их OBB, проверка пересечения за шаг | Роман |
 | Core/Session + App/LevelFlow | Реализованы CPU-сеанс, монеты/финиш/KillY/hazards/reset/events, каталог/переходы/пауза/GameComplete; оконный host --play подключён | Владимир |
-| App/Input + Clock | Реализованы CPU-маршрутизация/runner, native adapter и host --play с общим AppScreen из LevelFlow; меню/HUD отдельно в #19 | Николай |
+| App/Input + Clock | Реализованы CPU-маршрутизация/runner, native adapter и host --play с общим AppScreen из LevelFlow; меню/HUD #19 подключены через MenuController и MenuOverlayAdapter | Николай |
 | App/Camera | Реализованы орбита, pitch clamp, yaw-relative движение и отступ от OBB; поза передаётся в публичную Camera оконного host | Николай |
-| App/Presenter | Реализованы процедурные меши, два скина, Apply snapshot/Path и контрактный 3D-preview; snapshot настоящего сеанса отображается в --play; полный маршрут ещё требует меню/level2 | Роман |
-| App/Menu | Главное меню, уровни, пауза, настройки звука, скины, результаты и единственный HUD/overlay | Николай |
+| App/Presenter | Реализованы процедурные меши, два скина, Apply snapshot/Path и контрактный 3D-preview; snapshot настоящего сеанса отображается в --play; полный маршрут ещё требует level2/audio | Роман |
+| App/Menu | Подключены MainMenu/LevelSelect/Settings/Skins/Paused/Failed/Results и единственный HUD/overlay; данные level2/звук отдельно | Николай |
 | App/AudioCoordinator | Идемпотентные команды воспроизведения из событий, настройки громкости и lifecycle | Роман |
 | Tests/QA | Независимые CPU-регрессии, интеграционные, ручные Linux и чистый запуск | Константин / Артём |
 
 Требования, архитектура, контракты, настройка CI/репозитория, интеграционные решения и сдача —
 Team Lead с Codex. Таблица описывает реализацию согласованных контрактов участниками.
 Engine-расширения имеют собственные PR/тесты и фиксированный commit до подключения в игре.
+Overlay API из upstream #53 доступен в закреплённой версии; меню/HUD и hit-test #19
+подключены в App. Реальный HiDPI с framebuffer≠client остаётся отдельной непроведённой проверкой.
 
 ## Цикл кадра и владение
 
@@ -54,7 +56,8 @@ WASD преобразуется в нормализованный вектор X
 на согласованном потоке Engine.Create. Engine владеет и освобождает GPU/UI-ресурсы.
 App владеет игровыми данными и отдельным AudioDevice; при завершении App вызывает его Dispose,
 а AudioDevice освобождает свои voices/buffers/context до завершения приложения. Пауза останавливает игровые эффекты/музыку по контракту, меню остаётся доступным.
-Оконный стенд `--play` из #6 пока не создаёт AudioCoordinator и не подменяет полноценное меню #19.
+Игровой host #6/#19 создаёт один MenuController; Program создаёт AudioDevice и связывает master gain с Settings.
+AudioCoordinator/звуковые ресурсы ещё не подключены. Меню и HUD рисуются через публичный overlay.
 Его host переносит объекты текущего Presenter в один Scene, переданный Engine.Run;
 Start/Next не создают второго окна. Terminal tick запрашивает отложенный сброс runner,
 который прекращает catch-up после текущего Step без рекурсивного Clear.

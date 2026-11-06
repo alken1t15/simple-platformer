@@ -4,7 +4,8 @@
 Он включает принятые [input/cursor PR #52](https://github.com/alken1t15/simple-3d-engine/pull/52)
 и [audio PR #51](https://github.com/alken1t15/simple-3d-engine/pull/51),
 а также [overlay PR #53](https://github.com/alken1t15/simple-3d-engine/pull/53).
-Ниже различаются доступное API зависимости и ещё не подключённая игровая реализация.
+Принятый SHA закреплён [игровым PR #35](https://github.com/alken1t15/simple-platformer/pull/35).
+Ниже различаются доступное API, подключённые меню/управление и оставшиеся ресурсы игры.
 
 | Возможность | Что есть | Что требуется / граница |
 |---|---|---|
@@ -12,8 +13,8 @@
 | Геометрия шара | MeshData принимает произвольные вершины; PrimitiveFactory только cube/plane | Процедурная UV-сфера в App без GL; не требуется новый тип renderer или импорт моделей |
 | Клавиши | A/D/W/S, оба Shift, Space/R/Escape, Enter, стрелки, Tab; down/pressed/released/focus | Native adapter подключён к InputRouter/host (#6); после активации удержания требуют release/new press |
 | Мышь/захват курсора | Immutable PointerSnapshot: logical Position/Delta/buttons/edges; CursorMode.Normal/Captured | Adapter подключён на owner thread; focus loss освобождает capture, gain не восстанавливает его автоматически |
-| UI / текст / overlay | Immutable OverlayFrame с panels/images/texts и Engine.SetOverlay(frame/null); logical client pixels, ASCII-атлас, clipping/resize/Refresh | Меню/HUD/layout/hit-test реализуются в App (#19); реальный framebuffer≠client HiDPI не проверен |
-| Звук | Отдельный Engine3D.Audio: PCM16 WAV mono/stereo 8–48kHz, voices/loop/pause/volume/dispose, silent fallback | Игровые WAV/AudioCoordinator в #21; device создаёт App явно, preview пока не воспроизводит звук |
+| UI / текст / overlay | Immutable OverlayFrame с panels/images/texts и Engine.SetOverlay(frame/null); logical client pixels, ASCII-атлас, clipping/resize/Refresh | Меню/HUD/layout/hit-test подключены в App (#19); реальный framebuffer≠client HiDPI не проверен |
+| Звук | Отдельный Engine3D.Audio: PCM16 WAV mono/stereo 8–48kHz, voices/loop/pause/volume/dispose, silent fallback | Игровые WAV/AudioCoordinator в #21; Program создаёт AudioDevice и связывает volume/mute; игровые ресурсы ещё отсутствуют |
 | Физика | Не входила в движок | BallSimulation и коллизии реализуются в Platformer.Core, а не в renderer |
 
 ## Изменение зависимости
@@ -27,11 +28,11 @@ checkout, отдельный upstream PR, проверки, review и merge то
 
 ### Что подключать участникам
 
-- #6: `--play` читает `engine.Input` один раз в onUpdate, NativeInputAdapter переносит snapshot
-  в AppInputSnapshot; GameplayHost связывает native cursor с CaptureRequested и LevelFlow.
-  Меню/HUD подключаются отдельно в #19.
-- #21: использовать публичный Engine3D.Audio; App уже имеет ProjectReference, устройство/ресурсы
-  создаёт и освобождает будущий AppStartup. Игровых WAV/event mapping этим обновлением не добавлено.
+- #6/#19: InputSnapshot читается один раз в onUpdate; native cursor, LevelFlow и графический
+  UI/HUD подключены. [Проверки](input-camera-testing.md); наличие автоматического прогона
+  не означает ручную приёмку физической мыши/WM/HiDPI.
+- #21: использовать публичный Engine3D.Audio; App уже имеет ProjectReference, Program уже создаёт/освобождает устройство,
+  загрузка ресурсов и AudioCoordinator ещё требуют #21. Игровых WAV/event mapping этим обновлением не добавлено.
 - #19: собирать OverlayFrame из модели меню/HUD и вызывать SetOverlay до Run или в onUpdate
   на owner thread; null очищает слой. Раскладка/hit-test остаются в App, не в движке.
 - #16/#17: native HiDPI с framebuffer≠client ещё не проверен; synthetic GPU scale=2 и обычный

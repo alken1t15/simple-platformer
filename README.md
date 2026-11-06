@@ -1,115 +1,90 @@
 # Ball Adventure
 
-Проект 3D-платформера на C#/.NET 10 и [Simple 3D Engine](https://github.com/alken1t15/simple-3d-engine):
-шарик проходит две локации с мостами, наклонами, монетами и вращающимися препятствиями.
-Целевая версия включает WASD/прыжок/ускорение, камеру мышью, звук и меню уровней/громкости/скинов.
-Цель — Linux, три недели с 02.11.2026, готовность не позднее 23.11.2026.
+3D-платформер на C#/.NET 10 и [Simple 3D Engine](https://github.com/alken1t15/simple-3d-engine).
+Шар перемещается в X/Z, Y вверх; мышь поворачивает камеру от третьего лица.
+Цель проекта — Linux, две локации с наклонами/мостами, монетами, вращающимися
+опасностями, звуком и меню уровней/громкости/скинов. План — три недели с 02.11.2026,
+готовность не позднее 23.11.2026; это план, а не подтверждение полной готовности.
 
-**Сейчас это частичная реализация:** есть технические preview и стенд `--play` с управлением
-Training Track, мышью, камерой, физикой и сеансом. Полные меню/HUD, вторая локация и
-игровой звук ещё не подключены. Это не готовая Ball Adventure.
+**Сейчас подключены управление, камера, меню и HUD для Training Track.**
+Обычный запуск открывает графическое Main Menu в том же окне, что и 3D-сцена.
+Работают Play, выбор доступного уровня, настройки master volume/mute, скины,
+пауза, повтор и результаты. В каталоге пока одна настоящая локация;
+Turning Maze, игровые WAV и AudioCoordinator остаются в #21.
+Полное прохождение двух локаций и слышимый игровой звук ещё не подтверждены.
 
-В Core подготовлены неизменяемые 3D-данные первой локации
-[Training Track](docs/training-track.md): `TrainingTrack.Create()`, OBB дорожек,
-наклон, мост, прыжковый зазор и 10 монет. Данные подключены к 3D-preview;
-управление доступно в `--play`, ручная приёмка полного прохождения ещё требуется.
+В Core реализованы [Training Track](docs/training-track.md),
+[физика шара](docs/ball-physics.md), [сеанс/монеты/опасности](docs/game-session.md).
+[Presenter](docs/scene-presenter.md) показывает настоящий snapshot сеанса;
+[ввод/камера](docs/input-camera.md) и [меню/HUD](docs/menu.md) связаны через один LevelFlow.
+Технические preview сохранены отдельными режимами.
 
-В Core реализована [физика шара](docs/ball-physics.md): фиксированный шаг,
-движение/прыжок/boost и непрерывные столкновения сферы со статическими OBB.
-Есть CPU-проверки наклонов, тонких поверхностей и участков Training Track.
-Физика подключена к оконному стенду `--play`; полное ручное прохождение ещё не подтверждено.
-
-В App подключены [ввод, фиксированный шаг и камера](docs/input-camera.md) из #6:
-публичный snapshot движка читается один раз в onUpdate, LevelFlow получает команды,
-камера поворачивается мышью, фокус ставит паузу. В `--play` Enter/Space запускает или
-продолжает Training Track; полноценное графическое меню остаётся задачей #19.
-
-В App реализован [3D Presenter](docs/scene-presenter.md): шар, скины classic-blue/orange,
-дорожки, монеты, рамка финиша и отображение поз опасностей. Отдельный preview показывает
-их на сценарных snapshot; `--play` использует Presenter настоящего сеанса.
-
-В #8 реализована [CPU-часть сеанса и переходов](docs/game-session.md): монеты/финиш
-по Path, KillY, события, Restart, LevelCatalog и App/LevelFlow с сохранением настроек.
-Опасности из #20 проверяются по полному Path и времени шага до монет/финиша;
-контакт завершает попытку поражением. Snapshot передаёт позы балок в Presenter,
-Restart возвращает начальную фазу. Оконный host подключён в `--play`;
-настоящий маршрут двух локаций требует данных #21 и полноценных меню #19.
-
-## Подготовка
+## Подготовка и проверки
 
 Нужны Git и .NET 10 **SDK** по [global.json](global.json). SDK 8/9 и один Runtime не подходят.
-Первый restore требует NuGet; графический запуск требует дисплей и OpenGL 3.3.
+Графический запуск требует дисплей и OpenGL 3.3. Для первого restore нужен NuGet.
 
 ```sh
 git clone --recurse-submodules https://github.com/alken1t15/simple-platformer.git
 cd simple-platformer
-```
-
-Для существующего клона:
-
-```sh
 git submodule update --init --recursive
 dotnet --version
-```
-
-Движок закреплён submodule `external/engine` на commit
-`7d097269004ad59fc014cdeb707ccd9911c63841`: публичные клавиши/мышь/CursorMode из
-[PR движка №52](https://github.com/alken1t15/simple-3d-engine/pull/52) и аудиосервис из
-[PR №51](https://github.com/alken1t15/simple-3d-engine/pull/51), overlay из
-[PR №53](https://github.com/alken1t15/simple-3d-engine/pull/53). Используется принятый squash SHA,
-а не HEAD ветки автора. [Возможности и ограничения](docs/engine-integration.md).
-
-App ссылается на `Engine3D.Audio`, поэтому обычная сборка проверяет доступность аудио API.
-Устройство автоматически не создаётся; в preview звука пока нет. Для будущего воспроизведения
-на Debian/Ubuntu/Mint нужна системная `libopenal1`; без устройства доступен диагностируемый
-silent fallback. Silent/null-driver проверки не подтверждают слышимость.
-OverlayFrame/SetOverlay доступны для меню и HUD задачи #19; игровые экраны ещё не реализованы.
-Встроенный ASCII-атлас и его лицензия поставляются движком; меню проектируется на английском.
-Реальный HiDPI с framebuffer≠client ещё не проверен; synthetic GPU scale=2 этого не подтверждает.
-Native input/cursor подключён в #6; игровой audio adapter остаётся задачей #21.
-Изменения движка вносятся отдельным PR; рабочая копия зависимости в игре не редактируется.
-Проверка, сборка и тесты одной командой (PowerShell 7):
-
-```powershell
-pwsh -NoProfile -File scripts/Verify.ps1
-```
-
-Эквивалент вручную:
-
-```sh
 dotnet restore Platformer.sln
 dotnet build Platformer.sln -c Release --no-restore
 dotnet test Platformer.sln -c Release --no-build
 python scripts/check_docs.py
+git diff --check
 ```
+
+PowerShell 7: `pwsh -NoProfile -File scripts/Verify.ps1` выполняет проверки с остановкой при ошибке.
+
+Движок закреплён на **`7d097269004ad59fc014cdeb707ccd9911c63841`**:
+input/cursor [PR #52](https://github.com/alken1t15/simple-3d-engine/pull/52),
+audio [PR #51](https://github.com/alken1t15/simple-3d-engine/pull/51) и
+ASCII overlay [PR #53](https://github.com/alken1t15/simple-3d-engine/pull/53).
+Этот SHA принят в игре через [PR #35](https://github.com/alken1t15/simple-platformer/pull/35).
+Исходники движка и gitlink в интеграции #6/#19 не редактируются.
+Атлас и FONT-LICENSE.txt поставляет движок; английский UI соответствует его ASCII-шрифту.
+[Сторонние компоненты](THIRD_PARTY.md), [возможности/ограничения движка](docs/engine-integration.md).
+
+App создаёт один AudioDevice при игровом запуске на потоке окна; настройки немедленно
+меняют его MasterVolume, mute сохраняет предпочитаемую громкость. На Debian/Ubuntu/Mint
+для native audio нужна `libopenal1`; без устройства возможен диагностируемый silent fallback.
+Игровые записи и события звука ещё не подключены. Изменение gain/null-driver проверка
+не подтверждают слышимость. Smoke не создаёт AudioDevice.
 
 ## Запуск
 
 ```sh
-dotnet run --project src/Platformer.App -c Release --no-build -- --help
-dotnet run --project src/Platformer.App -c Release --no-build -- --play
-dotnet run --project src/Platformer.App -c Release --no-build -- --play --smoke
 dotnet run --project src/Platformer.App -c Release --no-build
+dotnet run --project src/Platformer.App -c Release --no-build -- --play
 dotnet run --project src/Platformer.App -c Release --no-build -- --smoke
+dotnet run --project src/Platformer.App -c Release --no-build -- --help
+dotnet run --project src/Platformer.App -c Release --no-build -- --legacy --smoke
 dotnet run --project src/Platformer.App -c Release --no-build -- --presenter
 dotnet run --project src/Platformer.App -c Release --no-build -- --presenter --skin orange --overview --smoke
 ```
 
-Обычный запуск показывает неподвижный макет уровня сбоку; нажмите Escape в активном окне или закройте окно для выхода.
-`--smoke` показывает три кадра и завершает процесс. Это проверка интеграции, не игровая приёмка и не FPS-тест.
-Linux/WSL: [графический запуск](docs/development-process.md#linux-и-wsl).
-`--presenter` включает отдельный 3D-preview; Space меняет скин, R сбрасывает сценарий,
-`--still` останавливает сценарное движение для снимка. Это не игровой ввод из #6.
+Обычный запуск и `--play` открывают Main Menu. Стрелки/Tab выбирают пункт,
+Enter/Space или клик активирует его; мышь и клавиатура используют один выбор.
+В игре WASD двигает шар относительно yaw камеры, Space прыгает, любой Shift даёт boost,
+R перезапускает уровень. Мышь вверх поднимает взгляд, вниз опускает.
+Escape ставит паузу; из Paused Escape/Continue продолжает игру, из подменю — возвращает назад.
+Main Menu закрывается кнопкой Exit либо системным закрытием окна.
 
-`--play` — отдельный стенд #6: Enter/Space — старт/продолжение/повтор/далее,
-WASD — движение относительно камеры, Space — прыжок, любой Shift — boost,
-R — перезапуск, мышь — камера (вверх — поднять взгляд, вниз — опустить).
-Escape ставит паузу, затем возвращает на старт;
-на стартовом экране Escape закрывает стенд. Alt-Tab ставит паузу; возврат требует
-явного Enter. Удержанные при переходе клавиши требуют отпускания и нового нажатия.
-Подсказки и состояния выводятся в терминал; это временный стенд без меню/HUD #19.
-`--play --smoke` показывает три кадра Training Track без ввода, Step и захвата мыши.
-[Проверки управления и оставшаяся ручная приёмка](docs/input-camera-testing.md).
+В меню курсор свободен; Play/Continue захватывает его. Потеря фокуса ставит паузу,
+возврат фокуса не продолжает игру. Удержанные при переходе кнопки требуют release/new press.
+HUD показывает уровень, Coins collected/total и boost ready/active/cooldown.
+Settings, открытые из Paused, сохраняют паузу и возвращаются в неё.
+
+Любой `--smoke` ограничен тремя показанными кадрами: без игрового ввода, ticks и capture.
+По умолчанию он проверяет меню; `--legacy` — старую сцену, `--presenter` — сценарный 3D-preview.
+В Presenter Space меняет скин, R сбрасывает сценарий, `--still` останавливает его;
+это отдельный preview без игрового управления.
+
+`--trace-input` в игровом режиме выводит JSON снимков/кадров/UI для native-драйвера.
+[Автоматические проверки и ручная Linux-приёмка](docs/input-camera-testing.md).
+Smoke/CPU/X11 не заменяют физическую мышь, настоящий Alt-Tab, HiDPI, FPS или полное прохождение.
 
 ## Документы
 

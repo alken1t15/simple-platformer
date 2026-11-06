@@ -1,17 +1,17 @@
 # Ввод, фиксированный шаг и камера (#6)
 
-Реализованы CPU-модули App и оконный стенд `--play`: нативные WASD/Space/Shift/R,
+Реализованы CPU-модули App и игровой host (обычный запуск / `--play`): нативные WASD/Space/Shift/R,
 мышь, захват курсора, GameSession/LevelFlow, Presenter и публичная камера движка.
-Это частичная интеграция Ball Adventure. Полноценные меню/HUD (#19), звук и
-вторая локация (#21) ещё не подключены; физическая мышь и ручное прохождение
-не объявляются проверенными. Обычный запуск и `--presenter` сохраняют preview.
+Меню/HUD #19 подключены в том же окне через публичный overlay. Вторая локация,
+игровые WAV и AudioCoordinator ещё требуют #21; ручное прохождение не объявляется
+проверенным. `--legacy` и `--presenter` сохраняют технические preview.
 
 ## Публичный ввод и порядок кадра
 
 Движок закреплён на **`7d097269004ad59fc014cdeb707ccd9911c63841`**:
-[input PR #52](https://github.com/alken1t15/simple-3d-engine/pull/52),
-[overlay PR #53](https://github.com/alken1t15/simple-3d-engine/pull/53),
+[upstream overlay PR #53](https://github.com/alken1t15/simple-3d-engine/pull/53),
 [game gitlink PR #35](https://github.com/alken1t15/simple-platformer/pull/35).
+Ввод принят ранее в [upstream PR #52](https://github.com/alken1t15/simple-3d-engine/pull/52).
 Исходники движка и gitlink в этой реализации #6 не меняются.
 
 `Program` читает `engine.Input` один раз внутри onUpdate на потоке Create.
@@ -29,8 +29,9 @@
    Команда строится с новым yaw того же кадра; pitch не меняет движение X/Z.
 4. FixedStepRunner вызывает LevelFlow.Step с фиксированным шагом settings.
    LevelFlow обновляет Core и Presenter. Terminal tick останавливает catch-up.
-5. Host согласует AppScreen, переносит CameraPose в публичную Camera,
-   актуальные объекты Presenter — в постоянную Scene, переданную Engine.Run.
+5. MenuController обрабатывает переходы единственного LevelFlow; host согласует AppScreen,
+   переносит CameraPose в публичную Camera и объекты Presenter — в постоянную Scene.
+   MenuView после переходов/ticks задаёт единственную композицию overlay/HUD.
 6. Program задаёт CursorMode по CaptureRequested: Normal в меню/паузе/без фокуса,
    Captured только после явного Start/Continue/Retry. Движок рисует тот же кадр.
 
@@ -82,22 +83,25 @@ Position у target, LookAt остаётся ненулевым. Fallback пре�
 консервативную остановку после 128 итераций почти касательного cast;
 она может сократить расстояние сильнее нужного, но не пропускает камеру через стену.
 
-## Стенд и проверки
+## Игровой запуск и проверки
 
 Команда: `dotnet run --project src/Platformer.App -c Release --no-build -- --play`.
-Enter/Space запускает Training Track, продолжает паузу, повторяет Failed или
-вызывает Next после финиша; после единственной локации получается GameComplete.
-Escape — пауза/возврат на старт/выход со старта. Это клавиатурный стенд с подсказками
-в терминале, не реализация меню #19. Production-каталог содержит только готовую
-Training Track: тестовые вторые уровни не подменяют Turning Maze.
+Обычный запуск открывает тот же графический Main Menu. Стрелки/Tab и мышь выбирают
+пункт, Enter/Space или клик активирует его. Escape ставит паузу; из Paused Escape
+или Continue продолжает игру; Back возвращает из подменю. Exit закрывает Main Menu.
+Каталог пока содержит только готовую Training Track; тестовые уровни не заменяют Turning Maze.
+
+MenuController заменяет прежние временные переходы стенда #6. После освобождения capture
+первая Normal позиция указателя задаёт базу выбора, исключая случайный переход с Continue
+на Settings из-за смены координат. Клавиатура и указатель используют один UI selection model.
 
 `--help` работает без окна. Любой `--smoke` ограничен тремя кадрами;
-`--play --smoke` показывает Training Track без ввода, Step и capture.
-`--trace-input` вместе с `--play` выводит JSON-диагностику снимка и игрового кадра
-для X11-драйвера; по умолчанию поток диагностики отключён.
+игровой smoke показывает Main Menu/Training Track без ввода, Step, AudioDevice и capture.
+`--trace-input` выводит JSON-диагностику снимка/кадра/UI для X11-драйвера;
+по умолчанию поток отключён. [Меню и audio volume](menu.md).
 
 Авторские CPU-тесты: InputRouterTests, FixedStepRunnerTests, CameraRigTests,
-GameplayFrameRunnerTests и GameplayHostTests. Последние проверяют реальный сеанс,
+GameplayFrameRunnerTests, GameplayHostTests и GameplayMenuIntegrationTests. Последние проверяют реальный сеанс,
 Scene/Camera, terminal catch-up, переходы, pause/focus/rearm, reset и монеты.
 Отдельные аналитические тесты камеры проверяют стены/наклоны/рёбра/embedded target;
 тесты с BallSimulator сравнивают результат при 1/2/5 ticks за render frame.

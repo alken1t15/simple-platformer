@@ -73,6 +73,26 @@ public sealed class HazardRegressionTests
     }
 
     [TestMethod]
+    public void SessionFailsWhenBeamSweepsThroughRestingBallInFirstTick()
+    {
+        // Та же геометрия через GameSession: шар покоится на полу, ось балки на высоте его
+        // центра; ни поза до tick, ни поза после него шар не задевают.
+        float sweep = MathF.PI / 3f;
+        var hazard = Beam(sweep / Defaults.FixedStepSeconds, -sweep / 2f, new Vector3(0f, 0.5f, 0f));
+        var level = new LevelDefinition("regression", new Vector3(2f, 0.501f, 0f), -3f,
+            new OrientedBox(new Vector3(0f, 500f, 0f), Vector3.One, Quaternion.Identity), [Floor()], [], [hazard]);
+        var session = new GameSession(level, Defaults);
+        var ball = session.Snapshot.Ball.Center;
+        Assert.IsGreaterThan(Radius, Vector3.Distance(ball, session.Snapshot.Hazards.Single().Bounds.ClosestPoint(ball)));
+
+        session.Step(default);
+        ball = session.Snapshot.Ball.Center;
+        Assert.IsGreaterThan(Radius, Vector3.Distance(ball, session.Snapshot.Hazards.Single().Bounds.ClosestPoint(ball)));
+        Assert.AreEqual(SessionPhase.Failed, session.Snapshot.Phase);
+        Assert.AreEqual(1L, session.DrainEvents().Single(e => e.Kind == GameEventKind.Failed).Tick);
+    }
+
+    [TestMethod]
     public void BeamThatStopsShortOrPassesBeyondReachDoesNotHit()
     {
         float tick = Defaults.FixedStepSeconds;

@@ -268,7 +268,7 @@ public sealed class SessionRegressionTests
                  {
                      items => items.Reverse(),
                      items => items.Skip(1).Concat(items.Take(1)),
-                     items => items.OrderBy(item => item.GetHashCode()),
+                     items => items.Where((_, i) => i % 2 == 1).Concat(items.Where((_, i) => i % 2 == 0)),
                  })
         {
             var actual = Trace(Variant(order));

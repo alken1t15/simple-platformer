@@ -48,6 +48,7 @@ FPS и слышимость; для них — QA-чек-лист на Linux (#1
 | Неизменяемость уровня | TrainingTrack | `TrainingTrackFactoryReturnsIndependentEquivalentLevels` | Два вызова фабрики — разные эквивалентные экземпляры |
 | BA-09, A11 | HazardMotion | `EvaluatePlacesCenterAtPivotPlusRotatedOffsetForAnyTime` | Поворот вокруг +Y: X → (cosθ,0,−sinθ); центр и ось балки при θ=0, π/2 и после 10⁶ периодов; определение не меняется. Допуск `AccumulatedTolerance`: ошибка большого времени ~1e-9 |
 | BA-09, A11 | HazardCollision | `BeamSweepingThroughStationaryBallWithinOneTickIsAHit` | Балка (offset 2, half (1,0.1,0.1)) за tick −30°→+30°: в обеих позах зазор 2·sin30°−0.1−r = 0.4 > 0, в середине tick ось проходит через шар — `IntersectsPath` = true |
+| BA-09, A11 | GameSession, HazardCollision | `SessionFailsWhenBeamSweepsThroughRestingBallInFirstTick` | Та же балка в сеансе: шар на полу, позы до и после tick 1 вне шара — Failed в tick 1 |
 | BA-09 | HazardCollision | `BeamThatStopsShortOrPassesBeyondReachDoesNotHit` | Поворот −30°→−20° (ось в 0.68 от центра) и полный проход при радиусе шара 3.6 (зазор ≈0.097 до угла 3.0033) — промаха нет |
 | BA-09 | HazardCollision | `BrokenPathIsRejectedAndExhaustedBudgetNamesHazard` | Пустой Path, зазор долей, разрыв End/Start, неполное покрытие, обратный порядок — ArgumentException; отрезок 10 при шаге r/4 (80 > 32 подшагов) — InvalidOperationException с ID |
 | BA-09, A11, level2 | GameSession, Turning Maze | `TurningMazeArenaBeamReachesBallRestingInArenaWithinGeometricWindow` | Шар покоится в арене на радиусе 1.5 под углом π/2 к начальной оси балки: Failed при угле в [acos((r+0.15√2)/1.5), acos(r/1.5)+dt], одно событие Failed |
@@ -69,7 +70,7 @@ FPS и слышимость; для них — QA-чек-лист на Linux (#1
 | Этап | Основа | Регрессии #9 | Весь набор |
 |---|---|---|---|
 | PR #27 (#4/#5) | main `c8f6032` | 17 PASS | 86 PASS |
-| Сеанс, опасности, level2 (#8/#20/#21) | main `dde53a6` | 32 PASS (+15) | 256 PASS, 0 FAIL, 0 SKIP |
+| Сеанс, опасности, level2 (#8/#20/#21) | main `dde53a6` | 33 PASS (+16) | 257 PASS, 0 FAIL, 0 SKIP |
 
 SHA итогового commit фиксируется в описании PR.
 
@@ -89,7 +90,7 @@ SHA итогового commit фиксируется в описании PR.
 | GameSession: убрать `else` перед сбором монет и финиша | Опасность+финиш+монета в одном tick |
 | GameSession: убрать `sequence = 0;` в Restart | `SequenceStartsAtOneInEverySessionAndEventKeysNeverRepeat` |
 | GameSession: `sequence = nextSequence` до публикации tick | Бюджет контактов, нумерация Sequence |
-| HazardCollision: убрать `if (Check(segment, 0d, 1d)) return true;` | `BeamSweepingThroughStationaryBallWithinOneTickIsAHit` |
+| HazardCollision: убрать `if (Check(segment, 0d, 1d)) return true;` | `BeamSweepingThroughStationaryBallWithinOneTickIsAHit`, `SessionFailsWhenBeamSweepsThroughRestingBallInFirstTick` |
 | HazardMotion: центр без поворота offset | 3 регрессии опасностей |
 | GameSession: `level.Hazards.OrderBy(...)` → `level.Hazards.ToArray()` | Нет: эквивалентная мутация — SessionSnapshot сортирует позы сам, а попадание проверяется через `Any` |
 

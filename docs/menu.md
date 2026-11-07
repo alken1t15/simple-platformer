@@ -3,7 +3,7 @@
 MenuController, MenuView, адаптивная раскладка и HudModel подключены к GameplayHost (#6)
 и публичному overlay движка. Обычный запуск и `--play` открывают графический Main Menu;
 это тот же Engine/Scene lifecycle, что и игра. Движок закреплён на принятом
-`7d097269004ad59fc014cdeb707ccd9911c63841`, upstream
+`936b71a7393ef52b7d0d3b277af6b4c287be92c6`, upstream
 [PR #53](https://github.com/alken1t15/simple-3d-engine/pull/53), игровой
 [PR #35](https://github.com/alken1t15/simple-platformer/pull/35).
 

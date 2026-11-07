@@ -67,7 +67,7 @@ try
         if (game is not null)
         {
             var appInput = NativeInputAdapter.Map(input);
-            var client = engine.WindowBounds;
+            var client = engine.ClientSize;
             var frameResult = !smoke ? game.Advance(appInput, frameSeconds, client.Width, client.Height) : default;
             if (smoke) game.RefreshView(client.Width, client.Height);
             engine.SetOverlay(MenuOverlayAdapter.Build(game.View));

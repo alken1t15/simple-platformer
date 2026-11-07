@@ -35,10 +35,7 @@ public sealed class TurningMazeRegressionTests
     {
         var maze = TurningMaze.Create();
         var simulator = new BallSimulator(maze, Defaults);
-        var state = Air(maze.Finish.Center + Vector3.UnitY * 2f);
-        for (int tick = 0; tick < 240 && !(state.Grounded && state.Velocity.LengthSquared() < 1e-8f); tick++)
-            state = simulator.Step(state, default).Ball;
-        Assert.IsTrue(state.Grounded);
+        var state = DropOnto(simulator, maze.Finish.Center + Vector3.UnitY * 2f, "finish");
         Assert.IsLessThanOrEqualTo(Radius, Vector3.Distance(state.Center, maze.Finish.ClosestPoint(state.Center)));
         var spawn = simulator.CreateInitialState().Center;
         Assert.IsGreaterThan(Radius, Vector3.Distance(spawn, maze.Finish.ClosestPoint(spawn)));

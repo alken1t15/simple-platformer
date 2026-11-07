@@ -50,16 +50,16 @@ FPS и слышимость; для них — QA-чек-лист на Linux (#1
 | BA-09, A11 | HazardCollision | `BeamSweepingThroughStationaryBallWithinOneTickIsAHit` | Балка (offset 2, half (1,0.1,0.1)) за tick −30°→+30°: в обеих позах зазор 2·sin30°−0.1−r = 0.4 > 0, в середине tick ось проходит через шар — `IntersectsPath` = true |
 | BA-09, A11 | GameSession, HazardCollision | `SessionFailsWhenBeamSweepsThroughRestingBallInFirstTick` | Та же балка в сеансе: шар на полу, позы до и после tick 1 вне шара — Failed в tick 1 |
 | BA-09 | HazardCollision | `BeamThatStopsShortOrPassesBeyondReachDoesNotHit` | Поворот −30°→−20° (ось в 0.68 от центра) и полный проход при радиусе шара 3.6 (зазор ≈0.097 до угла 3.0033) — промаха нет |
-| BA-09 | HazardCollision | `BrokenPathIsRejectedAndExhaustedBudgetNamesHazard` | Пустой Path, зазор долей, разрыв End/Start, неполное покрытие, обратный порядок — ArgumentException; отрезок 10 при шаге r/4 (80 > 32 подшагов) — InvalidOperationException с ID |
-| BA-09, A11, level2 | GameSession, Turning Maze | `TurningMazeArenaBeamReachesBallRestingInArenaWithinGeometricWindow` | Шар покоится в арене на радиусе 1.5 под углом π/2 к начальной оси балки: Failed при угле в [acos((r+0.15√2)/1.5), acos(r/1.5)+dt], одно событие Failed |
+| BA-09 | HazardCollision | `BrokenPathIsRejectedAndExhaustedBudgetNamesHazard` | Пустой Path, зазор долей, разрыв End/Start, неполное покрытие, вырожденная доля End ≤ Start — ArgumentException; отрезок 10 при шаге r/4 (80 > 32 подшагов) — InvalidOperationException с ID |
+| BA-09, A11, level2 | GameSession, Turning Maze | `TurningMazeArenaBeamReachesBallRestingInArenaWithinGeometricWindow` | Шар покоится в арене на радиусе 1.5 под углом π/2 к начальной оси балки: центр шара в высоте балки, поэтому контакт с боковой гранью при θc = acos((r+half.Z)/1.5); Failed в первом tick с углом в [θc, θc+ω·dt] (допуск 1e-4 рад), одно событие Failed. Размеры берутся из данных уровня |
 | BA-08, A10 | GameSession | `ThinCoinBesideTickChordIsCollectedByPathBetweenEndpoints` | Монета сбоку от середины отрезка tick на R−ε, ε = L²/(32R): обе позы шара дальше R, засчитывается в этом tick по Path; при R+1e-3 — никогда |
 | BA-08, A10 | GameSession | `CoinOnPathCountsOnceEvenWhenBallPassesItAgain` | Проход вправо, влево и снова вправо через монету — одно CoinCollected |
 | BA-09, A11 | GameSession | `HazardTouchedInSameTickAsFinishAndCoinFailsWithoutCompletingOrCollecting` | Опасность, Finish и монета входят в конец Path tick K на L/2: Failed без LevelCompleted и монеты; контроль без опасности — монета и финиш в том же tick |
-| BA-04, A12 | GameSession | `RestartIssuesFreshSessionAndLeavesEarlierSnapshotUntouched` | Новый SessionId, Tick 0, время 0, пустые монеты/очередь/Path, boost сброшен, поза опасности при t=0; прежний Snapshot не изменился; монета снова засчитывается в новом сеансе |
-| BA-04 | GameSession | `SequenceStartsAtOneInEverySessionAndEventKeysNeverRepeat` | Три сеанса с промежуточными DrainEvents: Sequence 1..n без пропусков в каждом SessionId, ключи (SessionId, Sequence) уникальны, непрочитанное перед Restart отброшено |
-| Контракт ошибок | GameSession | `ContactBudgetFailureLeavesSnapshotPathAndQueuedEventsUnchanged` | Посадка у стены при бюджете 1 контакта: тот же Snapshot и LastPath, повтор падает так же, в очереди только прежняя монета с Sequence 1 |
-| Независимость порядка | GameSession, Turning Maze | `PermutedLevelCollectionsProduceIdenticalEventsAndSnapshots` | Данные level2 + вторая опасность, 3 перестановки surfaces/coins/hazards: совпадают события и снимки каждого tick |
-| BA-08, A10, level2 | Turning Maze | `EveryTurningMazeCoinIsTouchedByBallLandingBelowIt` | Первая поза с опорой после падения под каждой монетой (включая рампу) — расстояние ≤ r + CoinRadius; число монет из данных |
+| BA-04, A12 | GameSession | `RestartIssuesFreshSessionAndLeavesEarlierSnapshotUntouched` | Новый SessionId, Tick 0, время 0, пустые монеты/очередь/Path, boost сброшен, поза опасности при t=0; прежний Snapshot не изменился ни после Restart, ни после Step нового сеанса; монета снова засчитывается в новом сеансе |
+| BA-04 | GameSession | `SequenceStartsAtOneInEverySessionAndEventKeysNeverRepeat` | Три сеанса с промежуточными DrainEvents: Sequence 1..n без пропусков в каждом SessionId, ключи (SessionId, Sequence) уникальны; Jumped с опоры, не прочитанный перед Restart, отброшен |
+| Контракт ошибок | GameSession | `ContactBudgetFailureLeavesSnapshotPathAndQueuedEventsUnchanged` | Посадка у стены при бюджете 1 контакта: ошибка называет MaxContactIterations и ID поверхности, тот же Snapshot и LastPath, повтор падает так же, в очереди только прежняя монета с Sequence 1 |
+| Независимость порядка | GameSession, Turning Maze | `PermutedLevelCollectionsProduceIdenticalEventsAndSnapshots` | Данные level2 + две опасности, 3 различные перестановки surfaces/coins/hazards: совпадают события и снимки каждого tick |
+| BA-08, A10, level2 | Turning Maze | `EveryTurningMazeCoinIsTouchedByBallLandingBelowIt` | Первая поза с опорой после падения под каждой монетой (включая рампу) — расстояние ≤ r + CoinRadius; число монет из данных. Проверяет опору под монетой, а не достижимость по маршруту |
 | BA-06, A13, level2 | Turning Maze | `BallRestingOnTurningMazeFinishPlatformOverlapsFinishButSpawnDoesNot` | Шар на финишной площадке пересекает Finish, spawn — нет |
 | BA-07, A07, level2 | Turning Maze | `TurningMazeRampNormalAndUphillDirectionFollowTwentyDegreeGeometry` | Рампа (24,0,8)→(27,3·tan20°,8): normal (−sin20°, cos20°, 0), vy/vx = tan20°, зазор опоры |
 
@@ -69,10 +69,10 @@ FPS и слышимость; для них — QA-чек-лист на Linux (#1
 
 | Этап | Основа | Регрессии #9 | Весь набор |
 |---|---|---|---|
-| PR #27 (#4/#5) | main `c8f6032` | 17 PASS | 86 PASS |
+| PR #27 (#4/#5), контейнер `mcr.microsoft.com/dotnet/sdk:10.0` | main `c8f6032` | 17 PASS | 86 PASS |
 | Сеанс, опасности, level2 (#8/#20/#21) | main `dde53a6` | 33 PASS (+16) | 257 PASS, 0 FAIL, 0 SKIP |
 
-SHA итогового commit фиксируется в описании PR.
+SHA проверенного commit указывается в описании PR.
 
 Дефектов в #4/#5/#8/#20/#21 не выявлено. Дефект, найденный позже, оформляется
 отдельной строкой: минимальное воспроизведение, тест, issue/PR исправления.
@@ -89,6 +89,7 @@ SHA итогового commit фиксируется в описании PR.
 | GameSession: `< level.KillY \|\| hazardHit)` → `< level.KillY)` | Арена level2, опасность+финиш+монета в одном tick |
 | GameSession: убрать `else` перед сбором монет и финиша | Опасность+финиш+монета в одном tick |
 | GameSession: убрать `sequence = 0;` в Restart | `SequenceStartsAtOneInEverySessionAndEventKeysNeverRepeat` |
+| GameSession: убрать `events = [];` в Restart | `RestartIssuesFreshSessionAndLeavesEarlierSnapshotUntouched`, `SequenceStartsAtOneInEverySessionAndEventKeysNeverRepeat` |
 | GameSession: `sequence = nextSequence` до публикации tick | Бюджет контактов, нумерация Sequence |
 | HazardCollision: убрать `if (Check(segment, 0d, 1d)) return true;` | `BeamSweepingThroughStationaryBallWithinOneTickIsAHit`, `SessionFailsWhenBeamSweepsThroughRestingBallInFirstTick` |
 | HazardMotion: центр без поворота offset | 3 регрессии опасностей |

@@ -116,7 +116,7 @@ public sealed class HazardRegressionTests
             [new(a, b, 0f, 0.4f), new(b, b, 0.5f, 1f)],                    // зазор долей
             [new(a, b, 0f, 0.5f), new(b + Vector3.UnitY, b, 0.5f, 1f)],    // разрыв End→Start
             [new(a, b, 0f, 0.9f)],                                         // не покрывает [0,1]
-            [new(b, a, 0.5f, 1f), new(a, b, 0f, 0.5f)],                    // обратный порядок
+            [new(a, a, 0f, 0f), new(a, b, 0f, 1f)],                        // вырожденная доля End ≤ Start
         ];
         foreach (var path in broken)
             Assert.ThrowsExactly<ArgumentException>(() => HazardCollision.IntersectsPath(hazard, path, 0d, Defaults));
@@ -131,25 +131,36 @@ public sealed class HazardRegressionTests
     [TestMethod]
     public void TurningMazeArenaBeamReachesBallRestingInArenaWithinGeometricWindow()
     {
-        // Реальные данные level2: балка ±2 вдоль своей оси, полутолщина 0.15, ω=1, старт вдоль X.
-        // Шар покоится на радиусе 1.5 по −Z, т.е. под углом π/2 от начальной оси.
-        // Раньше θ₁ = acos((r+0.15√2)/1.5) контакт невозможен; к θ₂ = acos(r/1.5) ось
-        // балки уже проходит через шар. Вертикально балка 0.4..0.7 пересекает шар 0..1.
+        // Реальные данные level2. Шар покоится на расстоянии d = 1.5 от оси вращения по −Z,
+        // т.е. под углом π/2 к начальной оси балки. При повороте на θ расстояние от центра
+        // шара до продольной оси балки — d·cosθ, а высота центра лежит внутри вертикального
+        // размаха балки, поэтому первый контакт — с боковой гранью: d·cosθ − half.Z = r.
+        // Удар засчитывается в первом tick, к концу которого θ ≥ θc.
         var maze = TurningMaze.Create();
         var beam = maze.Hazards.Single();
-        Assert.AreEqual(1f, beam.AngularSpeed);
+        Assert.AreEqual(Vector3.Zero, beam.CenterOffset, "балка вращается вокруг своего центра");
+        Assert.AreEqual(Quaternion.Identity, beam.InitialOrientation);
+        Assert.AreEqual(Vector3.UnitY, beam.Axis);
         Assert.AreEqual(0f, beam.InitialAngle);
-        var spawn = beam.Pivot with { Y = 0.501f } - Vector3.UnitZ * 1.5f;
+        const float distance = 1.5f;
+        var spawn = beam.Pivot with { Y = 0.501f } - Vector3.UnitZ * distance;
+        Assert.IsLessThanOrEqualTo(beam.HalfExtents.Y, MathF.Abs(spawn.Y - beam.Pivot.Y), "центр шара в высоте балки");
+        Assert.IsGreaterThan(distance, beam.HalfExtents.X, "торец балки не участвует в первом контакте");
+
         var level = new LevelDefinition(maze.Id, spawn, maze.KillY, maze.Finish, maze.Surfaces, [], maze.Hazards);
         var session = new GameSession(level, Defaults);
-        int limit = (int)(2d * Math.PI / Defaults.FixedStepSeconds);
+        int limit = (int)(2d * Math.PI / (beam.AngularSpeed * Defaults.FixedStepSeconds));
         while (session.Snapshot.Phase == SessionPhase.Running && session.Snapshot.Tick < limit)
             session.Step(default);
 
         Assert.AreEqual(SessionPhase.Failed, session.Snapshot.Phase);
+        double contactAngle = Math.Acos((Radius + beam.HalfExtents.Z) / distance);
         double hitAngle = session.Snapshot.SimulationSeconds * beam.AngularSpeed;
-        Assert.IsGreaterThanOrEqualTo(Math.Acos((Radius + 0.15 * Math.Sqrt(2d)) / 1.5), hitAngle);
-        Assert.IsLessThanOrEqualTo(Math.Acos(Radius / 1.5) + Defaults.FixedStepSeconds, hitAngle);
+        // Допуск 1e-4 рад: float-позы и PositionEpsilon дают сдвиг контакта порядка 1e-5 рад,
+        // а один tick — ω·dt ≈ 8.3e-3 рад.
+        const double angleTolerance = 1e-4;
+        Assert.IsGreaterThanOrEqualTo(contactAngle - angleTolerance, hitAngle);
+        Assert.IsLessThanOrEqualTo(contactAngle + beam.AngularSpeed * Defaults.FixedStepSeconds + angleTolerance, hitAngle);
         var events = session.DrainEvents();
         Assert.AreEqual(GameEventKind.Failed, events.Single().Kind);
     }

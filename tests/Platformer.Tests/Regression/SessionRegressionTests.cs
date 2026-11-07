@@ -24,7 +24,7 @@ public sealed class SessionRegressionTests
         new("regression", new Vector3(0f, 0.501f, 0f), -3f, finish ?? FarFinish,
             [Floor(50f), .. extra], coins ?? [], hazards ?? []);
 
-    private static HazardDefinition StaticBox(string id, Vector3 center, Vector3 half) =>
+    private static HazardDefinition StaticHazard(string id, Vector3 center, Vector3 half) =>
         new(id, center, Vector3.UnitY, Vector3.Zero, half, Quaternion.Identity, 0f, 0f);
 
     /// <summary>Path tick-а <paramref name="tick"/> при беге вправо по пустому полу.</summary>
@@ -104,7 +104,7 @@ public sealed class SessionRegressionTests
         float face = end.X + Radius - delta;
         var finish = Box(new Vector3(face + 0.5f, end.Y, 0f), new Vector3(0.5f, 1f, 1f));
         var coin = new CoinDefinition("coin", new Vector3(face + 0.2f, end.Y, 0f), 0.2f);
-        var hazard = StaticBox("wall", new Vector3(face + 0.5f, end.Y, 0f), new Vector3(0.5f, 0.2f, 0.2f));
+        var hazard = StaticHazard("wall", new Vector3(face + 0.5f, end.Y, 0f), new Vector3(0.5f, 0.2f, 0.2f));
 
         // Контроль: без опасности в tick K засчитываются и монета, и финиш.
         var control = new GameSession(Arena(finish, [coin]), Defaults);
@@ -162,16 +162,21 @@ public sealed class SessionRegressionTests
         Assert.IsEmpty(session.DrainEvents(), "непрочитанные события прежнего сеанса отброшены");
         Assert.IsEmpty(session.LastPath);
 
-        // Прежний снимок — значение: Restart его не трогает.
-        Assert.AreEqual((expected.SessionId, expected.Tick, expected.SimulationSeconds, expected.Phase, expected.Ball),
-            (old.SessionId, old.Tick, old.SimulationSeconds, old.Phase, old.Ball));
-        CollectionAssert.AreEqual(expected.Coins, old.CollectedCoinIds.ToArray());
-        CollectionAssert.AreEqual(expected.Poses, old.Hazards.ToArray());
+        // Прежний снимок — значение: ни Restart, ни следующие Step его не трогают.
+        void AssertOldUnchanged(string stage)
+        {
+            Assert.AreEqual((expected.SessionId, expected.Tick, expected.SimulationSeconds, expected.Phase, expected.Ball),
+                (old.SessionId, old.Tick, old.SimulationSeconds, old.Phase, old.Ball), stage);
+            CollectionAssert.AreEqual(expected.Coins, old.CollectedCoinIds.ToArray(), stage);
+            CollectionAssert.AreEqual(expected.Poses, old.Hazards.ToArray(), stage);
+        }
+        AssertOldUnchanged("после Restart");
 
         // Монета снова доступна и засчитывается уже в новом сеансе.
         var again = RunRight(session, 60);
         var collected = again.Single(e => e.Kind == GameEventKind.CoinCollected);
         Assert.AreEqual(fresh.SessionId, collected.SessionId);
+        AssertOldUnchanged("после Step нового сеанса");
     }
 
     [TestMethod]
@@ -184,15 +189,20 @@ public sealed class SessionRegressionTests
         for (int round = 0; round < 3; round++)
         {
             ids.Add(session.Snapshot.SessionId);
-            for (int tick = 0; tick < 150; tick++)
+            // Прыжок на tick 130 приземляется через 2·JumpSpeed/Gravity ≈ 0.67 с (80 tick),
+            // поэтому к tick 230 шар снова на опоре.
+            for (int tick = 0; tick < 230; tick++)
             {
                 session.Step(new GameCommand(Vector2.UnitX, tick == 130, tick == 40));
                 // Промежуточные выборки не должны сбивать нумерацию.
                 if (tick % 7 == 0) all.AddRange(session.DrainEvents());
             }
             all.AddRange(session.DrainEvents());
-            session.Step(Right);
-            session.Restart(); // событие последнего tick не прочитано и пропадает
+            // Прыжок с опоры по контракту даёт Jumped; его не читают до Restart, и он пропадает.
+            Assert.IsTrue(session.Snapshot.Ball.Grounded, "перед последним tick шар на опоре");
+            session.Step(new GameCommand(Vector2.UnitX, true, false));
+            session.Restart();
+            Assert.IsEmpty(session.DrainEvents(), "непрочитанный Jumped прежнего сеанса отброшен");
         }
 
         Assert.HasCount(3, ids.Distinct().ToArray());
@@ -235,6 +245,8 @@ public sealed class SessionRegressionTests
 
         Assert.IsNotNull(failure, "шар должен упереться в стену и исчерпать бюджет");
         StringAssert.Contains(failure.Message, "MaxContactIterations");
+        // Контракт: ошибка бюджета называет ID поверхности; в tick посадки это стена или пол.
+        Assert.IsTrue(failure.Message.Contains("'wall'") || failure.Message.Contains("'floor'"), failure.Message);
         Assert.AreSame(before, session.Snapshot);
         Assert.AreSame(path, session.LastPath);
         Assert.AreEqual(SessionPhase.Running, before.Phase);
@@ -251,31 +263,35 @@ public sealed class SessionRegressionTests
     [TestMethod]
     public void PermutedLevelCollectionsProduceIdenticalEventsAndSnapshots()
     {
-        // Реальные данные level2 + вторая опасность, чтобы перестановка затрагивала и hazards.
+        // Реальные данные level2 + ещё две опасности: при трёх элементах все три
+        // перестановки hazards различны (при двух они совпали бы в один обмен).
         var maze = TurningMaze.Create();
-        var extra = new HazardDefinition("aux-beam", new Vector3(0f, 0.55f, -30f), Vector3.UnitY,
+        HazardDefinition AuxBeam(string id, float z) => new(id, new Vector3(0f, 0.55f, z), Vector3.UnitY,
             Vector3.Zero, new Vector3(1f, 0.1f, 0.1f), Quaternion.Identity, -2f, 0.3f);
-        HazardDefinition[] hazards = [.. maze.Hazards, extra];
-        LevelDefinition Variant(Func<IEnumerable<object>, IEnumerable<object>> order) =>
+        HazardDefinition[] hazards = [.. maze.Hazards, AuxBeam("aux-beam", -30f), AuxBeam("aux-beam-2", -40f)];
+        LevelDefinition Variant(int order) =>
             new(maze.Id, maze.Spawn, maze.KillY, maze.Finish,
-                order(maze.Surfaces).Cast<SurfaceDefinition>().ToArray(),
-                order(maze.Coins).Cast<CoinDefinition>().ToArray(),
-                order(hazards).Cast<HazardDefinition>().ToArray());
+                Reorder(maze.Surfaces, order), Reorder(maze.Coins, order), Reorder(hazards, order));
 
-        var reference = Trace(Variant(items => items));
+        var reference = Trace(Variant(0));
         Assert.IsTrue(reference.Events.Any(e => e.Kind == GameEventKind.CoinCollected));
-        foreach (var order in new Func<IEnumerable<object>, IEnumerable<object>>[]
-                 {
-                     items => items.Reverse(),
-                     items => items.Skip(1).Concat(items.Take(1)),
-                     items => items.Where((_, i) => i % 2 == 1).Concat(items.Where((_, i) => i % 2 == 0)),
-                 })
+        for (int order = 1; order <= 3; order++)
         {
+            Assert.IsFalse(hazards.SequenceEqual(Reorder(hazards, order)), $"перестановка {order}");
             var actual = Trace(Variant(order));
             CollectionAssert.AreEqual(reference.Events, actual.Events);
             CollectionAssert.AreEqual(reference.Frames, actual.Frames);
         }
     }
+
+    /// <summary>0 — исходный порядок; 1 — обратный; 2 — сдвиг на один; 3 — нечётные, затем чётные.</summary>
+    private static T[] Reorder<T>(IReadOnlyList<T> items, int order) => order switch
+    {
+        0 => [.. items],
+        1 => [.. Enumerable.Reverse(items)],
+        2 => [.. items.Skip(1).Concat(items.Take(1))],
+        _ => [.. items.Where((_, i) => i % 2 == 1).Concat(items.Where((_, i) => i % 2 == 0))],
+    };
 
     private static (List<(long Sequence, long Tick, GameEventKind Kind, string? Id)> Events, List<string> Frames) Trace(LevelDefinition level)
     {

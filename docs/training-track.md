@@ -4,7 +4,7 @@
 с ID `level1`. Источник геометрии — [TrainingTrack.cs](../src/Platformer.Core/TrainingTrack.cs),
 без JSON, ресурсов движка и дублирования размеров для рендера. Физика и Presenter
 должны читать `SurfaceDefinition.Bounds`: полный scale равен `2 * HalfExtents`,
-позиция — `Center`, поворот — `Orientation`. Это ещё не подключённый игровой уровень.
+позиция — `Center`, поворот — `Orientation`. Уровень подключён в production-каталог и автоматический сквозной маршрут.
 
 ## Маршрут и поверхности
 

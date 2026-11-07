@@ -245,7 +245,14 @@ def main():
 
         capture("main-menu")
         levels = click_control("levels", "LevelSelect")
-        assert len([control for control in levels["controls"] if control["id"].startswith("level:")]) == 1
+        assert {control["id"] for control in levels["controls"] if control["id"].startswith("level:")} == {"level:level1", "level:level2"}
+        click_control("level:level2", "LevelSelect")
+        direct = click_control("start", "Playing")
+        assert direct["level"] == "level2" and direct["coins"] == 0
+        press("Escape")
+        until(lambda f: f["screen"] == "Paused", "direct level2 pause")
+        click_control("main-menu", "MainMenu")
+        click_control("levels", "LevelSelect")
         x.XResizeWindow(display, native, 640, 480)
         x.XFlush(display)
         until(lambda f: f["clientWidth"] == 640 and f["clientHeight"] == 480, "menu resize logical geometry")

@@ -8,7 +8,7 @@ try
     if (args is ["--help"])
     {
         Console.WriteLine("""
-            Ball Adventure: Training Track, menus and HUD. Second level and game sound assets pending.
+            Ball Adventure: Training Track and Turning Maze, menus, HUD and game audio.
             Usage: Platformer.App [--play | --legacy | --presenter [--skin classic-blue|orange] [--overview] [--still]] [--smoke]
             Default / --play: open Main Menu. Arrows/Tab: choose; Enter/Space or mouse click: select.
             WASD: move; Space: jump; Shift: boost; R: restart; mouse: camera (up looks up).
@@ -45,9 +45,12 @@ try
     if (traceInput && !gameplayMode) throw new ArgumentException("--trace-input requires gameplay mode.");
 
     using var audio = gameplayMode && !smoke ? AudioDevice.Create(new AudioOptions()) : null;
-    var game = gameplayMode ? new GameplayHost(new LevelCatalog([TrainingTrack.Create()]),
+    if (audio is { IsSilent: true }) Console.Error.WriteLine($"Audio: silent mode. {audio.Diagnostic}");
+    using var gameAudio = audio is null ? null : new AudioCoordinator(
+        new NativeAudioPlayback(audio, Path.Combine(AppContext.BaseDirectory, "Assets", "Audio")));
+    var game = gameplayMode ? new GameplayHost(GameLevels.CreateCatalog(),
         SimulationSettings.Default, new UserSettings(), smoke,
-        applyMasterVolume: audio is null ? null : value => audio.MasterVolume = value) : null;
+        applyMasterVolume: audio is null ? null : value => audio.MasterVolume = value, audio: gameAudio) : null;
     var preview = presenterMode ? new PresenterPreview(skin, overview) : null;
     var snapshot = preview is null && game is null ? PreviewScene.Create() : null;
     using var engine = Engine.Create(new EngineOptions
@@ -83,6 +86,7 @@ try
                     screen = game.Flow.Screen.ToString(), cursor = engine.CursorMode.ToString(),
                     down = appInput.Down.ToString(), pressed = appInput.Pressed.ToString(), released = appInput.Released.ToString(),
                     tick = game.Flow.Snapshot?.Tick, session = game.Flow.Snapshot?.SessionId,
+                    level = game.Flow.Snapshot?.LevelId,
                     x = ball?.Center.X, y = ball?.Center.Y, z = ball?.Center.Z,
                     boost = ball?.BoostRemainingSeconds, cooldown = ball?.BoostCooldownSeconds,
                     ticks = frameResult.Ticks, moveX = frameResult.Input.Gameplay.MoveWorldXZ.X,

@@ -77,16 +77,4 @@ public sealed class LevelRegressionTests
         for (int tick = 0; tick < 120; tick++) state = simulator.Step(state, Right).Ball;
         return state;
     }
-
-    private static BallState DropOnto(BallSimulator simulator, Vector3 start, string label)
-    {
-        var state = Air(start);
-        for (int tick = 0; tick < 240; tick++)
-        {
-            state = simulator.Step(state, default).Ball;
-            if (state.Grounded && state.Velocity.LengthSquared() < 1e-8f) return state;
-        }
-        Assert.Fail($"{label}: шар не нашёл опору под точкой");
-        return state;
-    }
 }

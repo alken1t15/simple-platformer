@@ -6,18 +6,18 @@
 а не из копии решателя. CPU-тесты не доказывают визуальный вид, ручную проходимость,
 FPS и слышимость; для них — QA-чек-лист на Linux (#11).
 
-Состояние на момент добавления матрицы: модули #4 и #5 реализованы и покрыты; `GameSession`,
-`HazardMotion` и `HazardCollision` (#8, #20) и вторая локация (#21) ещё не существуют.
-Для них ниже зафиксирован тест-дизайн; задача #9 не закрывается до их прогона.
-
-В #8 добавлены авторские [проверки GameSession/LevelFlow](game-session.md#проверки).
-Они не заменяют независимые регрессии этой матрицы. Опасности #20 подключены к сеансу;
-авторские проверки приоритетов, отката и Restart описаны там же, независимый прогон — задача QA.
+Первая часть матрицы (PR #27) покрыла модули #4 и #5. После слияния `GameSession` (#8),
+`HazardMotion`/`HazardCollision` (#20) и данных Turning Maze (#21, PR #38/#40) прежний
+тест-дизайн реализован независимыми регрессиями ниже. Авторские
+[проверки GameSession/LevelFlow](game-session.md#проверки) их не заменяют.
 
 ## Реализованные проверки
 
 Файлы: [физика](../tests/Platformer.Tests/Regression/PhysicsRegressionTests.cs),
 [уровень](../tests/Platformer.Tests/Regression/LevelRegressionTests.cs),
+[сеанс](../tests/Platformer.Tests/Regression/SessionRegressionTests.cs),
+[опасности](../tests/Platformer.Tests/Regression/HazardRegressionTests.cs),
+[вторая локация](../tests/Platformer.Tests/Regression/TurningMazeRegressionTests.cs),
 [общие данные и допуски](../tests/Platformer.Tests/Regression/RegressionFixtures.cs).
 
 Допуски и их обоснование:
@@ -46,42 +46,57 @@ FPS и слышимость; для них — QA-чек-лист на Linux (#1
 | BA-06, A13 | Training Track | `BallRestingOnFinishPlatformOverlapsFinishVolume` | Шар на финишной площадке пересекает Finish; spawn — нет |
 | Копирование коллекций | LevelDefinition | `SimulationIgnoresLaterChangesOfLevelSourceList` | Чёрный ящик: после Clear/Add исходного списка поведение шара за 1 с то же. Структурная проверка — авторский `AllInputListsAreCopiedAndCannotBeMutatedThroughReturnedInterfaces` |
 | Неизменяемость уровня | TrainingTrack | `TrainingTrackFactoryReturnsIndependentEquivalentLevels` | Два вызова фабрики — разные эквивалентные экземпляры |
+| BA-09, A11 | HazardMotion | `EvaluatePlacesCenterAtPivotPlusRotatedOffsetForAnyTime` | Поворот вокруг +Y: X → (cosθ,0,−sinθ); центр и ось балки при θ=0, π/2 и после 10⁶ периодов; определение не меняется. Допуск `AccumulatedTolerance`: ошибка большого времени ~1e-9 |
+| BA-09, A11 | HazardCollision | `BeamSweepingThroughStationaryBallWithinOneTickIsAHit` | Балка (offset 2, half (1,0.1,0.1)) за tick −30°→+30°: в обеих позах зазор 2·sin30°−0.1−r = 0.4 > 0, в середине tick ось проходит через шар — `IntersectsPath` = true |
+| BA-09, A11 | GameSession, HazardCollision | `SessionFailsWhenBeamSweepsThroughRestingBallInFirstTick` | Та же балка в сеансе: шар на полу, позы до и после tick 1 вне шара — Failed в tick 1 |
+| BA-09 | HazardCollision | `BeamThatStopsShortOrPassesBeyondReachDoesNotHit` | Поворот −30°→−20° (ось в 0.68 от центра) и полный проход при радиусе шара 3.6 (зазор ≈0.097 до угла 3.0033) — промаха нет |
+| BA-09 | HazardCollision | `BrokenPathIsRejectedAndExhaustedBudgetNamesHazard` | Пустой Path, зазор долей, разрыв End/Start, неполное покрытие, вырожденная доля End ≤ Start — ArgumentException; отрезок 10 при шаге r/4 (80 > 32 подшагов) — InvalidOperationException с ID |
+| BA-09, A11, level2 | GameSession, Turning Maze | `TurningMazeArenaBeamReachesBallRestingInArenaWithinGeometricWindow` | Шар покоится в арене на радиусе 1.5 под углом π/2 к начальной оси балки: центр шара в высоте балки, поэтому контакт с боковой гранью при θc = acos((r+half.Z)/1.5); Failed в первом tick с углом в [θc, θc+ω·dt] (допуск 1e-4 рад), одно событие Failed. Размеры берутся из данных уровня |
+| BA-08, A10 | GameSession | `ThinCoinBesideTickChordIsCollectedByPathBetweenEndpoints` | Монета сбоку от середины отрезка tick на R−ε, ε = L²/(32R): обе позы шара дальше R, засчитывается в этом tick по Path; при R+1e-3 — никогда |
+| BA-08, A10 | GameSession | `CoinOnPathCountsOnceEvenWhenBallPassesItAgain` | Проход вправо, влево и снова вправо через монету — одно CoinCollected |
+| BA-09, A11 | GameSession | `HazardTouchedInSameTickAsFinishAndCoinFailsWithoutCompletingOrCollecting` | Опасность, Finish и монета входят в конец Path tick K на L/2: Failed без LevelCompleted и монеты; контроль без опасности — монета и финиш в том же tick |
+| BA-04, A12 | GameSession | `RestartIssuesFreshSessionAndLeavesEarlierSnapshotUntouched` | Новый SessionId, Tick 0, время 0, пустые монеты/очередь/Path, boost сброшен, поза опасности при t=0; прежний Snapshot не изменился ни после Restart, ни после Step нового сеанса; монета снова засчитывается в новом сеансе |
+| BA-04 | GameSession | `SequenceStartsAtOneInEverySessionAndEventKeysNeverRepeat` | Три сеанса с промежуточными DrainEvents: Sequence 1..n без пропусков в каждом SessionId, ключи (SessionId, Sequence) уникальны; Jumped с опоры, не прочитанный перед Restart, отброшен |
+| Контракт ошибок | GameSession | `ContactBudgetFailureLeavesSnapshotPathAndQueuedEventsUnchanged` | Посадка у стены при бюджете 1 контакта: ошибка называет MaxContactIterations и ID поверхности, тот же Snapshot и LastPath, повтор падает так же, в очереди только прежняя монета с Sequence 1 |
+| Независимость порядка | GameSession, Turning Maze | `PermutedLevelCollectionsProduceIdenticalEventsAndSnapshots` | Данные level2 + две опасности, 3 различные перестановки surfaces/coins/hazards: совпадают события и снимки каждого tick |
+| BA-08, A10, level2 | Turning Maze | `EveryTurningMazeCoinIsTouchedByBallLandingBelowIt` | Первая поза с опорой после падения под каждой монетой (включая рампу) — расстояние ≤ r + CoinRadius; число монет из данных. Проверяет опору под монетой, а не достижимость по маршруту |
+| BA-06, A13, level2 | Turning Maze | `BallRestingOnTurningMazeFinishPlatformOverlapsFinishButSpawnDoesNot` | Шар на финишной площадке пересекает Finish, spawn — нет |
+| BA-07, A07, level2 | Turning Maze | `TurningMazeRampNormalAndUphillDirectionFollowTwentyDegreeGeometry` | Рампа (24,0,8)→(27,3·tan20°,8): normal (−sin20°, cos20°, 0), vy/vx = tan20°, зазор опоры |
 
 ## Результаты прогона
 
-Окружение: Linux, контейнер `mcr.microsoft.com/dotnet/sdk:10.0` (SDK 10.0.403), Release, без дисплея и OpenGL.
-Проверяется HEAD ветки `feature/9-independent-regressions` поверх main `c8f6032`;
-SHA итогового commit и вывод фиксируются в описании PR. Весь набор: 86 PASS, 0 FAIL, 0 SKIP,
-из них 17 — регрессии #9.
+Окружение: Linux, .NET SDK 10.0.403, Release, без дисплея и OpenGL.
 
-Дефектов в реализованных модулях #4/#5 не выявлено. Дефект, найденный позже, оформляется
+| Этап | Основа | Регрессии #9 | Весь набор |
+|---|---|---|---|
+| PR #27 (#4/#5), контейнер `mcr.microsoft.com/dotnet/sdk:10.0` | main `c8f6032` | 17 PASS | 86 PASS |
+| Сеанс, опасности, level2 (#8/#20/#21) | main `dde53a6` | 33 PASS (+16) | 257 PASS, 0 FAIL, 0 SKIP |
+
+SHA проверенного commit указывается в описании PR.
+
+Дефектов в #4/#5/#8/#20/#21 не выявлено. Дефект, найденный позже, оформляется
 отдельной строкой: минимальное воспроизведение, тест, issue/PR исправления.
 
-Чувствительность проверена мутациями `src/Platformer.Core/BallSimulator.cs` в рабочей копии
-(в commit не входят): правка, `dotnet test ... --filter "FullyQualifiedName~Regression"`,
-обратное применение той же правки.
+Чувствительность проверена мутациями в рабочей копии (в commit не входят): правка,
+`dotnet test ... --filter "FullyQualifiedName~Regression"`, обратное применение той же правки.
 
-| Мутация (было → стало) | Упавшие регрессии |
+| Файл: мутация (было → стало) | Упавшие регрессии |
 |---|---|
-| `if (SphereGeometry.Sweep(` → `if (false && SphereGeometry.Sweep(` | 7: тонкая плита, повтор маршрута, Path, бюджет, одновременный контакт, монеты, финиш |
-| `BoostCooldownSeconds - excess` → `BoostCooldownSeconds - FixedStepSeconds - excess` | Boost-тест |
-| `Cos(settings.MaxSlopeRadians)` → `Cos(settings.MaxSlopeRadians + 0.09f)` (≈55°) | `SupportFlipsAroundConfiguredMaxSlope(51)` |
-| `level.Surfaces.OrderBy(surface => surface.Id, StringComparer.Ordinal).ToArray()` → `level.Surfaces.ToArray()` | `SimultaneousContactBudgetErrorNamesSameSurfaceForAnyOrder`; авторские тесты эту мутацию не ловят |
+| BallSimulator: `if (SphereGeometry.Sweep(` → `if (false && SphereGeometry.Sweep(` | 7: тонкая плита, повтор маршрута, Path, бюджет, одновременный контакт, монеты, финиш |
+| BallSimulator: `BoostCooldownSeconds - excess` → `BoostCooldownSeconds - FixedStepSeconds - excess` | Boost-тест |
+| BallSimulator: `Cos(settings.MaxSlopeRadians)` → `Cos(settings.MaxSlopeRadians + 0.09f)` (≈55°) | `SupportFlipsAroundConfiguredMaxSlope(51)` |
+| BallSimulator: `level.Surfaces.OrderBy(surface => surface.Id, StringComparer.Ordinal).ToArray()` → `level.Surfaces.ToArray()` | `SimultaneousContactBudgetErrorNamesSameSurfaceForAnyOrder`; авторские тесты эту мутацию не ловят |
+| GameSession: `< level.KillY \|\| hazardHit)` → `< level.KillY)` | Арена level2, опасность+финиш+монета в одном tick |
+| GameSession: убрать `else` перед сбором монет и финиша | Опасность+финиш+монета в одном tick |
+| GameSession: убрать `sequence = 0;` в Restart | `SequenceStartsAtOneInEverySessionAndEventKeysNeverRepeat` |
+| GameSession: убрать `events = [];` в Restart | `RestartIssuesFreshSessionAndLeavesEarlierSnapshotUntouched`, `SequenceStartsAtOneInEverySessionAndEventKeysNeverRepeat` |
+| GameSession: `sequence = nextSequence` до публикации tick | Бюджет контактов, нумерация Sequence |
+| HazardCollision: убрать `if (Check(segment, 0d, 1d)) return true;` | `BeamSweepingThroughStationaryBallWithinOneTickIsAHit`, `SessionFailsWhenBeamSweepsThroughRestingBallInFirstTick` |
+| HazardMotion: центр без поворота offset | 3 регрессии опасностей |
+| GameSession: `level.Hazards.OrderBy(...)` → `level.Hazards.ToArray()` | Нет: эквивалентная мутация — SessionSnapshot сортирует позы сам, а попадание проверяется через `Any` |
 
-## Тест-дизайн, ожидающий реализации
-
-| BA / сценарий | Модуль | Планируемая проверка |
-|---|---|---|
-| BA-09, A11 | HazardCollision (#20) | Неподвижный шар, по которому проходит балка за один tick: обе позы в endpoints вне шара, `IntersectsPath` = true (swept hazard). Эталон — пример acceptance: offset 2, halfExtents (1,0.1,0.1), ω 2 рад/с, радиус конца ≈3.01, путь за tick ≈0.0502 |
-| BA-09, A11 | HazardMotion (#20) | `Evaluate` при угле 0, π/2, большом времени: центр = pivot + Rotate(offset); определение не меняется |
-| BA-09 | HazardCollision (#20) | Невалидный Path (зазор долей, разрыв End/Start, пустой) — ArgumentException; бюджет — InvalidOperationException с hazard ID |
-| BA-08, A10 | GameSession (#8) | Монета на пути внутри tick считается один раз, повторное прохождение не даёт счёта; тонкая монета между endpoints засчитывается по Path |
-| BA-09, A11 | GameSession (#8) | Опасность и Finish в одном tick → Failed, без LevelCompleted и монет этого tick |
-| BA-04, A12 | GameSession (#8) | Restart: новый SessionId, Tick 0, пустая очередь, монеты/boost/hazard time сброшены; старый Snapshot не изменился |
-| BA-04 | GameSession (#8) | Sequence событий начинается с 1 в каждом SessionId; ключ (SessionId, Sequence) не повторяется |
-| Контракт ошибок | GameSession (#8) | Исчерпание бюджета: Snapshot, Tick, счёт и очередь событий без частичных изменений |
-| BA-06/07, A13 | Вторая локация (#21) | Те же проверки монет/финиша/рампы на данных level2, число монет из данных |
-| Независимость порядка | GameSession (#8) | Перестановка surfaces/coins/hazards не меняет события и Snapshot |
+Граница CPU прежняя: визуальный вид, ручная проходимость двух локаций, FPS и слышимость
+этими тестами не подтверждаются.
 
 ## Команды
 

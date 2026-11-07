@@ -34,6 +34,19 @@ internal static class RegressionFixtures
     internal static BallState Air(Vector3 center, Vector3 velocity = default) =>
         new(center, velocity, Radius, false, Vector3.Zero, 0f, 0f);
 
+    /// <summary>Отпускает шар из <paramref name="start"/> и ждёт покоя на опоре; иначе тест падает.</summary>
+    internal static BallState DropOnto(BallSimulator simulator, Vector3 start, string label)
+    {
+        var state = Air(start);
+        for (int tick = 0; tick < 240; tick++)
+        {
+            state = simulator.Step(state, default).Ball;
+            if (state.Grounded && state.Velocity.LengthSquared() < 1e-8f) return state;
+        }
+        Assert.Fail($"{label}: шар не нашёл опору под точкой");
+        return state;
+    }
+
     /// <summary>Расстояние центра до опорной плоскости лежит в зазоре [r−PenetrationSlop, r+SkinWidth+PositionEpsilon].</summary>
     internal static void AssertWithinSupportGap(float height, string message = "")
     {

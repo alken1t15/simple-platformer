@@ -89,7 +89,7 @@ Position у target, LookAt остаётся ненулевым. Fallback пре�
 Обычный запуск открывает тот же графический Main Menu. Стрелки/Tab и мышь выбирают
 пункт, Enter/Space или клик активирует его. Escape ставит паузу; из Paused Escape
 или Continue продолжает игру; Back возвращает из подменю. Exit закрывает Main Menu.
-Каталог пока содержит только готовую Training Track; тестовые уровни не заменяют Turning Maze.
+Production-каталог GameLevels содержит Training Track и Turning Maze. Сквозной тест проходит обе локации через ввод/runner/сеанс/Presenter; это не ручная QA.
 
 MenuController заменяет прежние временные переходы стенда #6. После освобождения capture
 первая Normal позиция указателя задаёт базу выбора, исключая случайный переход с Continue

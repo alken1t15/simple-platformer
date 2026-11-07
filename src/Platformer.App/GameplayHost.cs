@@ -14,6 +14,7 @@ public sealed class GameplayHost
     private readonly GameScenePresenter _preview;
     private bool _resetRequested;
     private bool _resetMenuPointer = true;
+    private readonly AudioCoordinator? _audio;
 
     public LevelFlow Flow { get; }
     public GameplayFrameRunner Frames { get; }
@@ -25,17 +26,18 @@ public sealed class GameplayHost
     public bool CaptureRequested => !CloseRequested && Flow.Screen == AppScreen.Playing && Frames.CaptureRequested;
 
     public GameplayHost(LevelCatalog catalog, SimulationSettings settings, UserSettings userSettings, bool smoke = false,
-        Action<float>? applyMasterVolume = null)
+        Action<float>? applyMasterVolume = null, AudioCoordinator? audio = null)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         _catalog = catalog;
+        _audio = smoke ? null : audio;
         Frames = new GameplayFrameRunner(settings, smoke);
         Flow = new LevelFlow(catalog, settings, userSettings, resetTransientState: () =>
         {
             // LevelFlow вызывает callback и из Step: Clear здесь был бы рекурсивным.
             Frames.Clock.RequestClear();
             _resetRequested = true;
-        });
+        }, stopGameplayAudio: () => _audio?.Stop(), setAudioPaused: value => _audio?.SetPaused(value));
         Menu = new MenuController(Flow, catalog, applyMasterVolume);
         View = Menu.BuildView(960f, 640f);
         _preview = new GameScenePresenter(catalog.Levels[0]);
@@ -69,6 +71,11 @@ public sealed class GameplayHost
         else if (result.Camera is { } pose) ApplyCamera(pose);
         SynchronizeScene();
         RefreshView(clientWidth, clientHeight);
+        if (_audio is not null)
+        {
+            if (Flow.Snapshot is { } snapshot) _audio.Consume(snapshot.SessionId, Flow.DrainEvents());
+            _audio.SetScreen(Flow.Screen);
+        }
         return result;
     }
 

@@ -4,12 +4,12 @@ MenuController, MenuView, адаптивная раскладка и HudModel п
 и публичному overlay движка. Обычный запуск и `--play` открывают графический Main Menu;
 это тот же Engine/Scene lifecycle, что и игра. Движок закреплён на принятом
 `936b71a7393ef52b7d0d3b277af6b4c287be92c6`, upstream
-[PR #53](https://github.com/alken1t15/simple-3d-engine/pull/53), игровой
-[PR #35](https://github.com/alken1t15/simple-platformer/pull/35).
+[PR #54](https://github.com/alken1t15/simple-3d-engine/pull/54), игровой
+[PR #39](https://github.com/alken1t15/simple-platformer/pull/39).
 
 UI/HUD работает с настоящими LevelFlow, GameSession и Presenter. Каталог поставки
-пока содержит только Training Track; полнота двух локаций, WAV/AudioCoordinator и
-слышимый звук требуют #21. Авторские CPU-тесты/снимки с двумя контролируемыми уровнями
+содержит Training Track и Turning Maze; WAV/AudioCoordinator подключены.
+Слышимый звук и полная приёмка контента ещё требуют #21/QA. Авторские CPU-тесты/снимки с двумя контролируемыми уровнями
 не подменяют настоящую Turning Maze. [Объём](project-scope.md), [контракт](app-engine-contract-v1.md#app).
 
 ## Поведение UI

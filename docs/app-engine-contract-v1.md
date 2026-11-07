@@ -6,12 +6,12 @@ Core определён в [core-contract-v1.md](core-contract-v1.md); прин�
 переносит публичный InputSnapshot в CPU-границу AppInputSnapshot, InputRouter имеет оба overload.
 `--play` связывает GameSession/LevelFlow с окном и курсором; AppScreen используется из LevelFlow.
 Меню/HUD #19 подключены через [MenuController/MenuOverlayAdapter](menu.md);
-игровые WAV/AudioCoordinator и вторая локация ещё требуют #21.
+игровые WAV/AudioCoordinator и обе локации подключены; слышимость и полная QA остаются отдельными проверками.
 В #7 реализованы GameScenePresenter, SkinDefinition/GameSkins и контрактный
 [3D-preview](scene-presenter.md). В #8 добавлены LevelFlow, AppScreen и UserSettings —
 [таблица переходов и callbacks](game-session.md#каталог-и-app). Это CPU-модель с Presenter,
-оконный стенд подключён в #6, полный игровой маршрут ещё не реализован. Опасности #20 подключены к сеансу и Presenter;
-ввод и UI интегрированы в #6/#19; игровые звук/данные level2 остаются #21.
+оконный стенд подключён в #6, двухуровневый маршрут реализован и проверен автоматически. Опасности #20 подключены к сеансу и Presenter;
+ввод и UI интегрированы в #6/#19; игровые звук/данные level2 подключены; оставшаяся приёмка контента относится к #21.
 
 <a id="app"></a>
 
@@ -201,7 +201,7 @@ Namespace Engine3D.Audio в отдельном проекте без Core-зав
 и формы методов сохраняются. Инициализация не происходит автоматически при Engine.Create.
 AudioDevice создаётся App на том же основном потоке, ownerthread проверяется до backend вызова.
 Program уже создаёт один AudioDevice до MainMenu и связывает master gain с меню.
-По целевому контракту #21 AppStartup загружает clips и создаёт AudioCoordinator до MainMenu. Устройство живёт до завершения приложения, не пересоздаётся при Next/Restart.
+Program загружает clips и создаёт AudioCoordinator до MainMenu. Устройство живёт до завершения приложения, не пересоздаётся при Next/Restart.
 Начальная MasterVolume берётся из UserSettings; настройки доступны уже в первом меню.
 PCM WAV: RIFF/WAVE, integer16bit little-endian, mono/stereo, sample rate8–48kHz; неподдерживаемый
 формат→InvalidDataException с path, missingfile→FileNotFoundException.
@@ -224,8 +224,8 @@ Stop/Dispose voice повторяемы; после Dispose остальные �
 
 InputSnapshot.Pointer, расширенные InputKey, CursorMode и Engine3D.Audio существуют в закреплённом
 `7d09726` вместе с OverlayFrame/SetOverlay. Native input/cursor и меню/HUD подключены в #6/#19;
-master gain связан с AudioDevice. Игровые клипы/AudioCoordinator ещё впереди.
-Настоящий HiDPI с framebuffer≠client остаётся непроверенным в #16/#17.
+master gain связан с AudioDevice. Игровые клипы/AudioCoordinator подключены; см. [описание](game-audio.md).
+Native Wayland framebuffer/client=2 и pointer/hit-test проверены автоматически; физический HiDPI-монитор не проверялся.
 Для следующих расширений нужны отдельный upstream PR, engine regression tests и точный game gitlink.
 QA проверяет no-device отдельно от слышимости;
 никакая UI/audio/input реализация не должна зависеть от старой рабочей копии проекта.

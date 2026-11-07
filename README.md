@@ -6,12 +6,13 @@
 опасностями, звуком и меню уровней/громкости/скинов. План — три недели с 02.11.2026,
 готовность не позднее 23.11.2026; это план, а не подтверждение полной готовности.
 
-**Сейчас подключены управление, камера, меню и HUD для Training Track.**
+**Подключены управление, камера, меню, HUD и звук для двух локаций.**
 Обычный запуск открывает графическое Main Menu в том же окне, что и 3D-сцена.
 Работают Play, выбор доступного уровня, настройки master volume/mute, скины,
-пауза, повтор и результаты. В каталоге пока одна настоящая локация;
-Turning Maze, игровые WAV и AudioCoordinator остаются в #21.
-Полное прохождение двух локаций и слышимый игровой звук ещё не подтверждены.
+пауза, повтор и результаты. Каталог содержит Training Track и Turning Maze;
+Next ведёт на следующую локацию, после второй — к общему результату.
+Автоматический маршрут через настоящий renderer проходит обе локации с 25/25 монетами.
+Ручная приёмка на целевом компьютере и слышимость ещё требуют проверки.
 
 В Core реализованы [Training Track](docs/training-track.md),
 [физика шара](docs/ball-physics.md), [сеанс/монеты/опасности](docs/game-session.md).
@@ -42,7 +43,8 @@ PowerShell 7: `pwsh -NoProfile -File scripts/Verify.ps1` выполняет пр
 input/cursor [PR #52](https://github.com/alken1t15/simple-3d-engine/pull/52),
 audio [PR #51](https://github.com/alken1t15/simple-3d-engine/pull/51) и
 ASCII overlay [PR #53](https://github.com/alken1t15/simple-3d-engine/pull/53).
-Этот SHA принят в игре через [PR #35](https://github.com/alken1t15/simple-platformer/pull/35).
+Этот SHA принят в игре через [PR #39](https://github.com/alken1t15/simple-platformer/pull/39):
+[engine PR #54](https://github.com/alken1t15/simple-3d-engine/pull/54) добавил ClientSize для Wayland.
 Исходники движка и gitlink в интеграции #6/#19 не редактируются.
 Атлас и FONT-LICENSE.txt поставляет движок; английский UI соответствует его ASCII-шрифту.
 [Сторонние компоненты](THIRD_PARTY.md), [возможности/ограничения движка](docs/engine-integration.md).
@@ -50,8 +52,10 @@ ASCII overlay [PR #53](https://github.com/alken1t15/simple-3d-engine/pull/53).
 App создаёт один AudioDevice при игровом запуске на потоке окна; настройки немедленно
 меняют его MasterVolume, mute сохраняет предпочитаемую громкость. На Debian/Ubuntu/Mint
 для native audio нужна `libopenal1`; без устройства возможен диагностируемый silent fallback.
-Игровые записи и события звука ещё не подключены. Изменение gain/null-driver проверка
-не подтверждают слышимость. Smoke не создаёт AudioDevice.
+AudioCoordinator подключает jump/coin/fail/finish и один музыкальный loop;
+пауза приостанавливает voices, Restart/Next останавливают прежние эффекты.
+Собственные PCM16 WAV поставляются относительно пути приложения; [источники и lifecycle](docs/game-audio.md).
+OpenAL null/silent-проверка не подтверждает слышимость. Smoke не создаёт AudioDevice.
 
 ## Запуск
 

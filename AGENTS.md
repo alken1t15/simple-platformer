@@ -33,10 +33,14 @@ docs/architecture.md и docs/project-scope.md; остальные докумен
 вращающиеся препятствия, звук, меню уровней/громкости/скинов; цель — Linux.
 Параметры проектирования и готовность реализации различай по docs/requirements.md.
 Engine snapshot `936b71a7393ef52b7d0d3b277af6b4c287be92c6` поддерживает клавиши/мышь/CursorMode,
-отдельный Engine3D.Audio и OverlayFrame/SetOverlay (upstream PR #52/#51/#53).
-Игровые input/cursor/audio adapters и меню/HUD ещё не подключены; доступный API не означает готовую игру.
+отдельный Engine3D.Audio и OverlayFrame/SetOverlay (upstream PR #52/#51/#53), ClientSize (#54).
+Input/cursor/audio adapters, меню/HUD и каталог Training Track/Turning Maze подключены;
+AudioCoordinator использует собственные PCM16 WAV, lifecycle описан в docs/game-audio.md.
 Overlay использует logical client pixels и встроенный ASCII-атлас; реальный framebuffer≠client
-HiDPI остаётся непроверенным, synthetic scale=2 не заменяет такую проверку.
+HiDPI проверен автоматическим native Wayland compositor с framebuffer/client=2,
+включая реальные pointer coordinates/hit-test; physical монитор/устройство этим не подтверждаются.
+Synthetic viewport scale=2 не заменяет такую проверку. Linux renderer-маршрут двух локаций
+с 25/25 монетами проверен автоматически; ручное полное прохождение/слышимый звук/FPS не заявлены.
 Новые расширения следуют docs/engine-integration.md и требуют upstream PR и точного gitlink.
 Сохраняй Y вверх, правую систему координат и матричные соглашения движка.
 

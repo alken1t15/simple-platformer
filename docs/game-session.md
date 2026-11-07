@@ -126,3 +126,8 @@ GameplayHostTests проверяют стык LevelFlow/runner/Presenter: зав
 Подменю возвращается на исходный экран; Settings из Paused сохраняет паузу, Escape в
 Paused вызывает Continue. Escape в MainMenu не закрывает приложение — используется Exit.
 Эти переходы очищают ввод через тот же callback host, не создавая другого сеанса.
+
+
+## Production host и аудио
+
+GameplayHost соединяет LevelFlow с InputRouter/runner, Presenter и AudioCoordinator; GameLevels содержит обе локации. Stop/pause callbacks вызываются при переходах, события доставляются один раз после кадра. Проверки маршрута/Retry/прямого level2 — [протокол](gameplay-integration.md), lifecycle звука — [game-audio.md](game-audio.md). Ранее приведённые CPU-проверки не подменяются ручной QA.

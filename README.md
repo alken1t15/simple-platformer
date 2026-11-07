@@ -38,7 +38,7 @@ git diff --check
 
 PowerShell 7: `pwsh -NoProfile -File scripts/Verify.ps1` выполняет проверки с остановкой при ошибке.
 
-Движок закреплён на **`7d097269004ad59fc014cdeb707ccd9911c63841`**:
+Движок закреплён на **`936b71a7393ef52b7d0d3b277af6b4c287be92c6`**:
 input/cursor [PR #52](https://github.com/alken1t15/simple-3d-engine/pull/52),
 audio [PR #51](https://github.com/alken1t15/simple-3d-engine/pull/51) и
 ASCII overlay [PR #53](https://github.com/alken1t15/simple-3d-engine/pull/53).

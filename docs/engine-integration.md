@@ -1,6 +1,6 @@
 # Движок: возможности и план расширений для Ball Adventure
 
-Закреплённый SHA: **`7d097269004ad59fc014cdeb707ccd9911c63841`**, обновление 06.11.2026.
+Закреплённый SHA: **`936b71a7393ef52b7d0d3b277af6b4c287be92c6`**, обновление 06.11.2026.
 Он включает принятые [input/cursor PR #52](https://github.com/alken1t15/simple-3d-engine/pull/52)
 и [audio PR #51](https://github.com/alken1t15/simple-3d-engine/pull/51),
 а также [overlay PR #53](https://github.com/alken1t15/simple-3d-engine/pull/53).
@@ -140,3 +140,13 @@ UI/input/audio могут идти параллельно после фикса�
 интегрируются последовательно, без трёх несовместимых методов Run/Dispose.
 Новых пакетов/ассетов в этой переработке не добавлено; соответствующие записи THIRD_PARTY
 обязательны в реализационных PR, а не откладываются к сдаче.
+
+
+## Размер окна на Wayland — upstream PR54
+
+[Engine PR54](https://github.com/alken1t15/simple-3d-engine/pull/54) добавляет ClientSize
+без запроса глобальной позиции окна. App использует это свойство для layout/hit-test.
+Прежний WindowBounds вызывал FeatureUnavailable на Wayland.
+Native nested Wayland scale=2: client960x640/framebuffer1920x1280 и GPU pixel test PASS;
+это проверка buffer scale, не физического HiDPI-монитора/мыши или FPS.
+Воспроизведение: [скрипт и ограничения](../external/engine/docs/client-size-wayland.md).

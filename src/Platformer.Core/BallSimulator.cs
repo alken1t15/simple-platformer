@@ -5,6 +5,7 @@ namespace Platformer.Core;
 /// <summary>Чистый шаг одной сферы по статическим поверхностям. Все рабочие данные локальны вызову.</summary>
 public sealed class BallSimulator
 {
+    private const float RollingDragPerSecond = 0.25f;
     private readonly LevelDefinition level;
     private readonly SimulationSettings settings;
     private readonly SurfaceDefinition[] surfaces;
@@ -96,8 +97,9 @@ public sealed class BallSimulator
                 // Постоянное торможение до нуля удерживало шар на любом склоне.
                 // Вязкое сопротивление качению допускает старт под действием тяжести
                 // и конечную скорость: dv/dt = downhill - drag * v.
-                float drag = settings.BrakingAcceleration / settings.MoveSpeed;
-                velocity = (velocity + downhill * dt) / (1f + drag * dt);
+                // Качение по склону не использует сильное торможение отпусканием WASD:
+                // иначе на пологой петле Sky Storm предел достигался уже при ~0.48 ед/с.
+                velocity = (velocity + downhill * dt) / (1f + RollingDragPerSecond * dt);
             }
             else
             {

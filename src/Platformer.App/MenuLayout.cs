@@ -67,10 +67,10 @@ internal static class MenuLayout
 
         if (screen == AppScreen.Playing && hud is not null)
         {
-            panels.Add(new(Rect(24f, 24f, 432f, 144f), new(0.025f, 0.04f, 0.07f, 0.85f), MenuPanelKind.Sheet));
-            Text(hud.LevelName, 44f, 40f, 28f);
-            Text($"Coins {hud.CoinCount}/{hud.TotalCoins}", 44f, 84f, 24f);
-            Text(hud.BoostText, 44f, 122f, 22f, Accent);
+            panels.Add(new(Rect(24f, 24f, 336f, 108f), new(0.025f, 0.04f, 0.07f, 0.85f), MenuPanelKind.Sheet));
+            Text(hud.LevelName, 44f, 38f, 22f);
+            Text($"Coins {hud.CoinCount}/{hud.TotalCoins}", 44f, 72f, 18f);
+            Text(hud.BoostText, 44f, 100f, 16f, Accent);
             if (hud.ShowHelp)
             {
                 float helpTop = hud.Hint is null ? 614f : 580f;

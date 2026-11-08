@@ -26,6 +26,9 @@ public sealed class GameScenePresenter
     private double _simulationSeconds;
     private Vector3 _spinAxis;
     private double _spinSpeed;
+    private Vector3 _previousPosition;
+    private Quaternion _previousRotation = Quaternion.Identity;
+    private Quaternion _currentRotation = Quaternion.Identity;
 
     public Scene Scene { get; } = new();
     public SceneObject BallObject { get; }
@@ -147,7 +150,7 @@ public sealed class GameScenePresenter
         if (snapshot.Platforms.Count != _fragile.Count || snapshot.Platforms.Any(state => !_fragile.ContainsKey(state.Id)))
             throw new ArgumentException("Неизвестные или отсутствующие платформы", nameof(snapshot));
 
-        Quaternion rotation = reset ? Quaternion.Identity : BallObject.Transform.Rotation;
+        Quaternion rotation = reset ? Quaternion.Identity : _currentRotation;
         var spinAxis = reset ? Vector3.Zero : _spinAxis;
         double spinSpeed = reset ? 0d : _spinSpeed;
         if (!reset && snapshot.Tick > _tick)
@@ -198,6 +201,12 @@ public sealed class GameScenePresenter
                     : flash ? WarningA : WarningB;
         }
         foreach (var pose in snapshot.Hazards) SetBounds(_hazards[pose.Id], pose.Bounds);
+        if (reset || snapshot.Tick > _tick)
+        {
+            _previousPosition = reset ? snapshot.Ball.Center : _lastBall.Center;
+            _previousRotation = reset ? rotation : _currentRotation;
+        }
+        _currentRotation = rotation;
         BallObject.Transform.Position = snapshot.Ball.Center;
         BallObject.Transform.Scale = new Vector3(snapshot.Ball.Radius);
         BallObject.Transform.Rotation = rotation;
@@ -213,6 +222,25 @@ public sealed class GameScenePresenter
         _simulationSeconds = snapshot.SimulationSeconds;
         _spinAxis = spinAxis;
         _spinSpeed = spinSpeed;
+    }
+
+    /// <summary>Только отображение между двумя принятыми ticks; snapshot и физика не меняются.</summary>
+    public void InterpolateBall(float alpha)
+    {
+        if (!float.IsFinite(alpha) || alpha < 0 || alpha > 1) throw new ArgumentOutOfRangeException(nameof(alpha));
+        if (_sessionId == Guid.Empty) return;
+        var position = Vector3.Lerp(_previousPosition, _lastBall.Center, alpha);
+        BallObject.Transform.Position = position;
+        BallObject.Transform.Rotation = Quaternion.Slerp(_previousRotation, _currentRotation, alpha);
+        _visual?.UpdateContactShadow(_lastBall with { Center = position }, _simulationSeconds, _unshadowedSurfaceIndices);
+    }
+
+    /// <summary>Переход/restart не интерполирует между разными попытками или через паузу.</summary>
+    public void ResetInterpolation()
+    {
+        _previousPosition = _lastBall.Center;
+        _previousRotation = _currentRotation;
+        InterpolateBall(1);
     }
 
     private SceneObject Add(MeshData mesh, MaterialData material)

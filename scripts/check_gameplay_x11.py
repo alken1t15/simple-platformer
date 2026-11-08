@@ -49,6 +49,10 @@ def main():
     bind(x, "XDestroyWindow", c.c_int, pointer, window)
     bind(x, "XStoreName", c.c_int, pointer, window, c.c_char_p)
     bind(x, "XResizeWindow", c.c_int, pointer, window, c.c_uint, c.c_uint)
+    bind(x, "XInternAtom", c.c_ulong, pointer, c.c_char_p, c.c_int)
+    bind(x, "XGetWindowProperty", c.c_int, pointer, window, c.c_ulong, c.c_long, c.c_long,
+         c.c_int, c.c_ulong, c.POINTER(c.c_ulong), c.POINTER(c.c_int), c.POINTER(c.c_ulong),
+         c.POINTER(c.c_ulong), c.POINTER(pointer))
     bind(x, "XWarpPointer", c.c_int, pointer, window, window, c.c_int, c.c_int, c.c_uint, c.c_uint, c.c_int, c.c_int)
     bind(x, "XQueryPointer", c.c_int, pointer, window, c.POINTER(window), c.POINTER(window),
          c.POINTER(c.c_int), c.POINTER(c.c_int), c.POINTER(c.c_int), c.POINTER(c.c_int), c.POINTER(c.c_uint))
@@ -185,6 +189,23 @@ def main():
         until(lambda f: f.get("frame", 0) >= 3, "startup/render")
         native = find_window(root, "Ball Adventure")
         assert native, "Окно Ball Adventure не найдено."
+
+        def assert_fixed_size(width, height):
+            atom = x.XInternAtom(display, b"WM_NORMAL_HINTS", False)
+            actual, count, remaining = c.c_ulong(), c.c_ulong(), c.c_ulong()
+            fmt, data = c.c_int(), pointer()
+            status = x.XGetWindowProperty(display, native, atom, 0, 18, False, 0,
+                c.byref(actual), c.byref(fmt), c.byref(count), c.byref(remaining), c.byref(data))
+            try:
+                assert status == 0 and fmt.value == 32 and count.value >= 9, "Нет WM_NORMAL_HINTS"
+                hints = list(c.cast(data, c.POINTER(c.c_ulong))[:count.value])
+                assert hints[0] & (1 << 4) and hints[0] & (1 << 5), "Нет PMinSize/PMaxSize"
+                assert hints[5:7] == hints[7:9] == [width, height], "WM разрешает resize за края: " + str(hints)
+            finally:
+                if data:
+                    x.XFree(data)
+
+        assert_fixed_size(960, 640)
         x.XMapRaised(display, native)
         focus(native)
         until(lambda f: f["focused"], "focus")
@@ -253,6 +274,7 @@ def main():
         until(lambda f: f["screen"] == "Paused", "direct level2 pause")
         click_control("main-menu", "MainMenu")
         click_control("levels", "LevelSelect")
+        # Принудительная X11-команда обходит WM. Это проверка clamping, а не drag пользователя.
         x.XResizeWindow(display, native, 80, 48)
         x.XFlush(display)
         until(lambda f: f["clientWidth"] == 800 and f["clientHeight"] == 450, "minimum resize constraint")
@@ -284,6 +306,7 @@ def main():
         until(lambda f: any(control["label"] == "Resolution: < 1024 x 576 >" for control in f["controls"]), "resolution keyboard selection")
         click_control("apply-resolution", "Settings")
         until(lambda f: f["clientWidth"] == 1024 and f["clientHeight"] == 576, "apply keyboard resolution")
+        assert_fixed_size(1024, 576)
         capture("settings")
         click_control("back", "MainMenu")
         click_control("skins", "SkinSelect")

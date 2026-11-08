@@ -1,11 +1,12 @@
 # Движок: возможности и план расширений для Ball Adventure
 
-Закреплённый SHA: **`f20770963ee2725b88105e569bc1036238736e54`**, обновление 08.11.2026.
+Закреплённый SHA: **`e9433bffbceaa087504c93cd7bd1c71cd02cfa62`**, обновление 08.11.2026.
 Он включает принятые [input/cursor PR #52](https://github.com/alken1t15/simple-3d-engine/pull/52)
 и [audio PR #51](https://github.com/alken1t15/simple-3d-engine/pull/51),
 а также [overlay PR #53](https://github.com/alken1t15/simple-3d-engine/pull/53).
-Текущий SHA — merge [upstream PR #55](https://github.com/alken1t15/simple-3d-engine/pull/55):
-ClientSizeLimits/SetClientSize и ограничения окна. Overlay ранее подключён
+Текущий SHA — merge [upstream PR #56](https://github.com/alken1t15/simple-3d-engine/pull/56):
+Resizable=false запрещает пользовательский drag resize, SetClientSize остаётся рабочим.
+ClientSizeLimits/SetClientSize и ограничения окна — PR #55. Overlay ранее подключён
 [игровым PR #35](https://github.com/alken1t15/simple-platformer/pull/35), ClientSize — PR #39.
 Ниже различаются доступное API, подключённые меню/управление и оставшиеся ресурсы игры.
 
@@ -24,7 +25,7 @@ ClientSizeLimits/SetClientSize и ограничения окна. Overlay ра�
 
 Исходную рабочую копию движка и её workflow не изменять. Для расширения — изолированный
 checkout, отдельный upstream PR, проверки, review и merge только при поручении; затем отдельное
-изменение gitlink игры на точный принятый SHA. Сейчас выбран squash commit PR #55;
+изменение gitlink игры на точный принятый SHA. Сейчас выбран squash commit PR #56;
 его предки `b20e9edab6e437aeeb4d48c8908b945e0f9f7d2f` и
 `29d2028df53915a1fad52509ee792040637e12b9` — принятые input #52 и audio #51.
 Готовность контракта и готовность реализации отмечаются отдельно; не импортировать внутренний NativeWindow.

@@ -1,14 +1,16 @@
 # Ball Adventure: контракты App и расширений движка v1
 
 Контракт задачи #3 принят в PR #22 (02.11.2026); реализация остаётся задачами команды. Контракт будущей реализации, не заявление о текущих возможностях.
-Core определён в [core-contract-v1.md](core-contract-v1.md); принятый engine gitlink — `e9433bffbceaa087504c93cd7bd1c71cd02cfa62` (overlay PR53/game PR35).
+Core определён в [core-contract-v1.md](core-contract-v1.md); принятый engine gitlink — `04cd6fd441e7974060d5a47b69e49c3598bb047d` (overlay PR53/game PR35).
 В #6 реализованы [ввод/runner/камера и оконный host](input-camera.md): NativeInputAdapter
 переносит публичный InputSnapshot в CPU-границу AppInputSnapshot, InputRouter имеет оба overload.
 `--play` связывает GameSession/LevelFlow с окном и курсором; AppScreen используется из LevelFlow.
 Меню/HUD #19 подключены через [MenuController/MenuOverlayAdapter](menu.md);
 Размер окна: App/WindowSettings хранит допустимые Choices, предварительный Selected
-и фактический Actual. Program синхронизирует ClientSize/ClientSizeLimits и потребляет
-однократный TakeRequest через SetClientSize в onUpdate; Core не зависит от окна.
+и фактический Actual, а также предварительный/подтверждённый режим.
+Program синхронизирует ClientSize/WindowedClientSizeLimits/IsFullscreen/FullscreenSize
+и потребляет однократный TakeDisplayRequest через SetFullscreen, затем SetClientSize
+только для Windowed в onUpdate; Core не зависит от окна.
 Ограничения и выбор Resolution/Apply — [контракт меню](menu.md#window-size), engine PR #55.
 игровые WAV/AudioCoordinator и обе локации подключены; слышимость и полная QA остаются отдельными проверками.
 В #7 реализованы GameScenePresenter, SkinDefinition/GameSkins и контрактный

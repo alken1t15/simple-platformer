@@ -33,7 +33,7 @@ KillY, события, reset и CPU-переходы с сохранением �
 Подготовка требований/архитектуры/API принята в PR #22, макет содержания — в PR #23.
 Независимая часть #6 добавляет [CPU-ввод, фиксированный шаг и камеру](input-camera.md)
 с авторскими тестами и стыком к BallSimulator. Используется общее объявление AppScreen
-из принятого LevelFlow #8. Движок закреплён на `e9433bf` с input/cursor, overlay, ClientSize и отдельным audio API;
+из принятого LevelFlow #8. Движок закреплён на `04cd6fd` с input/cursor, overlay, ClientSize и отдельным audio API;
 native adapter, GameSession/LevelFlow и меню/HUD подключены в обычном запуске и `--play`.
 Overlay принят engine PR53/game PR35; сценарные preview сохранены отдельно. Обычный ручной Linux input/menu-протокол записан автором; native Wayland scale2 проверен автоматически. Полная независимая приёмка #19/#21 и слышимость не заявлены.
 

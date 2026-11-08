@@ -2,7 +2,7 @@
 
 Статус: проект реализации, не описание готовой игры. База — три проекта .NET10;
 публичные Engine3D.Core/OpenGL используются через submodule на
-`e9433bffbceaa087504c93cd7bd1c71cd02cfa62`. Движок не редактируется внутри submodule.
+`04cd6fd441e7974060d5a47b69e49c3598bb047d`. Движок не редактируется внутри submodule.
 
 ```text
 Platformer.App → Platformer.Core (только стандартная .NET)
@@ -14,8 +14,9 @@ Platformer.Tests → Core / CPU-часть App
 
 Имена solution/пространств имён Platformer сохраняются, чтобы не добавлять несвязанный рефакторинг.
 Выбор размера окна находится в CPU-модели App/WindowSettings и MenuController.
-Program передаёт актуальные ClientSize/ClientSizeLimits и выполняет однократный
-запрос через публичный Engine.SetClientSize. Оконные ограничения принадлежат движку;
+Program передаёт актуальные ClientSize/WindowedClientSizeLimits/IsFullscreen/FullscreenSize
+и выполняет однократный запрос через публичный Engine.SetFullscreen,
+затем Engine.SetClientSize только в Windowed. Оконные ограничения принадлежат движку;
 Core не зависит от окна. Поведение — [меню](menu.md#window-size).
 3D означает перемещение в X/Z и прыжок/гравитацию по Y, а не прежний фиксированный Z.
 

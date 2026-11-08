@@ -8,7 +8,7 @@
 
 ## Публичный ввод и порядок кадра
 
-Движок закреплён на **`e9433bffbceaa087504c93cd7bd1c71cd02cfa62`**:
+Движок закреплён на **`04cd6fd441e7974060d5a47b69e49c3598bb047d`**:
 [upstream overlay PR #53](https://github.com/alken1t15/simple-3d-engine/pull/53),
 [game gitlink PR #35](https://github.com/alken1t15/simple-platformer/pull/35).
 Ввод принят ранее в [upstream PR #52](https://github.com/alken1t15/simple-3d-engine/pull/52).

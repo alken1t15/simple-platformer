@@ -32,13 +32,18 @@ docs/architecture.md и docs/project-scope.md; остальные докумен
 Обязательны две локации с переходами, WASD/Space/Shift/R, мышь, монеты, наклоны,
 вращающиеся препятствия, звук, меню уровней/громкости/скинов; цель — Linux.
 Параметры проектирования и готовность реализации различай по docs/requirements.md.
-Engine snapshot `e9433bffbceaa087504c93cd7bd1c71cd02cfa62` поддерживает клавиши/мышь/CursorMode,
+Engine snapshot `04cd6fd441e7974060d5a47b69e49c3598bb047d` поддерживает клавиши/мышь/CursorMode,
 отдельный Engine3D.Audio и OverlayFrame/SetOverlay (upstream PR #52/#51/#53), ClientSize (#54).
 Ограничения окна и SetClientSize/ClientSizeLimits (#55) подключены к Settings:
 800×450 минимум (уменьшается на маленьком экране), доступные размеры фильтруются;
 выбор и Apply отделены от подтверждённого ClientSize ОС.
 Изменение размера перетаскиванием краёв/углов отключено через EngineOptions.Resizable=false;
 SetClientSize для Settings остаётся доступным.
+SetFullscreen/IsFullscreen/FullscreenSize/WindowedClientSizeLimits (#57) подключены:
+Display: Windowed/Fullscreen и Apply переключают режим в том же окне; fullscreen —
+текущий desktop mode без вычитания рамки/панелей, оконный размер восстанавливается.
+SetClientSize в fullscreen запрещён: сначала SetFullscreen(false). На Wayland для
+полноэкранного режима используется основной монитор, позицию возврата выбирает compositor.
 На Wayland лимит консервативен по наименьшей логической области мониторов; панели compositor API не сообщает.
 Input/cursor/audio adapters, меню/HUD и каталог Training Track/Turning Maze подключены;
 AudioCoordinator использует собственные PCM16 WAV, lifecycle описан в docs/game-audio.md.

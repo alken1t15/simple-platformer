@@ -14,6 +14,8 @@ Next ведёт на следующую локацию, после второй 
 
 В Settings доступны Resolution и Apply resolution: размер окна выбирается мышью
 или Left/Right и применяется отдельной кнопкой; Current window показывает результат ОС.
+Display: Fullscreen занимает весь монитор в текущем разрешении (1920×1080 на Full HD
+при масштабе 100%); Display: Windowed возвращает обычное окно. Apply применяет оба выбора.
 Растягивание окна за края и углы отключено — используйте Resolution → Apply resolution.
 Обычное окно ограничено минимумом 800×450 и доступной областью экрана с учётом рамки;
 на маленьком экране минимум уменьшается. [Подробности и ограничения Wayland](docs/menu.md#window-size).
@@ -45,12 +47,13 @@ git diff --check
 
 PowerShell 7: `pwsh -NoProfile -File scripts/Verify.ps1` выполняет проверки с остановкой при ошибке.
 
-Движок закреплён на **`e9433bffbceaa087504c93cd7bd1c71cd02cfa62`**:
+Движок закреплён на **`04cd6fd441e7974060d5a47b69e49c3598bb047d`**:
 input/cursor [PR #52](https://github.com/alken1t15/simple-3d-engine/pull/52),
 audio [PR #51](https://github.com/alken1t15/simple-3d-engine/pull/51) и
 ASCII overlay [PR #53](https://github.com/alken1t15/simple-3d-engine/pull/53).
-Текущий SHA — merge [engine PR #56](https://github.com/alken1t15/simple-3d-engine/pull/56):
-Resizable=false отключает растягивание за края. [Engine PR #55](https://github.com/alken1t15/simple-3d-engine/pull/55)
+Текущий SHA — merge [engine PR #57](https://github.com/alken1t15/simple-3d-engine/pull/57):
+fullscreen в текущем разрешении монитора. [Engine PR #56](https://github.com/alken1t15/simple-3d-engine/pull/56)
+добавил Resizable=false для запрета растягивания за края. [Engine PR #55](https://github.com/alken1t15/simple-3d-engine/pull/55)
 добавил ограничения окна и SetClientSize/ClientSizeLimits для выбора разрешения.
 Ранее [game PR #39](https://github.com/alken1t15/simple-platformer/pull/39)
 подключил ClientSize для Wayland из [engine PR #54](https://github.com/alken1t15/simple-3d-engine/pull/54).

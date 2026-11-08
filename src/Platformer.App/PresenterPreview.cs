@@ -15,7 +15,7 @@ public sealed class PresenterPreview
     public Camera Camera { get; }
     public SkinDefinition Skin { get; private set; }
 
-    public PresenterPreview(string skinId = "classic-blue", bool overview = false)
+    public PresenterPreview(string skinId = "classic-blue", bool overview = false, bool visual = false)
     {
         var track = TrainingTrack.Create();
         float height = track.Surfaces.Single(surface => surface.Id == "upper-platform").Bounds.Center.Y + 0.2f;
@@ -25,12 +25,19 @@ public sealed class PresenterPreview
             track.Finish, track.Surfaces, track.Coins, [hazard]);
         _hazard = hazard;
         Skin = GameSkins.Get(skinId);
-        Presenter = new GameScenePresenter(level);
+        Presenter = new GameScenePresenter(level, visual);
         Camera = new Camera
         {
             Position = overview ? new Vector3(18f, 22f, 27f) : new Vector3(0f, 2f, 3.5f),
             Target = overview ? new Vector3(1f, 0f, 7f) : new Vector3(-0.5f, 0.5f, 0f),
         };
+        if (visual)
+        {
+            Camera.FarPlane = 220f;
+            Camera.Position = overview ? new(17f, 14f, 23f) : new(-3.8f, 2.8f, 5.4f);
+            Camera.Target = overview ? new(1f, 0.2f, 9f) : new(0.9f, 0.4f, 0.4f);
+            Camera.FieldOfViewDegrees = overview ? 54f : 50f;
+        }
         Apply();
     }
 
@@ -49,7 +56,8 @@ public sealed class PresenterPreview
 
     public void ToggleSkin()
     {
-        Skin = GameSkins.Get(Skin.Id == "classic-blue" ? "orange" : "classic-blue");
+        int index = GameSkins.All.ToList().FindIndex(skin => skin.Id == Skin.Id);
+        Skin = GameSkins.All[(index + 1) % GameSkins.All.Count];
         Apply();
     }
 

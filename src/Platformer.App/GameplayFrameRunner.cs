@@ -37,7 +37,7 @@ public sealed class GameplayFrameRunner
     }
 
     public GameplayFrameResult Advance(AppInputSnapshot input, double frameSeconds, Vector3 target,
-        LevelDefinition level, Action<GameCommand> step)
+        LevelDefinition level, Action<GameCommand> step, IReadOnlyList<CrumblingPlatformState>? platforms = null)
     {
         if (!double.IsFinite(frameSeconds) || frameSeconds < 0d)
             throw new ArgumentOutOfRangeException(nameof(frameSeconds));
@@ -65,7 +65,7 @@ public sealed class GameplayFrameRunner
         }
         if (Screen != AppScreen.Playing) return new GameplayFrameResult(frame, null, 0);
         CameraPose pose = Camera.Update(_suppressMouse || _smoke ? Vector2.Zero : input.MouseDelta,
-            target, level, (float)Math.Min(frameSeconds, float.MaxValue));
+            target, level, (float)Math.Min(frameSeconds, float.MaxValue), platforms);
         _suppressMouse = false;
         // Повторное чистое преобразование использует yaw именно текущего кадра.
         frame = Router.Map(input, Screen, pose.YawRadians);

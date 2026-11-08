@@ -152,9 +152,9 @@ HUD полностью реализуется в #19: данные из SessionS
 | Экран | Видимые элементы и действия |
 |---|---|
 | MainMenu | Ball Adventure; Play, Levels, Settings, Skins, Exit. Play начинает Training Track |
-| LevelSelect | Две подписанные карточки Training Track / Turning Maze, Start выбранного, Back; обе доступны сразу |
+| LevelSelect | Четыре записи Training Track / Turning Maze / Jump Circuit / Island Circuit, Start выбранного, Back; все доступны сразу |
 | Settings | Master volume 0–100%, значение числом, mute с видимым состоянием, Back. Изменения немедленны |
-| SkinSelect | Два видимых образца classic-blue/orange, отметка выбранного, Select, Back; не достаточно списка невидимых ID |
+| SkinSelect | Шесть карточек с изображениями classic-blue/orange/emerald/violet/basketball/football, отметка выбора, Select, Back |
 | Playing / HUD | Имя уровня; Coins collected/total; Boost ready / active remaining / cooldown remaining; короткая подсказка WASD, Space, Shift, R, Esc на стартовом участке |
 | Paused | Затемнённая игровая сцена; Continue, Restart, Settings, MainMenu. Из Settings возвращаемся в Paused |
 | Failed | Понятное сообщение о поражении; Retry, LevelSelect, MainMenu. R повторяет уровень |
@@ -169,7 +169,8 @@ Next сохраняет результат завершённой локации
 и Retry на level2 общий итог равен 7 + новый результат level2, без монет неудачной попытки.
 Это данные App/LevelFlow, они не добавляются в Core SessionSnapshot.
 Выбор скина и громкость сохраняются между экранами/локациями в текущем процессе.
-Постоянное сохранение на диск не входит в эту задачу.
+В исходную задачу постоянное сохранение не входило; 09.11.2026 отдельно утверждены
+[лучшие результаты на диске, рейтинг и награды](progression.md).
 Мышь и клавиатура управляют одной моделью выбора: Up/Down/Tab, Enter/Space,
 Left/Right для громкости; Escape — назад, в Playing — пауза, в MainMenu выход только Exit.
 Нажатие Enter вместе с кликом выполняет действие один раз. Неактивный экран не получает ввод.

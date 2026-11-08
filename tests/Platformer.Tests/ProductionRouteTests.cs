@@ -40,15 +40,54 @@ public sealed class ProductionRouteTests
             }
             Assert.AreNotEqual(AppScreen.Playing, Host.Flow.Screen, $"Unreachable {x},{z}: {Host.Flow.Snapshot?.Ball.Center}");
         }
+
+        public void Hurdle(float x, float z = 0)
+        {
+            Go(x - 2, z);
+            for (int i = 0; i < 240 && Host.Flow.Snapshot!.Ball.Center.X < x - 1.45f; i++) Move(Vector2.UnitX);
+            Move(Vector2.UnitX, jump: true);
+            for (int i = 0; i < 240 && Host.Flow.Snapshot!.Ball.Center.X < x + 1.6f; i++) Move(Vector2.UnitX);
+        }
+
+        public void Gap(float edge, float landing)
+        {
+            Go(edge - 0.8f, 8);
+            for (int i = 0; i < 180 && Host.Flow.Snapshot!.Ball.Center.X < edge - 0.35f; i++) Move(Vector2.UnitX);
+            Assert.IsTrue(Host.Flow.Snapshot!.Ball.Grounded, $"Takeoff {edge}: {Host.Flow.Snapshot.Ball.Center}");
+            Move(Vector2.UnitX, true);
+            Go(landing, 8);
+            for (int i = 0; i < 120 && !Host.Flow.Snapshot!.Ball.Grounded; i++)
+            {
+                var ball = Host.Flow.Snapshot!.Ball;
+                Move(new Vector2(landing - ball.Center.X, 8 - ball.Center.Z) * 5 - new Vector2(ball.Velocity.X, ball.Velocity.Z));
+            }
+            Assert.IsTrue(Host.Flow.Snapshot!.Ball.Grounded);
+        }
+
+        public void SkyStorm()
+        {
+            Go(-6, 0); Go(8, 0);
+            for (int i = 1; i <= 36; i++)
+            {
+                float angle = -MathF.PI / 2 + i * MathF.PI / 24;
+                Go(8 + 8 * MathF.Cos(angle), 8 + 8 * MathF.Sin(angle));
+            }
+            Go(22, 8);
+            Gap(24, 26); Gap(27, 29); Gap(30, 32); Gap(33, 35);
+            Hurdle(38, 8);
+            Go(39.7f, 10.3f); Go(46, 10.3f); Go(48, 8); Go(51, 8);
+        }
     }
 
     [TestMethod]
-    public void ProductionCatalogPassesBothLocationsThroughInputRunnerSessionPresenterAndAudio()
+    [DataRow(false)]
+    [DataRow(true)]
+    public void ProductionCatalogPassesAllFiveLocationsThroughInputRunnerSessionPresenterAndAudio(bool visual)
     {
         var playback = new AudioCoordinatorTests.Playback();
         using var audio = new AudioCoordinator(playback);
         var host = new GameplayHost(GameLevels.CreateCatalog(), SimulationSettings.Default,
-            new UserSettings { SkinId = "orange", MasterVolume = 0.4f }, audio: audio);
+            new UserSettings { SkinId = "football", MasterVolume = 0.4f }, audio: audio, visual: visual);
         var driver = new Driver(host);
         driver.Press(AppButtons.Enter);
         driver.Go(-0.3f, -0.65f);
@@ -82,12 +121,52 @@ public sealed class ProductionRouteTests
         Assert.AreEqual(AppScreen.LevelResult, host.Flow.Screen);
         Assert.AreEqual(15, host.Flow.Snapshot!.CoinCount);
         driver.Press(AppButtons.Enter);
+        Assert.AreEqual("jump-circuit", host.Flow.Snapshot!.LevelId);
+        driver.Hurdle(5.5f);
+        driver.Hurdle(10);
+        driver.Hurdle(14.5f);
+        driver.Go(20, 0);
+        driver.Go(20, 10);
+        Assert.AreEqual(AppScreen.LevelResult, host.Flow.Screen);
+        Assert.AreEqual(10, host.Flow.Snapshot!.CoinCount);
+        driver.Press(AppButtons.Enter);
+        Assert.AreEqual("island-circuit", host.Flow.Snapshot!.LevelId);
+        for (int i = 1; i <= 12; i++)
+        {
+            float angle = -MathF.PI / 2 + i * MathF.PI / 24;
+            driver.Go(7 * MathF.Cos(angle), 7 + 7 * MathF.Sin(angle));
+        }
+        driver.Go(7, 12);
+        driver.Go(9.4f, 12);
+        driver.Go(9.4f, 16.2f);
+        driver.Go(7, 16.2f);
+        for (int i = 3; i <= 12; i++)
+        {
+            float angle = MathF.PI - i * MathF.PI / 24;
+            driver.Go(14 + 7 * MathF.Cos(angle), 14 + 7 * MathF.Sin(angle));
+        }
+        driver.Go(14.8f, 21);
+        for (int i = 0; i < 200 && host.Flow.Snapshot!.Ball.Center.X < 15.65f; i++) driver.Move(Vector2.UnitX);
+        driver.Move(Vector2.UnitX, jump: true);
+        driver.Go(19, 21);
+        driver.Go(23, 21);
+        Assert.AreEqual(AppScreen.LevelResult, host.Flow.Screen);
+        Assert.AreEqual(11, host.Flow.Snapshot!.CoinCount);
+        Assert.AreEqual(12, host.Flow.Progress.BaseStars);
+        driver.Press(AppButtons.Enter);
+        Assert.AreEqual(GameLevels.FinalLevelId, host.Flow.Snapshot!.LevelId);
+        driver.SkyStorm();
+        Assert.AreEqual(AppScreen.LevelResult, host.Flow.Screen);
+        Assert.AreEqual(20, host.Flow.Snapshot!.CoinCount);
+        driver.Press(AppButtons.Enter);
         Assert.AreEqual(AppScreen.GameComplete, host.Flow.Screen);
-        Assert.AreEqual(25, host.Flow.TotalCoinCount);
-        Assert.AreEqual("orange", host.Flow.UserSettings.SkinId);
+        Assert.AreEqual(66, host.Flow.TotalCoinCount);
+        Assert.AreEqual(15, host.Flow.Progress.TotalStars);
+        Assert.IsTrue(host.Flow.Progress.IsSkinUnlocked("champion"));
+        Assert.AreEqual("football", host.Flow.UserSettings.SkinId);
         Assert.AreEqual(0.4f, host.Flow.UserSettings.MasterVolume);
-        Assert.AreEqual(25, playback.Effects.Count(item => item.Kind == GameEventKind.CoinCollected));
-        Assert.AreEqual(2, playback.Effects.Count(item => item.Kind == GameEventKind.LevelCompleted));
+        Assert.AreEqual(66, playback.Effects.Count(item => item.Kind == GameEventKind.CoinCollected));
+        Assert.AreEqual(5, playback.Effects.Count(item => item.Kind == GameEventKind.LevelCompleted));
         Assert.IsTrue(playback.Music.All(voice => voice.Disposed));
     }
 

@@ -17,11 +17,12 @@ public sealed class SessionSnapshot
     public BallState Ball { get; }
     public IReadOnlyList<string> CollectedCoinIds { get; }
     public IReadOnlyList<HazardPose> Hazards { get; }
+    public IReadOnlyList<CrumblingPlatformState> Platforms { get; }
     public int CoinCount => CollectedCoinIds.Count;
 
     public SessionSnapshot(Guid sessionId, string levelId, long tick, double simulationSeconds,
         SessionPhase phase, BallState ball, IReadOnlyList<string> collectedCoinIds,
-        IReadOnlyList<HazardPose> hazards)
+        IReadOnlyList<HazardPose> hazards, IReadOnlyList<CrumblingPlatformState>? platforms = null)
     {
         if (sessionId == Guid.Empty) throw new ArgumentException("Требуется ID сеанса", nameof(sessionId));
         LevelId = LevelValidation.Id(levelId, nameof(levelId));
@@ -53,6 +54,16 @@ public sealed class SessionSnapshot
         }
         Array.Sort(coins, StringComparer.Ordinal);
         Array.Sort(poses, (left, right) => StringComparer.Ordinal.Compare(left.Id, right.Id));
+        var platformCopy = platforms?.ToArray() ?? [];
+        ids.Clear();
+        foreach (var platform in platformCopy)
+        {
+            if (!ids.Add(LevelValidation.Id(platform.Id, nameof(platforms)))
+                || (platform.TriggeredAtSeconds is { } triggered && (!double.IsFinite(triggered) || triggered < 0 || triggered > simulationSeconds))
+                || (platform.Collapsed && platform.TriggeredAtSeconds is null))
+                throw new ArgumentException("Некорректное состояние платформы", nameof(platforms));
+        }
+        Platforms = Array.AsReadOnly(platformCopy);
         SessionId = sessionId;
         Tick = tick;
         SimulationSeconds = simulationSeconds;

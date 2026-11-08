@@ -40,7 +40,13 @@ public sealed class MenuLayoutTests
                 foreach (var control in view.Controls)
                 {
                     Assert.IsTrue(view.Panels.Any(panel => panel.Bounds == control.Bounds));
-                    Assert.IsTrue(view.Texts.Any(text => text.Text == control.Label && control.Bounds.Contains(text.Position)));
+                    string label = control.Kind == MenuControlKind.Skin
+                        ? GameSkins.Get(control.Id["skin:".Length..]).DisplayName : control.Label;
+                    Assert.IsTrue(view.Texts.Any(text => text.Text == label && control.Bounds.Contains(text.Position)));
+                    if (control.PreviewBounds is { } preview)
+                        Assert.IsTrue(preview.X >= control.Bounds.X && preview.Y >= control.Bounds.Y
+                            && preview.X + preview.Width <= control.Bounds.X + control.Bounds.Width + 0.001f
+                            && preview.Y + preview.Height <= control.Bounds.Y + control.Bounds.Height + 0.001f);
                     Assert.AreEqual(1, view.Controls.Count(other => other.Bounds.Contains(
                         new(control.Bounds.X + control.Bounds.Width / 2f, control.Bounds.Y + control.Bounds.Height / 2f))));
                 }

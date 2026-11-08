@@ -59,6 +59,7 @@ try
             ? "Ball Adventure — presenter preview" : "Simple Platformer — integration preview",
         Width = 960,
         Height = 640,
+        Resizable = false,
         MinimumClientSize = (800, 450),
         LimitToMonitorWorkArea = true,
         FocusOnShow = !smoke,

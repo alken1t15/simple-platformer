@@ -32,12 +32,14 @@ docs/architecture.md и docs/project-scope.md; остальные докумен
 Обязательны две локации с переходами, WASD/Space/Shift/R, мышь, монеты, наклоны,
 вращающиеся препятствия, звук, меню уровней/громкости/скинов; цель — Linux.
 Параметры проектирования и готовность реализации различай по docs/requirements.md.
-Engine snapshot `f20770963ee2725b88105e569bc1036238736e54` поддерживает клавиши/мышь/CursorMode,
+Engine snapshot `e9433bffbceaa087504c93cd7bd1c71cd02cfa62` поддерживает клавиши/мышь/CursorMode,
 отдельный Engine3D.Audio и OverlayFrame/SetOverlay (upstream PR #52/#51/#53), ClientSize (#54).
 Ограничения окна и SetClientSize/ClientSizeLimits (#55) подключены к Settings:
 800×450 минимум (уменьшается на маленьком экране), доступные размеры фильтруются;
-выбор и Apply отделены от подтверждённого ClientSize ОС. На Wayland лимит консервативен
-по наименьшей логической области мониторов; панели compositor API не сообщает.
+выбор и Apply отделены от подтверждённого ClientSize ОС.
+Изменение размера перетаскиванием краёв/углов отключено через EngineOptions.Resizable=false;
+SetClientSize для Settings остаётся доступным.
+На Wayland лимит консервативен по наименьшей логической области мониторов; панели compositor API не сообщает.
 Input/cursor/audio adapters, меню/HUD и каталог Training Track/Turning Maze подключены;
 AudioCoordinator использует собственные PCM16 WAV, lifecycle описан в docs/game-audio.md.
 Overlay использует logical client pixels и встроенный ASCII-атлас; реальный framebuffer≠client

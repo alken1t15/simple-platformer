@@ -14,6 +14,7 @@ public sealed class MenuController
     private readonly LevelFlow flow;
     private readonly LevelCatalog catalog;
     private readonly Action<float> applyMasterVolume;
+    private readonly bool visual;
     private AppScreen observedScreen;
     private int selectedIndex;
     private bool confirmingMainMenu;
@@ -28,12 +29,13 @@ public sealed class MenuController
     public WindowSettings Window { get; } = new();
     private float EffectiveVolume => flow.UserSettings.Muted ? 0f : flow.UserSettings.MasterVolume;
 
-    public MenuController(LevelFlow flow, LevelCatalog catalog, Action<float>? applyMasterVolume = null)
+    public MenuController(LevelFlow flow, LevelCatalog catalog, Action<float>? applyMasterVolume = null, bool visual = false)
     {
         ArgumentNullException.ThrowIfNull(flow);
         ArgumentNullException.ThrowIfNull(catalog);
         this.flow = flow;
         this.catalog = catalog;
+        this.visual = visual;
         this.applyMasterVolume = applyMasterVolume ?? (_ => { });
         observedScreen = flow.Screen;
         ApplyVolume();
@@ -46,7 +48,7 @@ public sealed class MenuController
         HudModel? hud = flow.Screen == AppScreen.Playing && snapshot is not null
             ? HudModel.Create(catalog.Get(snapshot.LevelId), snapshot) : null;
         return MenuLayout.Build(flow.Screen, Page(), hud, EffectiveVolume, selectedIndex,
-            focused ? pointer : null, pressedId, width, height);
+            focused ? pointer : null, pressedId, width, height, visual);
     }
 
     /// <summary>Первый Normal snapshot после capture/focus задаёт базу, а не движение выбора.</summary>

@@ -12,7 +12,7 @@ public sealed class TropicalMenuThemeTests
     {
         var catalog = GameLevels.CreateCatalog();
         var flow = new LevelFlow(catalog, SimulationSettings.Default, new());
-        var menu = new MenuController(flow, catalog);
+        var menu = new MenuController(flow, catalog, visual: true);
         foreach (var screen in new[] { AppScreen.MainMenu, AppScreen.Settings, AppScreen.SkinSelect, AppScreen.LevelSelect })
         {
             if (screen == AppScreen.Settings) flow.OpenSettings();
@@ -30,7 +30,7 @@ public sealed class TropicalMenuThemeTests
                     Assert.AreEqual(standard.Texts[i].Text, themed.Texts[i].Text);
                     Assert.AreEqual(standard.Texts[i].Position, themed.Texts[i].Position);
                     Assert.AreEqual(standard.Texts[i].PixelHeight, themed.Texts[i].PixelHeight);
-                    Assert.IsLessThan(0.5f, themed.Texts[i].Color.R, "Светлая карточка требует тёмной надписи");
+                    Assert.IsGreaterThan(0.7f, themed.Texts[i].Color.G, "Тёмная карточка требует светлой надписи");
                 }
                 for (int i = 0; i < view.Panels.Count; i++)
                 {

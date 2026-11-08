@@ -9,8 +9,9 @@ public static class MenuOverlayAdapter
     {
         ArgumentNullException.ThrowIfNull(view);
         var backgrounds = visual ? view.Panels.Select(panel => TropicalMenuTheme.Panel(panel,
-            panel.Kind == MenuPanelKind.Control ? view.Controls.FirstOrDefault(control => control.Bounds == panel.Bounds) : null))
-            .Concat(TropicalMenuTheme.Decoration(view)) : Enumerable.Empty<OverlayImage>();
+            panel.Kind == MenuPanelKind.Control ? view.Controls.FirstOrDefault(control => control.Bounds == panel.Bounds) : null,
+            view.Screen == AppScreen.MainMenu))
+            : Enumerable.Empty<OverlayImage>();
         return new OverlayFrame(
             visual ? [] : view.Panels.Select(panel => new OverlayPanel(new UiRect(panel.Bounds.X, panel.Bounds.Y,
                 panel.Bounds.Width, panel.Bounds.Height), panel.Color)).ToArray(),

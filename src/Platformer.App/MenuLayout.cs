@@ -23,7 +23,7 @@ internal static class MenuLayout
     }
 
     internal static MenuView Build(AppScreen screen, MenuPage page, HudModel? hud, float volume,
-        int selectedIndex, Vector2? pointer, string? pressedId, float width, float height)
+        int selectedIndex, Vector2? pointer, string? pressedId, float width, float height, bool visual = false)
     {
         ValidateSize(width, height);
         var controls = new List<MenuControl>();
@@ -36,6 +36,34 @@ internal static class MenuLayout
         MenuRect Rect(float x, float y, float w, float h) => new(left + x * scale, top + y * scale, w * scale, h * scale);
         void Text(string text, float x, float y, float size, ColorRgba? color = null) =>
             texts.Add(new(new(left + x * scale, top + y * scale), text, size * scale, color ?? White));
+
+        if (visual && screen == AppScreen.MainMenu)
+        {
+            panels.Add(new(new(0, 0, width, height), new(1, 1, 1), MenuPanelKind.Backdrop));
+            Text("BALL", 104, 88, 70, Accent);
+            Text("ADVENTURE", 104, 163, 48);
+            Text("ROLL. JUMP. EXPLORE.", 108, 220, 16, Muted);
+            for (int i = 0; i < page.Details.Count; i++) Text(page.Details[i], 108, 255 + i * 24, 18, Muted);
+            for (int i = 0; i < page.Options.Count; i++)
+            {
+                var option = page.Options[i];
+                float y = 305 + i * 48;
+                var bounds = Rect(104, y, 360, 40);
+                bool selected = selectedIndex == i;
+                bool hovered = pointer is { } position && bounds.Contains(position);
+                bool pressed = option.Enabled && pressedId == option.Id;
+                controls.Add(new(option.Id, option.Label, option.Kind, bounds, selected, hovered, pressed,
+                    Enabled: option.Enabled, Locked: option.Locked));
+                panels.Add(new(bounds, new(1, 1, 1), MenuPanelKind.Control));
+                if (selected) panels.Add(new(Rect(104, y + 8, 3, 24), Accent, MenuPanelKind.Focus));
+                Text(option.Label, 124, y + 9, 23);
+                if (selected) Text(">", 434, y + 9, 23, Accent);
+            }
+            Text("Up / Down: choose", 108, 574, 16, Muted);
+            Text("Tab / Shift+Tab: next / previous", 108, 598, 16, Muted);
+            Text("Enter / Space / Mouse click: select", 108, 622, 16, Muted);
+            return new(screen, new(width, height), controls, panels, texts);
+        }
 
         if (screen == AppScreen.Playing && hud is not null)
         {

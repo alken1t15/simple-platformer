@@ -1,13 +1,14 @@
 using System.Numerics;
 using Engine3D.Core;
+using Engine3D.OpenGL;
 
 namespace Platformer.App;
 
 internal enum MenuAction { Play, Levels, Settings, Skins, Exit, ChooseLevel, Back, Volume, Mute,
-    ChooseSkin, Continue, Restart, MainMenu, Next, Resolution, ApplyResolution, DisplayMode, CancelMainMenu, ConfirmMainMenu, Music }
+    ChooseSkin, Continue, Restart, MainMenu, Next, Resolution, ApplyResolution, DisplayMode, CancelMainMenu, ConfirmMainMenu, Music, Controls }
 internal sealed record MenuOption(string Id, string Label, MenuAction Action,
     MenuControlKind Kind = MenuControlKind.Button, string? Value = null, ColorRgba? Swatch = null, bool Enabled = true, string? Detail = null, bool Locked = false, int? Rating = null);
-internal sealed record MenuPage(string Title, IReadOnlyList<string> Details, IReadOnlyList<MenuOption> Options);
+internal sealed record MenuPage(string Title, IReadOnlyList<string> Details, IReadOnlyList<MenuOption> Options, bool IsControlsPage = false);
 
 /// <summary>Один расчёт геометрии для отрисовки и hit-test; не обращается к окну.</summary>
 internal static class MenuLayout
@@ -36,6 +37,22 @@ internal static class MenuLayout
         MenuRect Rect(float x, float y, float w, float h) => new(left + x * scale, top + y * scale, w * scale, h * scale);
         void Text(string text, float x, float y, float size, ColorRgba? color = null) =>
             texts.Add(new(new(left + x * scale, top + y * scale), text, size * scale, color ?? White));
+        void Label(string text, float x, float y, float height, float size, ColorRgba? color = null)
+        {
+            var ink = OverlayTextMetrics.MeasureInkBounds(text, size);
+            Text(text, x, y + (height - ink.Height) / 2 - ink.Y, size, color);
+        }
+        void CardText(string title, string detail, float x, float y, float height,
+            float titleTop, float detailTop, float titleSize, float detailSize, ColorRgba ink, ColorRgba detailInk)
+        {
+            var first = OverlayTextMetrics.MeasureInkBounds(title, titleSize);
+            var second = OverlayTextMetrics.MeasureInkBounds(detail, detailSize);
+            float topInk = MathF.Min(titleTop + first.Y, detailTop + second.Y);
+            float bottomInk = MathF.Max(titleTop + first.Y + first.Height, detailTop + second.Y + second.Height);
+            float offset = (height - (bottomInk - topInk)) / 2 - topInk;
+            Text(title, x, y + titleTop + offset, titleSize, ink);
+            Text(detail, x, y + detailTop + offset, detailSize, detailInk);
+        }
 
         if (visual && screen == AppScreen.MainMenu)
         {
@@ -56,12 +73,9 @@ internal static class MenuLayout
                     Enabled: option.Enabled, Locked: option.Locked));
                 panels.Add(new(bounds, new(1, 1, 1), MenuPanelKind.Control));
                 if (selected) panels.Add(new(Rect(104, y + 8, 3, 24), Accent, MenuPanelKind.Focus));
-                Text(option.Label, 124, y + 9, 23);
-                if (selected) Text(">", 434, y + 9, 23, Accent);
+                Label(option.Label, 124, y, 40, 23);
+                if (selected) Label(">", 434, y, 40, 23, Accent);
             }
-            Text("Up / Down: choose", 108, 574, 16, Muted);
-            Text("Tab / Shift+Tab: next / previous", 108, 598, 16, Muted);
-            Text("Enter / Space / Mouse click: select", 108, 622, 16, Muted);
             return new(screen, new(width, height), controls, panels, texts);
         }
 
@@ -71,14 +85,6 @@ internal static class MenuLayout
             Text(hud.LevelName, 44f, 38f, 22f);
             Text($"Coins {hud.CoinCount}/{hud.TotalCoins}", 44f, 72f, 18f);
             Text(hud.BoostText, 44f, 100f, 16f, Accent);
-            if (hud.ShowHelp)
-            {
-                float helpTop = hud.Hint is null ? 614f : 580f;
-                panels.Add(new(Rect(24f, helpTop, 1000f, 696f - helpTop), new(0.025f, 0.04f, 0.07f, 0.85f), MenuPanelKind.Sheet));
-                Text("WASD move   Mouse camera   Space jump", 44f, helpTop + 14, 22f);
-                Text("Shift boost   R restart   Esc pause", 44f, helpTop + 48, 22f, Muted);
-                if (hud.Hint is not null) Text(hud.Hint, 44f, helpTop + 82, 18f, Accent);
-            }
             return new(screen, new(width, height), controls, panels, texts);
         }
 
@@ -86,7 +92,8 @@ internal static class MenuLayout
         panels.Add(new(new(0f, 0f, width, height), new(0.015f, 0.025f, 0.045f, 0.65f), MenuPanelKind.Backdrop));
         panels.Add(new(Rect(340f, 60f, 600f, 600f), new(0.035f, 0.055f, 0.09f, 0.94f), MenuPanelKind.Sheet));
         Text(page.Title, 376f, 92f, 34f);
-        for (int i = 0; i < page.Details.Count; i++) Text(page.Details[i], 376f, 152f + 30f * i, 22f, Muted);
+        for (int i = 0; i < page.Details.Count; i++) Text(page.Details[i], 376f,
+            152f + (page.IsControlsPage ? 32f : 30f) * i, page.IsControlsPage ? 20f : 22f, Muted);
 
         float row = MathF.Min(64f, 320f / Math.Max(1, page.Options.Count));
         for (int i = 0; i < page.Options.Count; i++)
@@ -94,13 +101,16 @@ internal static class MenuLayout
             var option = page.Options[i];
             bool skinGrid = screen == AppScreen.SkinSelect;
             bool levels = screen == AppScreen.LevelSelect;
+            bool settings = screen == AppScreen.Settings;
             int cards = skinGrid ? GameSkins.All.Count : levels ? page.Options.Count - 1 : 0;
             bool card = i < cards;
             bool paired = skinGrid && card;
             float x = paired ? 376f + (card ? i : i - cards) % 2 * 264f : 376f;
             float y = skinGrid ? (card ? 215f + i / 2 * 57f : 510f)
-                : levels ? (card ? 210f + i * 54f : 218f + cards * 54f) : 238f + row * i;
-            float buttonHeight = skinGrid ? (card ? 50f : 40f) : levels ? (card ? 46f : 40f) : row - 12;
+                : levels ? (card ? 210f + i * 54f : 218f + cards * 54f)
+                : page.IsControlsPage ? 574f : settings ? 224f + 50f * i : 238f + row * i;
+            float buttonHeight = skinGrid ? (card ? 50f : 40f) : levels ? (card ? 46f : 40f)
+                : settings ? 44f : row - 12;
             var bounds = Rect(x, y, paired ? 252f : 528f, buttonHeight);
             bool selected = selectedIndex == i;
             bool hovered = pointer is { } position && bounds.Contains(position);
@@ -117,31 +127,27 @@ internal static class MenuLayout
             ColorRgba ink = option.Enabled && !option.Locked ? White : Muted;
             if (previewBounds is not null)
             {
-                Text(GameSkins.Get(option.Value!).DisplayName, x + 60, y + 6, 17, ink);
-                Text(option.Detail ?? "", x + 60, y + 29, 13, option.Locked ? Muted : Accent);
+                CardText(GameSkins.Get(option.Value!).DisplayName, option.Detail ?? "", x + 60, y, buttonHeight,
+                    6, 29, 17, 13, ink, option.Locked ? Muted : Accent);
                 if (option.Swatch is { } swatch) panels.Add(new(Rect(x + 60, y + 46, 24, 2), swatch));
             }
             else if (option.Kind == MenuControlKind.Level)
             {
-                Text(option.Label, x + 14, y + 3, 19, ink);
-                Text(option.Detail ?? "", x + 14, y + 26, 14, option.Locked ? Muted : Accent);
+                CardText(option.Label, option.Detail ?? "", x + 14, y, buttonHeight,
+                    3, 26, 19, 14, ink, option.Locked ? Muted : Accent);
                 for (int star = 0; star < 3; star++)
                     images.Add(new(Rect(x + 430 + star * 28, y + 8, 25, 25),
                         star < (option.Rating ?? 0) ? MenuArtwork.FilledStar : MenuArtwork.EmptyStar));
             }
             else if (option.Kind == MenuControlKind.Volume)
-                Text(option.Label, x + 20, y + 1f, 20f, ink); // Семь строк Settings: подпись выше шкалы.
-            else Text(option.Label, x + 20, y + 9f, 22f, ink);
+                Label(option.Label, x + 20, y, buttonHeight, 20f, ink);
+            else Label(option.Label, x + 20, y, buttonHeight, settings ? 20f : 22f, ink);
             if (valueBounds is { } track)
             {
                 panels.Add(new(track, new(0.2f, 0.25f, 0.33f), MenuPanelKind.Track));
                 panels.Add(new(track with { Width = track.Width * volume }, Accent, MenuPanelKind.Fill));
             }
         }
-        Text(screen == AppScreen.Settings ? "Up / Down: choose; Left / Right: change" : "Up / Down: choose", 376f, 566f, 18f, Muted);
-        Text("Tab / Shift+Tab: next / previous", 376f, 588f, 18f, Muted);
-        Text("Enter / Space / Mouse click: select", 376f, 610f, 18f, Muted);
-        Text(screen == AppScreen.MainMenu ? "Exit: close game" : "Esc: back", 376f, 632f, 18f, Muted);
         return new(screen, new(width, height), controls, panels, texts, images);
     }
 }

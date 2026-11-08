@@ -56,8 +56,12 @@ try
     var progressStore = gameplayMode && !smoke ? new ProgressStore(ProgressStore.DefaultPath) : null;
     var progress = progressStore?.Load(catalog) ?? new PlayerProgress(catalog);
     if (progressStore?.Diagnostic is { } loadDiagnostic) Console.Error.WriteLine(loadDiagnostic);
+    var settingsStore = gameplayMode && !smoke ? new SettingsStore(SettingsStore.DefaultPath) : null;
+    var savedSettings = settingsStore?.Load(progress) ?? StoredSettings.Default;
+    if (settingsStore?.Diagnostic is { } settingsDiagnostic) Console.Error.WriteLine(settingsDiagnostic);
+    var persistence = settingsStore is null ? null : new SettingsPersistence(settingsStore, savedSettings, Console.Error.WriteLine);
     var game = gameplayMode ? new GameplayHost(catalog,
-        SimulationSettings.Default, new UserSettings(), smoke,
+        SimulationSettings.Default, savedSettings.CreateUserSettings(), smoke,
         applyMasterVolume: audio is null ? null : value => audio.MasterVolume = value, audio: gameAudio, visual: visual, progress: progress) : null;
     if (game is not null && progressStore is not null)
         game.Flow.ProgressChanged += () =>
@@ -70,96 +74,120 @@ try
     {
         Title = gameplayMode ? "Ball Adventure" : presenterMode
             ? "Ball Adventure — presenter preview" : "Simple Platformer — integration preview",
-        Width = 960,
-        Height = 640,
+        Width = savedSettings.WindowedResolution.Width,
+        Height = savedSettings.WindowedResolution.Height,
         Resizable = false,
         MinimumClientSize = (800, 450),
         LimitToMonitorWorkArea = true,
         FocusOnShow = !smoke,
     });
-    bool ready = false;
-    engine.Run(game?.Scene ?? preview?.Presenter.Scene ?? snapshot!.Scene,
-        game?.Camera ?? preview?.Camera ?? snapshot!.Camera, frameSeconds =>
+    WindowBranding.Apply(engine);
+    if (game is not null && settingsStore is not null)
     {
-        // Единственное чтение snapshot за кадр; ticks не обращаются к окну.
-        var input = engine.Input;
-        if (game is not null)
+        var initialClient = engine.ClientSize;
+        var initialLimits = engine.WindowedClientSizeLimits;
+        var desktop = engine.FullscreenSize;
+        game.Menu.Window.Synchronize(initialClient.Width, initialClient.Height, initialLimits.MinimumWidth,
+            initialLimits.MinimumHeight, initialLimits.MaximumWidth, initialLimits.MaximumHeight,
+            false, desktop.Width, desktop.Height);
+        game.Menu.Window.SelectActual();
+    }
+    bool restoreFullscreen = settingsStore is not null && savedSettings.Fullscreen;
+    bool ready = false;
+    try
+    {
+        engine.Run(game?.Scene ?? preview?.Presenter.Scene ?? snapshot!.Scene,
+            game?.Camera ?? preview?.Camera ?? snapshot!.Camera, frameSeconds =>
         {
-            var appInput = NativeInputAdapter.Map(input);
-            var client = engine.ClientSize;
-            var limits = engine.WindowedClientSizeLimits;
-            var fullscreenSize = engine.FullscreenSize;
-            game.Menu.Window.Synchronize(client.Width, client.Height, limits.MinimumWidth, limits.MinimumHeight,
-                limits.MaximumWidth, limits.MaximumHeight, engine.IsFullscreen, fullscreenSize.Width, fullscreenSize.Height);
-            var frameResult = !smoke ? game.Advance(appInput, frameSeconds, client.Width, client.Height) : default;
-            if (game.Menu.Window.TakeDisplayRequest() is { } display)
+            // Единственное чтение snapshot за кадр; ticks не обращаются к окну.
+            var input = engine.Input;
+            if (game is not null)
             {
-                engine.SetFullscreen(display.Fullscreen);
-                if (!display.Fullscreen) engine.SetClientSize(display.Resolution.Width, display.Resolution.Height);
-            }
-            if (smoke) game.RefreshView(client.Width, client.Height);
-            engine.SetOverlay(MenuOverlayAdapter.Build(game.View, visual));
-            var cursorMode = game.CaptureRequested ? CursorMode.Captured : CursorMode.Normal;
-            if (engine.CursorMode != cursorMode) engine.CursorMode = cursorMode;
-            if (game.CloseRequested) engine.RequestClose();
-            if (traceInput)
-            {
-                var ball = game.Flow.Snapshot?.Ball;
-                var ballRotation = game.Flow.Presenter?.BallObject.Transform.Rotation;
-                Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+                // Сначала окно получает фокус: X11/GLFW не должны сворачивать ещё не активное fullscreen-окно.
+                if (restoreFullscreen && input.IsFocused)
                 {
-                    kind = "frame", frame = engine.RenderedFrames, focused = input.IsFocused,
-                    screen = game.Flow.Screen.ToString(), cursor = engine.CursorMode.ToString(),
-                    down = appInput.Down.ToString(), pressed = appInput.Pressed.ToString(), released = appInput.Released.ToString(),
-                    tick = game.Flow.Snapshot?.Tick, session = game.Flow.Snapshot?.SessionId,
-                    level = game.Flow.Snapshot?.LevelId,
-                    x = ball?.Center.X, y = ball?.Center.Y, z = ball?.Center.Z,
-                    grounded = ball?.Grounded, velocityX = ball?.Velocity.X, velocityY = ball?.Velocity.Y,
-                    ballRotationX = ballRotation?.X, ballRotationY = ballRotation?.Y,
-                    ballRotationZ = ballRotation?.Z, ballRotationW = ballRotation?.W,
-                    boost = ball?.BoostRemainingSeconds, cooldown = ball?.BoostCooldownSeconds,
-                    ticks = frameResult.Ticks, moveX = frameResult.Input.Gameplay.MoveWorldXZ.X,
-                    moveZ = frameResult.Input.Gameplay.MoveWorldXZ.Y,
-                    jump = frameResult.Input.Gameplay.JumpPressed, jumpHeld = frameResult.Input.JumpHeld,
-                    boostPressed = frameResult.Input.Gameplay.BoostPressed,
-                    yaw = game.Frames.Camera.YawRadians, pitch = game.Frames.Camera.PitchRadians,
-                    pointerX = appInput.PointerPosition.X, pointerY = appInput.PointerPosition.Y,
-                    width = engine.FramebufferSize.Width, height = engine.FramebufferSize.Height,
-                    clientWidth = client.Width, clientHeight = client.Height,
-                    fullscreen = engine.IsFullscreen, fullscreenWidth = fullscreenSize.Width, fullscreenHeight = fullscreenSize.Height,
-                    controls = game.View.Controls.Select(control => new
+                    engine.SetFullscreen(true);
+                    restoreFullscreen = false;
+                }
+                var appInput = NativeInputAdapter.Map(input);
+                var client = engine.ClientSize;
+                var limits = engine.WindowedClientSizeLimits;
+                var fullscreenSize = engine.FullscreenSize;
+                game.Menu.Window.Synchronize(client.Width, client.Height, limits.MinimumWidth, limits.MinimumHeight,
+                    limits.MaximumWidth, limits.MaximumHeight, engine.IsFullscreen, fullscreenSize.Width, fullscreenSize.Height);
+                var frameResult = !smoke ? game.Advance(appInput, frameSeconds, client.Width, client.Height) : default;
+                if (!restoreFullscreen) persistence?.Observe(game.Flow.UserSettings, game.Menu.Window, frameSeconds);
+                if (game.Menu.Window.TakeDisplayRequest() is { } display)
+                {
+                    engine.SetFullscreen(display.Fullscreen);
+                    if (!display.Fullscreen) engine.SetClientSize(display.Resolution.Width, display.Resolution.Height);
+                }
+                if (smoke) game.RefreshView(client.Width, client.Height);
+                engine.SetOverlay(MenuOverlayAdapter.Build(game.View, visual));
+                var cursorMode = game.CaptureRequested ? CursorMode.Captured : CursorMode.Normal;
+                if (engine.CursorMode != cursorMode) engine.CursorMode = cursorMode;
+                if (game.CloseRequested) engine.RequestClose();
+                if (traceInput)
+                {
+                    var ball = game.Flow.Snapshot?.Ball;
+                    var ballRotation = game.Flow.Presenter?.BallObject.Transform.Rotation;
+                    Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
                     {
-                        id = control.Id, label = control.Label, selected = control.Selected, enabled = control.Enabled, locked = control.Locked,
-                        x = control.Bounds.X, y = control.Bounds.Y, width = control.Bounds.Width, height = control.Bounds.Height,
-                    }),
-                    uiTexts = game.View.Texts.Select(text => text.Text),
-                    volume = game.Flow.UserSettings.MasterVolume, muted = game.Flow.UserSettings.Muted,
-                    skin = game.Flow.UserSettings.SkinId, coins = game.Flow.Snapshot?.CoinCount,
-                    baseStars = game.Flow.Progress.BaseStars, adventureStars = game.Flow.Progress.TotalStars,
-                    sceneCoins = game.Scene.Objects.Count(item => ReferenceEquals(item.Mesh, visual ? VisualScene.Coin : GameMeshes.Coin)),
-                    audioVolume = audio?.MasterVolume, audioSilent = audio?.IsSilent,
-                }));
+                        kind = "frame", frame = engine.RenderedFrames, focused = input.IsFocused,
+                        screen = game.Flow.Screen.ToString(), cursor = engine.CursorMode.ToString(),
+                        down = appInput.Down.ToString(), pressed = appInput.Pressed.ToString(), released = appInput.Released.ToString(),
+                        tick = game.Flow.Snapshot?.Tick, session = game.Flow.Snapshot?.SessionId,
+                        level = game.Flow.Snapshot?.LevelId,
+                        x = ball?.Center.X, y = ball?.Center.Y, z = ball?.Center.Z,
+                        grounded = ball?.Grounded, velocityX = ball?.Velocity.X, velocityY = ball?.Velocity.Y,
+                        ballRotationX = ballRotation?.X, ballRotationY = ballRotation?.Y,
+                        ballRotationZ = ballRotation?.Z, ballRotationW = ballRotation?.W,
+                        boost = ball?.BoostRemainingSeconds, cooldown = ball?.BoostCooldownSeconds,
+                        ticks = frameResult.Ticks, moveX = frameResult.Input.Gameplay.MoveWorldXZ.X,
+                        moveZ = frameResult.Input.Gameplay.MoveWorldXZ.Y,
+                        jump = frameResult.Input.Gameplay.JumpPressed, jumpHeld = frameResult.Input.JumpHeld,
+                        boostPressed = frameResult.Input.Gameplay.BoostPressed,
+                        yaw = game.Frames.Camera.YawRadians, pitch = game.Frames.Camera.PitchRadians,
+                        pointerX = appInput.PointerPosition.X, pointerY = appInput.PointerPosition.Y,
+                        width = engine.FramebufferSize.Width, height = engine.FramebufferSize.Height,
+                        clientWidth = client.Width, clientHeight = client.Height,
+                        fullscreen = engine.IsFullscreen, fullscreenWidth = fullscreenSize.Width, fullscreenHeight = fullscreenSize.Height,
+                        controls = game.View.Controls.Select(control => new
+                        {
+                            id = control.Id, label = control.Label, selected = control.Selected, enabled = control.Enabled, locked = control.Locked,
+                            x = control.Bounds.X, y = control.Bounds.Y, width = control.Bounds.Width, height = control.Bounds.Height,
+                        }),
+                        uiTexts = game.View.Texts.Select(text => text.Text),
+                        volume = game.Flow.UserSettings.MasterVolume, muted = game.Flow.UserSettings.Muted,
+                        music = game.Flow.UserSettings.MusicTrackId,
+                        skin = game.Flow.UserSettings.SkinId, coins = game.Flow.Snapshot?.CoinCount,
+                        baseStars = game.Flow.Progress.BaseStars, adventureStars = game.Flow.Progress.TotalStars,
+                        sceneCoins = game.Scene.Objects.Count(item => ReferenceEquals(item.Mesh, visual ? VisualScene.Coin : GameMeshes.Coin)),
+                        audioVolume = audio?.MasterVolume, audioSilent = audio?.IsSilent,
+                    }));
+                }
             }
-        }
-        else if (!smoke && input.WasPressed(InputKey.Escape))
-        {
-            engine.RequestClose();
-            return;
-        }
-        if (preview is not null)
-        {
-            if (!smoke && input.WasPressed(InputKey.Space)) preview.ToggleSkin();
-            if (!smoke && input.WasPressed(InputKey.R)) preview.Restart();
-            if (!still) preview.Advance();
-            if (!ready && engine.RenderedFrames >= 3)
+            else if (!smoke && input.WasPressed(InputKey.Escape))
             {
-                Console.WriteLine("Presenter preview ready");
-                ready = true;
+                engine.RequestClose();
+                return;
             }
-        }
-        if (smoke && engine.RenderedFrames >= 3)
-            engine.RequestClose();
-    });
+            if (preview is not null)
+            {
+                if (!smoke && input.WasPressed(InputKey.Space)) preview.ToggleSkin();
+                if (!smoke && input.WasPressed(InputKey.R)) preview.Restart();
+                if (!still) preview.Advance();
+                if (!ready && engine.RenderedFrames >= 3)
+                {
+                    Console.WriteLine("Presenter preview ready");
+                    ready = true;
+                }
+            }
+            if (smoke && engine.RenderedFrames >= 3)
+                engine.RequestClose();
+        });
+    }
+    finally { persistence?.Flush(); }
     if (smoke || traceInput || !gameplayMode)
         Console.WriteLine($"Rendered frames: {engine.RenderedFrames}");
 }

@@ -8,6 +8,7 @@
 import ctypes as c
 import argparse
 import json
+import hashlib
 import os
 from pathlib import Path
 import queue
@@ -24,6 +25,8 @@ def main():
     parser.add_argument("--output", default="artifacts/input-camera", help="Каталог лога и снимка сцены.")
     parser.add_argument("--visual", action="store_true", help="Проверить тропическое оформление сцены и меню.")
     parser.add_argument("--assembly", type=Path, help="Проверить отдельную локальную сборку Platformer.App.dll.")
+    parser.add_argument("--verify-settings", action="store_true", help="Проверить профиль между тремя процессами игры.")
+    parser.add_argument("--verify-labels", action="store_true", help="Проверить центр видимых пикселей подписей кнопок.")
     args = parser.parse_args()
     output = Path(args.output)
     output.mkdir(parents=True, exist_ok=True)
@@ -67,6 +70,9 @@ def main():
     bind(x, "XKeysymToKeycode", c.c_uint, pointer, c.c_ulong)
     bind(x, "XFlush", c.c_int, pointer)
     bind(x, "XSync", c.c_int, pointer, c.c_int)
+    bind(x, "XGetImage", pointer, pointer, window, c.c_int, c.c_int, c.c_uint, c.c_uint, c.c_ulong, c.c_int)
+    bind(x, "XGetPixel", c.c_ulong, pointer, c.c_int, c.c_int)
+    bind(x, "XDestroyImage", c.c_int, pointer)
     class XError(c.Structure):
         _fields_ = [("type", c.c_int), ("display", pointer), ("resource", window),
                     ("serial", c.c_ulong), ("code", c.c_ubyte), ("request", c.c_ubyte), ("minor", c.c_ubyte)]
@@ -202,6 +208,19 @@ def main():
         until(lambda f: f.get("frame", 0) >= 3, "startup/render", timeout=20)
         native = find_window(root, "Ball Adventure")
         assert native, "Окно Ball Adventure не найдено."
+        icon_atom = x.XInternAtom(display, b"_NET_WM_ICON", False)
+        icon_type, icon_count, icon_remaining, icon_format, icon_data = c.c_ulong(), c.c_ulong(), c.c_ulong(), c.c_int(), pointer()
+        icon_status = x.XGetWindowProperty(display, native, icon_atom, 0, 65538, False, 0,
+            c.byref(icon_type), c.byref(icon_format), c.byref(icon_count), c.byref(icon_remaining), c.byref(icon_data))
+        try:
+            assert icon_status == 0 and icon_format.value == 32 and icon_count.value == 65538 and icon_remaining.value == 0
+            icon = list(c.cast(icon_data, c.POINTER(c.c_ulong))[:icon_count.value])
+            assert icon[:2] == [256, 256]
+            argb = b"".join((pixel & 0xffffffff).to_bytes(4, "big") for pixel in icon[2:])
+            assert hashlib.sha256(argb).hexdigest() == "bb3d8a3afa11ba7f765821bdfe78a6445c99920a1f51ffca4594979c4bb2dc4d", "Окно не получило фирменный значок"
+        finally:
+            if icon_data: x.XFree(icon_data)
+        print("PASS: native window icon matches the packaged Ball Adventure image")
 
         def assert_fixed_size(width, height):
             atom = x.XInternAtom(display, b"WM_NORMAL_HINTS", False)
@@ -258,6 +277,28 @@ def main():
             frame = latest()
             until(lambda f: f["frame"] >= frame["frame"] + 2, "render before " + name)
             subprocess.run(["import", "-window", str(native), str(output / (name + ".png"))], check=True)
+            if args.verify_labels:
+                for control in latest()["controls"]:
+                    if control["id"].startswith(("level:", "skin:")):
+                        continue
+                    px, py = int(control["x"]), int(control["y"])
+                    pw, ph = int(control["width"]), int(control["height"])
+                    bitmap = x.XGetImage(display, native, px, py, pw, ph, c.c_ulong(-1).value, 2)
+                    assert bitmap
+                    rows = []
+                    try:
+                        for yy in range(ph):
+                            for xx in range(pw):
+                                pixel = x.XGetPixel(bitmap, xx, yy)
+                                r, g, b = (pixel >> 16) & 255, (pixel >> 8) & 255, pixel & 255
+                                if r > 150 and g > 180 and b > 195:
+                                    rows.append(yy)
+                                    break
+                    finally:
+                        x.XDestroyImage(bitmap)
+                    assert rows, (name, control["id"], "Нет видимых пикселей надписи")
+                    ink_center = py + (min(rows) + max(rows) + 1) / 2
+                    assert abs(ink_center - (control["y"] + control["height"] / 2)) <= 1.5, (name, control["id"], ink_center, control)
 
         for symbol, name in [("w", "W"), ("a", "A"), ("s", "S"), ("d", "D"),
                              ("Shift_L", "LeftShift"), ("Shift_R", "RightShift"),
@@ -305,8 +346,8 @@ def main():
             stopped = selection(latest())
             assert all(selection(f) == stopped for f in collect(0.15)), "Navigation continued after release"
         print("PASS: оба Shift+Tab назад; удержание Tab/Down повторяет после задержки и останавливается")
-        assert "Enter / Space / Mouse click: select" in latest()["uiTexts"]
-        assert "Tab / Shift+Tab: next / previous" in latest()["uiTexts"]
+        assert "Enter / Space / Mouse click: select" not in latest()["uiTexts"]
+        assert "Tab / Shift+Tab: next / previous" not in latest()["uiTexts"]
 
         capture("main-menu")
         levels = click_control("levels", "LevelSelect")
@@ -354,6 +395,12 @@ def main():
         capture("level-select")
         click_control("back", "MainMenu")
         click_control("settings", "Settings")
+        click_control("controls", "Settings")
+        controls_page = until(lambda f: "WASD - roll / move" in f["uiTexts"], "dedicated controls page")
+        assert "Space - jump (hold to repeat)" in controls_page["uiTexts"]
+        capture("controls")
+        press("Escape")
+        until(lambda f: any(c["id"] == "volume" for c in f["controls"]), "controls Esc returns to Settings")
         assert "Music: < Original >" in latest()["uiTexts"], "Original music must remain default"
         click_control("music", "Settings")
         until(lambda f: "Music: < Exploration Theme >" in f["uiTexts"], "choose extra music")
@@ -446,6 +493,7 @@ def main():
         start = click_control("play", "Playing")
         assert start["cursor"] == "Captured"
         assert any(text.startswith("Coins ") for text in start["uiTexts"]), "HUD не подключён"
+        assert len(start["uiTexts"]) == 3, "В игре должны оставаться только три показателя HUD"
         key("w", True)
         until(lambda f: f["z"] < start["z"] - 0.03 and f["moveZ"] < -0.9, "W movement")
         key("w", False)
@@ -584,10 +632,54 @@ def main():
         click_control("confirm-main-menu", "MainMenu")
         press("Escape")
         assert all(f["screen"] == "MainMenu" for f in collect()), "Escape закрыл MainMenu"
+        expected_preferences = latest()
         click_control("exit", "MainMenu")
         assert process.wait(timeout=5) == 0, "Нештатный exit"
         reader.join(timeout=2)
         print("PASS: возврат к старту, release capture и штатный exit")
+        if args.verify_settings:
+            profile = Path(progress_directory.name) / "BallAdventure" / "settings-v1.json"
+            for iteration in range(2):
+                saved = json.loads(profile.read_text())
+                assert saved["SkinId"] == expected_preferences["skin"] and saved["MusicTrackId"] == expected_preferences["music"]
+                assert abs(saved["MasterVolume"] - expected_preferences["volume"]) < 0.0001 and saved["Muted"] == expected_preferences["muted"]
+                assert saved["Fullscreen"] == expected_preferences["fullscreen"]
+                if not saved["Fullscreen"]:
+                    assert (saved["WindowWidth"], saved["WindowHeight"]) == (expected_preferences["clientWidth"], expected_preferences["clientHeight"])
+                while not messages.empty():
+                    messages.get_nowait()
+                process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)
+                reader = threading.Thread(target=read_lines, daemon=True)
+                reader.start()
+                restored = until(lambda f: f.get("frame", 0) >= 3, "restart restores profile", timeout=20)
+                native = find_window(root, "Ball Adventure")
+                assert native, "Окно после перезапуска не найдено"
+                x.XMapRaised(display, native)
+                focus(native)
+                restored = until(lambda f: f["focused"] and f["fullscreen"] == saved["Fullscreen"], "restart focus and display")
+                assert restored["skin"] == saved["SkinId"] and restored["music"] == saved["MusicTrackId"]
+                assert restored["muted"] == saved["Muted"] and abs(restored["volume"] - saved["MasterVolume"]) < 0.0001
+                assert abs(restored["audioVolume"] - (0 if saved["Muted"] else saved["MasterVolume"])) < 0.0001
+                assert restored["fullscreen"] == saved["Fullscreen"]
+                if not saved["Fullscreen"]:
+                    assert (restored["clientWidth"], restored["clientHeight"]) == (saved["WindowWidth"], saved["WindowHeight"])
+                click_control("settings", "Settings")
+                click_control("display-mode", "Settings")
+                click_control("apply-resolution", "Settings")
+                if iteration == 0:
+                    until(lambda f: f["fullscreen"], "select fullscreen for next restart")
+                    click_control("mute", "Settings")
+                    until(lambda f: f["muted"], "save mute with remembered master volume")
+                else:
+                    until(lambda f: not f["fullscreen"] and (f["clientWidth"], f["clientHeight"]) ==
+                          (saved["WindowWidth"], saved["WindowHeight"]), "restore remembered windowed size")
+                capture("restored-settings-" + str(iteration))
+                expected_preferences = latest()
+                click_control("back", "MainMenu")
+                click_control("exit", "MainMenu")
+                assert process.wait(timeout=5) == 0
+                reader.join(timeout=2)
+            print("PASS: три процесса сохраняют skin/music/volume/mute и windowed/fullscreen с возвратом оконного размера")
     finally:
         for code in held_keys:
             xt.XTestFakeKeyEvent(display, code, False, 0)

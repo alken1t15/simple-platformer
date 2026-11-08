@@ -1,6 +1,6 @@
 namespace Platformer.App;
 
-/// <summary>Настройки процесса; LevelFlow сохраняет этот экземпляр между попытками и уровнями.</summary>
+/// <summary>Настройки сеанса; обычный запуск загружает/сохраняет их через SettingsStore.</summary>
 public sealed class UserSettings
 {
     private float masterVolume = 1f;

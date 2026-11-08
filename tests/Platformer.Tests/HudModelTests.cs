@@ -52,7 +52,8 @@ public sealed class HudModelTests
         Assert.AreEqual(AppScreen.Playing, view.Screen);
         Assert.IsEmpty(view.Controls);
         Assert.HasCount(1, view.Texts.Where(text => text.Text == "Coins 0/10").ToArray());
-        Assert.IsTrue(view.Texts.Any(text => text.Text.Contains("WASD")));
+        Assert.HasCount(3, view.Texts);
+        Assert.IsFalse(view.Texts.Any(text => text.Text.Contains("WASD")));
         menu.Handle(new(default, false, false, new(0, 1, true, false, true, Vector2.One)), 1280f, 720f);
         Assert.AreSame(before, flow.Snapshot);
         Assert.AreEqual(AppScreen.Playing, flow.Screen);

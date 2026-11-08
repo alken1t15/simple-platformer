@@ -13,9 +13,9 @@ namespace Platformer.Tests.Regression;
 public sealed class LevelRegressionTests
 {
     [TestMethod]
-    public void EveryTrainingTrackCoinIsTouchedByBallRestingBelowIt()
+    public void EveryTrainingTrackCoinIsTouchedByBallLandingBelowIt()
     {
-        // Шар, опущенный на опору под монетой, должен её касаться: расстояние центров
+        // В момент приземления под монетой шар должен её касаться: расстояние центров
         // ≤ BallRadius + CoinRadius. Число монет берётся из данных уровня.
         var track = TrainingTrack.Create();
         Assert.IsNotEmpty(track.Coins);

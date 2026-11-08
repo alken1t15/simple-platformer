@@ -7,7 +7,8 @@ public sealed class GameSession
     private readonly LevelDefinition level;
     private readonly SimulationSettings settings;
     private readonly BallSimulator simulator;
-    private readonly Func<BallState, GameCommand, BallStepResult> simulate;
+    private readonly Func<BallState, GameCommand, BallStepResult>? simulate;
+    private readonly SurfaceDefinition[] fragile;
     private readonly CoinDefinition[] coins;
     private readonly HazardDefinition[] hazards;
     private GameEvent[] events = [];
@@ -28,7 +29,8 @@ public sealed class GameSession
         this.level = level;
         this.settings = settings;
         simulator = new BallSimulator(level, settings);
-        this.simulate = simulate ?? simulator.Step;
+        this.simulate = simulate;
+        fragile = level.Surfaces.Where(surface => surface.CollapseDelaySeconds > 0).ToArray();
         coins = level.Coins.OrderBy(coin => coin.Id, StringComparer.Ordinal).ToArray();
         hazards = level.Hazards.OrderBy(hazard => hazard.Id, StringComparer.Ordinal).ToArray();
         ValidateHazardBudget();
@@ -44,11 +46,31 @@ public sealed class GameSession
         double seconds = tick * (double)settings.FixedStepSeconds;
         if (!double.IsFinite(seconds) || seconds <= before.SimulationSeconds)
             throw new InvalidOperationException("Исчерпана точность времени сеанса");
-        var result = simulate(before.Ball, command);
+        // Исчезновение опоры происходит на границе fixed tick. Весь набор остаётся
+        // локальным до публикации результата; неудачная физика не продвигает таймеры.
+        var platformStates = before.Platforms.Select(state => state with
+        {
+            Collapsed = state.Collapsed || (state.TriggeredAtSeconds is { } triggered
+                && seconds >= triggered + fragile.First(surface => surface.Id == state.Id).CollapseDelaySeconds),
+        }).ToArray();
+        var removed = platformStates.Where(state => state.Collapsed).Select(state => state.Id).ToHashSet(StringComparer.Ordinal);
+        bool canJump = before.Ball.Grounded && (removed.Count == 0 || simulator.HasSupport(before.Ball, removed));
+        var result = simulate is null ? simulator.Step(before.Ball, command, removed) : simulate(before.Ball, command);
+        for (int i = 0; i < platformStates.Length; i++)
+        {
+            var state = platformStates[i];
+            if (state.TriggeredAtSeconds is not null) continue;
+            var surface = fragile[i];
+            float radius = settings.BallRadius + settings.SkinWidth + settings.PositionEpsilon;
+            if (result.Path.Any(segment => SphereGeometry.Contact(surface.Bounds, segment.Start, radius).Separation <= 0
+                || SphereGeometry.Contact(surface.Bounds, segment.End, radius).Separation <= 0
+                || SphereGeometry.Sweep(surface.Bounds, segment.Start, segment.End - segment.Start, radius, out _, out _)))
+                platformStates[i] = state with { TriggeredAtSeconds = seconds };
+        }
         var pending = new List<(GameEventKind Kind, string? Id)>();
         if (command.BoostPressed && before.Ball.BoostRemainingSeconds == 0f && before.Ball.BoostCooldownSeconds == 0f)
             pending.Add((GameEventKind.BoostStarted, null));
-        if (command.JumpPressed && before.Ball.Grounded)
+        if (command.JumpPressed && canJump)
             pending.Add((GameEventKind.Jumped, null));
         var collected = new HashSet<string>(before.CollectedCoinIds, StringComparer.Ordinal);
         var phase = SessionPhase.Running;
@@ -75,7 +97,7 @@ public sealed class GameSession
         }
         long nextSequence = AdvanceCounter(sequence, pending.Count);
         var next = new SessionSnapshot(before.SessionId, level.Id, tick, seconds, phase,
-            result.Ball, collected.ToArray(), HazardPoses(seconds));
+            result.Ball, collected.ToArray(), HazardPoses(seconds), platformStates);
         long queueLength = AdvanceCounter(events.Length, pending.Count);
         if (queueLength > int.MaxValue) throw new InvalidOperationException("Переполнение очереди событий");
         var queue = new GameEvent[(int)queueLength];
@@ -106,7 +128,7 @@ public sealed class GameSession
     }
 
     private SessionSnapshot Initial() => new(Guid.NewGuid(), level.Id, 0, 0d, SessionPhase.Running,
-        simulator.CreateInitialState(), [], HazardPoses(0d));
+        simulator.CreateInitialState(), [], HazardPoses(0d), fragile.Select(surface => new CrumblingPlatformState(surface.Id, null, false)).ToArray());
 
     private HazardPose[] HazardPoses(double seconds) =>
         hazards.Select(hazard => HazardMotion.Evaluate(hazard, seconds)).ToArray();

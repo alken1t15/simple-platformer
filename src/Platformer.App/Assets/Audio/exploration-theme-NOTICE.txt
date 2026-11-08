@@ -1,0 +1,18 @@
+Exploration Theme
+Music by Cleyton Kauffman - https://soundcloud.com/cleytonkauffman
+Source: https://opengameart.org/content/exploration-theme
+Download: https://opengameart.org/sites/default/files/exploration_theme.zip
+License: Creative Commons Zero (CC0) 1.0 Universal
+https://creativecommons.org/publicdomain/zero/1.0/
+Full legal text: CC0-1.0.txt (distributed next to this notice)
+
+The WAV is the unmodified Exploration Theme/Exploration Theme.wav from the author archive.
+Renamed to exploration-theme.wav. No resampling, trimming, normalization or remixing.
+Original archive SHA256:
+81601FB33319491973803EDEEBB5AB5D2D05D943C0ACCB48EA79E84A9680FA43
+WAV SHA256:
+F88993692B978D9BF3D376B1AE45111C1D5F0EA27B4E550E987F580E1384A150
+
+CC0 applies to this external track. The existing music.wav and four procedural effects
+retain the repository MIT license; see LICENSE.txt. Attribution is optional under CC0,
+but the author is credited here. No runtime network access is needed.

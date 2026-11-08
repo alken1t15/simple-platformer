@@ -25,6 +25,14 @@ ImageMagick используется только для захвата сним
 созданные `scripts/generate_audio.py` (Codex), под MIT репозитория. Внешние записи,
 семплы или защищённые музыкальные произведения не использованы. [Описание](docs/game-audio.md).
 
+`Assets/Audio/exploration-theme.wav` — **Exploration Theme**, Cleyton Kauffman,
+[OpenGameArt](https://opengameart.org/content/exploration-theme), **CC0 1.0 Universal**.
+Music by Cleyton Kauffman — https://soundcloud.com/cleytonkauffman.
+Неизменённый авторский PCM16 stereo WAV, только переименован. Источник и SHA256:
+[notice](src/Platformer.App/Assets/Audio/exploration-theme-NOTICE.txt);
+[полный текст CC0](src/Platformer.App/Assets/Audio/CC0-1.0.txt) поставляется рядом.
+На этот трек не распространяется MIT-notice собственных пяти WAV.
+
 Новые меши/текстуры в `VisualScene`, `VisualContactShadow` и `SkinTextures`, включая
 спортивные узоры и картинки карточек, — собственные процедурные ресурсы под MIT
 репозитория. Внешние модели, изображения, товарные знаки и новые зависимости не добавлены.

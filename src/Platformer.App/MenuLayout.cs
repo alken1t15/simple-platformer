@@ -4,7 +4,7 @@ using Engine3D.Core;
 namespace Platformer.App;
 
 internal enum MenuAction { Play, Levels, Settings, Skins, Exit, ChooseLevel, Back, Volume, Mute,
-    ChooseSkin, Continue, Restart, MainMenu, Next, Resolution, ApplyResolution, DisplayMode, CancelMainMenu, ConfirmMainMenu }
+    ChooseSkin, Continue, Restart, MainMenu, Next, Resolution, ApplyResolution, DisplayMode, CancelMainMenu, ConfirmMainMenu, Music }
 internal sealed record MenuOption(string Id, string Label, MenuAction Action,
     MenuControlKind Kind = MenuControlKind.Button, string? Value = null, ColorRgba? Swatch = null, bool Enabled = true, string? Detail = null, bool Locked = false, int? Rating = null);
 internal sealed record MenuPage(string Title, IReadOnlyList<string> Details, IReadOnlyList<MenuOption> Options);
@@ -101,6 +101,8 @@ internal static class MenuLayout
                     images.Add(new(Rect(x + 430 + star * 28, y + 8, 25, 25),
                         star < (option.Rating ?? 0) ? MenuArtwork.FilledStar : MenuArtwork.EmptyStar));
             }
+            else if (option.Kind == MenuControlKind.Volume)
+                Text(option.Label, x + 20, y + 1f, 20f, ink); // Семь строк Settings: подпись выше шкалы.
             else Text(option.Label, x + 20, y + 9f, 22f, ink);
             if (valueBounds is { } track)
             {

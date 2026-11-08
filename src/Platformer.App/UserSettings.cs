@@ -5,6 +5,13 @@ public sealed class UserSettings
 {
     private float masterVolume = 1f;
     private string skinId = "classic-blue";
+    private string musicTrackId = MusicTracks.OriginalId;
+
+    public string MusicTrackId
+    {
+        get => musicTrackId;
+        set { MusicTracks.Get(value); musicTrackId = value; }
+    }
 
     public float MasterVolume
     {

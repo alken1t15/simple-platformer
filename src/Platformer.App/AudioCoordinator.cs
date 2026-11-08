@@ -11,7 +11,7 @@ public interface IGameAudioVoice : IDisposable
 
 public interface IGameAudioPlayback : IDisposable
 {
-    IGameAudioVoice PlayMusic();
+    IGameAudioVoice PlayMusic(string trackId = MusicTracks.OriginalId);
     IGameAudioVoice PlayEffect(GameEventKind kind);
 }
 
@@ -25,8 +25,24 @@ public sealed class AudioCoordinator : IDisposable
     private long sequence;
     private bool paused;
     private bool disposed;
+    private string musicTrackId = MusicTracks.OriginalId;
 
     public AudioCoordinator(IGameAudioPlayback playback) => this.playback = playback ?? throw new ArgumentNullException(nameof(playback));
+
+    /// <summary>Меняет только фон; в Pause новый voice создаётся лишь после Continue.</summary>
+    public void SelectMusic(string trackId)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        MusicTracks.Get(trackId);
+        if (musicTrackId == trackId) return;
+        if (music is not null)
+        {
+            music.Dispose();
+            music = null;
+            if (!paused) music = playback.PlayMusic(trackId);
+        }
+        musicTrackId = trackId;
+    }
 
     public void Consume(Guid currentSession, IReadOnlyList<GameEvent> events)
     {
@@ -61,7 +77,7 @@ public sealed class AudioCoordinator : IDisposable
         if (screen == AppScreen.Playing)
         {
             SetPaused(false);
-            music ??= playback.PlayMusic();
+            music ??= playback.PlayMusic(musicTrackId);
         }
         else if (screen is AppScreen.Paused or AppScreen.Settings)
             SetPaused(true);

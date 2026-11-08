@@ -27,7 +27,7 @@ internal sealed class RecordingPlayback : IGameAudioPlayback
     public IEnumerable<Voice> All => Music.Concat(Effects);
     public IEnumerable<Voice> Live => All.Where(voice => !voice.Disposed);
 
-    public IGameAudioVoice PlayMusic()
+    public IGameAudioVoice PlayMusic(string trackId = MusicTracks.OriginalId)
     {
         Assert.IsFalse(Disposed, "PlayMusic после Dispose");
         var voice = new Voice("music");

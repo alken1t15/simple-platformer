@@ -8,7 +8,7 @@ public sealed class NativeAudioPlayback : IGameAudioPlayback
 {
     private readonly AudioDevice device;
     private readonly Dictionary<GameEventKind, AudioClip> effects = new();
-    private AudioClip? music;
+    private readonly Dictionary<string, AudioClip> music = new(StringComparer.Ordinal);
     private bool disposed;
 
     public NativeAudioPlayback(AudioDevice device, string directory)
@@ -16,7 +16,8 @@ public sealed class NativeAudioPlayback : IGameAudioPlayback
         this.device = device ?? throw new ArgumentNullException(nameof(device));
         try
         {
-            music = device.LoadWave(Path.Combine(directory, "music.wav"));
+            foreach (var track in MusicTracks.All)
+                music.Add(track.Id, device.LoadWave(Path.Combine(directory, track.FileName)));
             foreach (var (kind, name) in new[] {
                 (GameEventKind.Jumped, "jump.wav"), (GameEventKind.CoinCollected, "coin.wav"),
                 (GameEventKind.Failed, "fail.wav"), (GameEventKind.LevelCompleted, "finish.wav") })
@@ -25,10 +26,11 @@ public sealed class NativeAudioPlayback : IGameAudioPlayback
         catch { Dispose(); throw; }
     }
 
-    public IGameAudioVoice PlayMusic()
+    public IGameAudioVoice PlayMusic(string trackId = MusicTracks.OriginalId)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
-        return new Voice(device.Play(music!, loop: true, volume: 0.25f));
+        MusicTracks.Get(trackId);
+        return new Voice(device.Play(music[trackId], loop: true, volume: 0.25f));
     }
 
     public IGameAudioVoice PlayEffect(GameEventKind kind)
@@ -41,7 +43,7 @@ public sealed class NativeAudioPlayback : IGameAudioPlayback
     {
         if (disposed) return;
         foreach (var clip in effects.Values) clip.Dispose();
-        music?.Dispose();
+        foreach (var clip in music.Values) clip.Dispose();
         disposed = true;
     }
 

@@ -99,14 +99,25 @@ dotnet run --project src/Platformer.App -c Release --no-build
 bash scripts/Play.sh
 ```
 
-Этот лаунчер запускает игру **с исходным оформлением, без `--visual`** и не принимает
-аргументы. Нужны .NET 10 Runtime в `PATH`, `setsid` из util-linux и графический сеанс.
+Без аргументов лаунчер использует исходное оформление; `bash scripts/Play.sh --visual`
+включает оформление со скриншотов. Нужны .NET 10 Runtime в `PATH`, `setsid` из util-linux и графический сеанс.
 Ctrl+C и закрытие исходного терминала не завершают игру; логи сохраняются в `artifacts/run/`.
 Лаунчер не выполняет сборку. Закрывай игру через Exit или системную кнопку окна.
+
+**Linux-ярлык с фирменным значком** — после сборки:
+
+```sh
+python3 scripts/install_desktop.py            # Ball Adventure в меню приложений
+python3 scripts/install_desktop.py --desktop  # дополнительно на рабочем столе
+```
+
+Ярлык запускает `--visual` без терминального окна. `sudo` не нужен; при переносе
+клона установи его заново. [Инструкция и ограничения](docs/desktop-launcher.md).
 
 **Windows / WSL:** [пошаговая инструкция](docs/windows-wsl.md). Доступны сборка в WSL,
 прямой Windows-запуск и локальная OpenAL Soft для звука. При слишком резкой камере
 через WSLg сравни с прямым Windows-запуском той же сборки.
+Общий [значок ICO](assets/branding/ball-adventure.ico) можно выбрать в свойствах Windows-ярлыка.
 
 ## Управление
 

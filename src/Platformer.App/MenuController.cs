@@ -24,6 +24,7 @@ public sealed class MenuController
     private bool focused = true;
 
     public bool CloseRequested { get; private set; }
+    public WindowSettings Window { get; } = new();
 
     public MenuController(LevelFlow flow, LevelCatalog catalog, Action<float>? applyMasterVolume = null)
     {
@@ -122,6 +123,8 @@ public sealed class MenuController
         }
         if (menu.HorizontalStep != 0 && option.Action == MenuAction.Volume)
             SetVolume(flow.UserSettings.MasterVolume + Math.Sign(menu.HorizontalStep) * 0.05f);
+        if (menu.HorizontalStep != 0 && option.Action == MenuAction.Resolution)
+            Window.Cycle(menu.HorizontalStep);
         return default;
     }
 
@@ -129,6 +132,8 @@ public sealed class MenuController
     {
         switch (option.Action)
         {
+            case MenuAction.Resolution: Window.Cycle(1); break;
+            case MenuAction.ApplyResolution: Window.RequestApply(); break;
             case MenuAction.Play: flow.Start(catalog.Levels[0].Id); return true;
             case MenuAction.Start: flow.Start(selectedLevelId); return true;
             case MenuAction.Restart: flow.Restart(); return true;
@@ -170,6 +175,7 @@ public sealed class MenuController
         pointer = null;
         pressedId = null;
         if (flow.Screen == AppScreen.SkinSelect) selectedSkinId = flow.UserSettings.SkinId;
+        if (flow.Screen == AppScreen.Settings) Window.SelectActual();
     }
 
     private MenuPage Page()
@@ -190,9 +196,11 @@ public sealed class MenuController
                     (level.Id == selectedLevelId ? "[x] " : "[ ] ") + HudModel.LevelNameFor(level.Id),
                     MenuAction.ChooseLevel, MenuControlKind.Level, level.Id))
                 .Concat([Button("start", "Start", MenuAction.Start), Back()]).ToArray()),
-            AppScreen.Settings => new("Settings", ["Changes apply immediately."],
+            AppScreen.Settings => new("Settings", [$"Current window: {Window.Actual}", "Volume changes apply immediately."],
             [new("volume", $"Master volume: {MathF.Round(settings.MasterVolume * 100f):0}%", MenuAction.Volume, MenuControlKind.Volume),
-             Button("mute", settings.Muted ? "Mute: ON" : "Mute: OFF", MenuAction.Mute), Back()]),
+             Button("mute", settings.Muted ? "Mute: ON" : "Mute: OFF", MenuAction.Mute),
+             Button("resolution", $"Resolution: < {Window.Selected} >", MenuAction.Resolution),
+             Button("apply-resolution", "Apply resolution", MenuAction.ApplyResolution), Back()]),
             AppScreen.SkinSelect => new("Choose a skin", ["Choose a sample, then Select to apply."],
                 GameSkins.All.Select(skin => new MenuOption($"skin:{skin.Id}",
                     (skin.Id == selectedSkinId ? "[x] " : "[ ] ") + skin.DisplayName

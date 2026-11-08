@@ -59,6 +59,8 @@ try
             ? "Ball Adventure — presenter preview" : "Simple Platformer — integration preview",
         Width = 960,
         Height = 640,
+        MinimumClientSize = (800, 450),
+        LimitToMonitorWorkArea = true,
         FocusOnShow = !smoke,
     });
     bool ready = false;
@@ -71,7 +73,12 @@ try
         {
             var appInput = NativeInputAdapter.Map(input);
             var client = engine.ClientSize;
+            var limits = engine.ClientSizeLimits;
+            game.Menu.Window.Synchronize(client.Width, client.Height, limits.MinimumWidth, limits.MinimumHeight,
+                limits.MaximumWidth, limits.MaximumHeight);
             var frameResult = !smoke ? game.Advance(appInput, frameSeconds, client.Width, client.Height) : default;
+            if (game.Menu.Window.TakeRequest() is { } resolution)
+                engine.SetClientSize(resolution.Width, resolution.Height);
             if (smoke) game.RefreshView(client.Width, client.Height);
             engine.SetOverlay(MenuOverlayAdapter.Build(game.View));
             var cursorMode = game.CaptureRequested ? CursorMode.Captured : CursorMode.Normal;

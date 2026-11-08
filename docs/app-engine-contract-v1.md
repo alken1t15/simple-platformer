@@ -1,11 +1,15 @@
 # Ball Adventure: контракты App и расширений движка v1
 
 Контракт задачи #3 принят в PR #22 (02.11.2026); реализация остаётся задачами команды. Контракт будущей реализации, не заявление о текущих возможностях.
-Core определён в [core-contract-v1.md](core-contract-v1.md); принятый engine gitlink — `936b71a7393ef52b7d0d3b277af6b4c287be92c6` (overlay PR53/game PR35).
+Core определён в [core-contract-v1.md](core-contract-v1.md); принятый engine gitlink — `f20770963ee2725b88105e569bc1036238736e54` (overlay PR53/game PR35).
 В #6 реализованы [ввод/runner/камера и оконный host](input-camera.md): NativeInputAdapter
 переносит публичный InputSnapshot в CPU-границу AppInputSnapshot, InputRouter имеет оба overload.
 `--play` связывает GameSession/LevelFlow с окном и курсором; AppScreen используется из LevelFlow.
 Меню/HUD #19 подключены через [MenuController/MenuOverlayAdapter](menu.md);
+Размер окна: App/WindowSettings хранит допустимые Choices, предварительный Selected
+и фактический Actual. Program синхронизирует ClientSize/ClientSizeLimits и потребляет
+однократный TakeRequest через SetClientSize в onUpdate; Core не зависит от окна.
+Ограничения и выбор Resolution/Apply — [контракт меню](menu.md#window-size), engine PR #55.
 игровые WAV/AudioCoordinator и обе локации подключены; слышимость и полная QA остаются отдельными проверками.
 В #7 реализованы GameScenePresenter, SkinDefinition/GameSkins и контрактный
 [3D-preview](scene-presenter.md). В #8 добавлены LevelFlow, AppScreen и UserSettings —

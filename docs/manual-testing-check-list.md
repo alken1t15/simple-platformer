@@ -1,9 +1,9 @@
 # Ball Adventure — чек-лист Linux-приёмки (issue #11)
 
 Ручной протокол проверки BA-01–13 на реальном Linux-стенде. Основа:
-[docs/requirements.md](docs/requirements.md), сценарии A01–20 в
-[docs/acceptance.md](docs/acceptance.md), содержание уровней —
-[docs/content-design.md](docs/content-design.md).
+[requirements.md](requirements.md), сценарии A01–20 в
+[acceptance.md](acceptance.md), содержание уровней —
+[content-design.md](content-design.md).
 
 Чек-лист готовится параллельно реализации; фактический прогон — после интеграции.
 Проверки, ожидающие других модулей, помечаются SKIP с указанием причины.

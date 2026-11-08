@@ -11,6 +11,11 @@
 Работают Play, выбор доступного уровня, настройки master volume/mute, скины,
 пауза, повтор и результаты. Каталог содержит Training Track и Turning Maze;
 Next ведёт на следующую локацию, после второй — к общему результату.
+
+В Settings доступны Resolution и Apply resolution: размер окна выбирается мышью
+или Left/Right и применяется отдельной кнопкой; Current window показывает результат ОС.
+Обычное окно ограничено минимумом 800×450 и доступной областью экрана с учётом рамки;
+на маленьком экране минимум уменьшается. [Подробности и ограничения Wayland](docs/menu.md#window-size).
 Автоматический маршрут через настоящий renderer проходит обе локации с 25/25 монетами.
 Ручная приёмка на целевом компьютере и слышимость ещё требуют проверки.
 
@@ -39,12 +44,14 @@ git diff --check
 
 PowerShell 7: `pwsh -NoProfile -File scripts/Verify.ps1` выполняет проверки с остановкой при ошибке.
 
-Движок закреплён на **`936b71a7393ef52b7d0d3b277af6b4c287be92c6`**:
+Движок закреплён на **`f20770963ee2725b88105e569bc1036238736e54`**:
 input/cursor [PR #52](https://github.com/alken1t15/simple-3d-engine/pull/52),
 audio [PR #51](https://github.com/alken1t15/simple-3d-engine/pull/51) и
 ASCII overlay [PR #53](https://github.com/alken1t15/simple-3d-engine/pull/53).
-Этот SHA принят в игре через [PR #39](https://github.com/alken1t15/simple-platformer/pull/39):
-[engine PR #54](https://github.com/alken1t15/simple-3d-engine/pull/54) добавил ClientSize для Wayland.
+Текущий SHA — merge [engine PR #55](https://github.com/alken1t15/simple-3d-engine/pull/55):
+ограничения окна и SetClientSize/ClientSizeLimits для выбора разрешения.
+Ранее [game PR #39](https://github.com/alken1t15/simple-platformer/pull/39)
+подключил ClientSize для Wayland из [engine PR #54](https://github.com/alken1t15/simple-3d-engine/pull/54).
 Исходники движка и gitlink в интеграции #6/#19 не редактируются.
 Атлас и FONT-LICENSE.txt поставляет движок; английский UI соответствует его ASCII-шрифту.
 [Сторонние компоненты](THIRD_PARTY.md), [возможности/ограничения движка](docs/engine-integration.md).

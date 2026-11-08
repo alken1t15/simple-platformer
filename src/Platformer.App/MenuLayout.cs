@@ -4,7 +4,7 @@ using Engine3D.Core;
 namespace Platformer.App;
 
 internal enum MenuAction { Play, Levels, Settings, Skins, Exit, ChooseLevel, Start, Back, Volume, Mute,
-    ChooseSkin, ApplySkin, Continue, Restart, MainMenu, Next }
+    ChooseSkin, ApplySkin, Continue, Restart, MainMenu, Next, Resolution, ApplyResolution }
 internal sealed record MenuOption(string Id, string Label, MenuAction Action,
     MenuControlKind Kind = MenuControlKind.Button, string? Value = null, ColorRgba? Swatch = null);
 internal sealed record MenuPage(string Title, IReadOnlyList<string> Details, IReadOnlyList<MenuOption> Options);
@@ -87,7 +87,7 @@ internal static class MenuLayout
                 panels.Add(new(track with { Width = track.Width * volume }, Accent));
             }
         }
-        Text(screen == AppScreen.Settings ? "Left/Right: volume   Esc: back" : "Arrows/Tab: choose   Enter: select", 376f, 594f, 20f, Muted);
+        Text(screen == AppScreen.Settings ? "Left/Right: volume/size   Enter: select" : "Arrows/Tab: choose   Enter: select", 376f, 594f, 20f, Muted);
         Text(screen == AppScreen.MainMenu ? "Mouse: select   Exit: close game" : "Mouse: select   Esc: back", 376f, 622f, 20f, Muted);
         return new(screen, new(width, height), controls, panels, texts);
     }

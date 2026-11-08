@@ -47,6 +47,9 @@ SetClientSize в fullscreen запрещён: сначала SetFullscreen(false
 На Wayland лимит консервативен по наименьшей логической области мониторов; панели compositor API не сообщает.
 Input/cursor/audio adapters, меню/HUD и каталог Training Track/Turning Maze подключены;
 AudioCoordinator использует собственные PCM16 WAV, lifecycle описан в docs/game-audio.md.
+Settings / Music выбирает исходный loop (по умолчанию) или Exploration Theme Cleyton Kauffman
+под CC0; notices поставляются с аудио. Выбор хранится в текущем процессе. В паузе новый
+музыкальный voice запускается только после Continue, эффекты при смене трека не сбрасываются.
 Overlay использует logical client pixels и встроенный ASCII-атлас; реальный framebuffer≠client
 HiDPI проверен автоматическим native Wayland compositor с framebuffer/client=2,
 включая реальные pointer coordinates/hit-test; physical монитор/устройство этим не подтверждаются.

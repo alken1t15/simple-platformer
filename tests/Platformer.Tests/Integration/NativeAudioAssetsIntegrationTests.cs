@@ -35,7 +35,8 @@ public sealed class NativeAudioAssetsIntegrationTests
         // Каждый клип backend запускается напрямую: ни один WAV не пропущен из-за маршрутизации событий.
         foreach (var kind in new[] { GameEventKind.Jumped, GameEventKind.CoinCollected, GameEventKind.Failed, GameEventKind.LevelCompleted })
             using (playback.PlayEffect(kind)) { }
-        using (playback.PlayMusic()) { }
+        foreach (var track in MusicTracks.All)
+            using (playback.PlayMusic(track.Id)) { }
     }
 
     [TestMethod]
@@ -49,8 +50,9 @@ public sealed class NativeAudioAssetsIntegrationTests
         string directory = Directory.CreateTempSubdirectory("platformer-audio-").FullName;
         try
         {
-            File.Copy(Path.Combine(AppContext.BaseDirectory, "Assets", "Audio", "music.wav"),
-                Path.Combine(directory, "music.wav"));
+            foreach (var track in MusicTracks.All)
+                File.Copy(Path.Combine(AppContext.BaseDirectory, "Assets", "Audio", track.FileName),
+                    Path.Combine(directory, track.FileName));
             using var device = AudioDevice.Create(new AudioOptions());
             var error = Assert.ThrowsExactly<FileNotFoundException>(() => new NativeAudioPlayback(device, directory));
             StringAssert.Contains(error.Message + error.FileName, "jump.wav");

@@ -82,6 +82,7 @@ public sealed class GameplayHost
         RefreshView(clientWidth, clientHeight);
         if (_audio is not null)
         {
+            _audio.SelectMusic(Flow.UserSettings.MusicTrackId);
             if (Flow.Snapshot is { } snapshot) _audio.Consume(snapshot.SessionId, Flow.DrainEvents());
             _audio.SetScreen(Flow.Screen);
         }

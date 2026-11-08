@@ -134,6 +134,8 @@ public sealed class MenuController
             Window.Cycle(menu.HorizontalStep);
         if (menu.HorizontalStep != 0 && option.Action == MenuAction.DisplayMode)
             Window.ToggleMode();
+        if (menu.HorizontalStep != 0 && option.Action == MenuAction.Music)
+            flow.UserSettings.MusicTrackId = MusicTracks.Cycle(flow.UserSettings.MusicTrackId, menu.HorizontalStep);
         return default;
     }
 
@@ -142,6 +144,9 @@ public sealed class MenuController
         if (!option.Enabled) return false;
         switch (option.Action)
         {
+            case MenuAction.Music:
+                flow.UserSettings.MusicTrackId = MusicTracks.Cycle(flow.UserSettings.MusicTrackId, 1);
+                break;
             case MenuAction.DisplayMode: Window.ToggleMode(); break;
             case MenuAction.Resolution: Window.Cycle(1); break;
             case MenuAction.ApplyResolution: Window.RequestApply(); break;
@@ -245,6 +250,7 @@ public sealed class MenuController
                 $"Current mode: {(Window.ActualFullscreen ? "Fullscreen" : "Windowed")}"],
             [new("volume", $"Master volume: {MathF.Round(EffectiveVolume * 100f):0}%", MenuAction.Volume, MenuControlKind.Volume),
              Button("mute", settings.Muted ? "Mute: ON" : "Mute: OFF", MenuAction.Mute),
+             Button("music", $"Music: < {MusicTracks.Get(settings.MusicTrackId).DisplayName} >", MenuAction.Music),
              Button("display-mode", $"Display: < {(Window.SelectedFullscreen ? "Fullscreen" : "Windowed")} >", MenuAction.DisplayMode),
              Button("resolution", $"Resolution: < {Window.Selected} >", MenuAction.Resolution),
              Button("apply-resolution", "Apply resolution", MenuAction.ApplyResolution), Back()]),

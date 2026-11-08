@@ -17,8 +17,9 @@ public sealed class AudioCoordinatorTests
             public void Dispose() => Disposed = true;
         }
         public List<Voice> Music { get; } = [];
+        public List<string> MusicIds { get; } = [];
         public List<(GameEventKind Kind, Voice Voice)> Effects { get; } = [];
-        public IGameAudioVoice PlayMusic() { var voice = new Voice(); Music.Add(voice); return voice; }
+        public IGameAudioVoice PlayMusic(string trackId = MusicTracks.OriginalId) { MusicIds.Add(trackId); var voice = new Voice(); Music.Add(voice); return voice; }
         public IGameAudioVoice PlayEffect(GameEventKind kind)
         { var voice = new Voice(); Effects.Add((kind, voice)); return voice; }
         public void Dispose() { }

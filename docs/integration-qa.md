@@ -29,8 +29,8 @@ SHA проверенного commit указывается в описании P
 | Двойная активация | Enter+click в одном кадре на Next — ровно один переход, level2 не пропускается | `EnterAndClickInOneFrameOnLevelResultAdvanceExactlyOneLevel` | PASS |
 | Двойная активация | Enter+click+R на Retry — один новый сеанс; удержание в Playing не создаёт второй | `EnterAndClickInOneFrameOnFailedCreateExactlyOneRetrySession` | PASS |
 | Двойная активация | Клик по Settings и Enter на Continue в одном кадре — одно действие, клик | `ClickOnSettingsWinsOverEnterOnDefaultContinueInSameFrame` | PASS |
-| Старые команды | Space, удержанный через финиш, не активирует Next; новый фронт — активирует | `ActivationKeyHeldThroughLevelEndDoesNotTriggerNext` | PASS |
-| Старые команды | Escape+R в одном кадре: Pause раньше Step и раньше R; удержанный Escape на экране результата не открывает выход | `PauseIsDecidedBeforeTicksSoTerminalFrameCannotSwallowOrDuplicateIt` | PASS |
+| Старые команды | Space, удержанный через финиш, вместе с автоповтором `Pressed` не активирует Next; после отпускания новый фронт активирует | `ActivationKeyHeldThroughLevelEndDoesNotTriggerNext` | PASS |
+| Старые команды | Escape+R в одном кадре: Pause раньше Step и раньше R; Escape, удержанный через Continue и финиш, вместе с автоповтором не ставит паузу и не открывает выход | `PauseIsDecidedBeforeTicksSoTerminalFrameCannotSwallowOrDuplicateIt` | PASS |
 | Focus | Потеря фокуса в Playing: Pause, отброшенные Space/Shift; активация с зажатыми клавишами не продолжает игру; на экране результата не нажимает Next | `FocusLossInPlayingAndResultClearsPendingCommandsAndNeverResumesByItself` | PASS |
 | Snapshot → HUD → Scene | CoinCount, текст HUD и удаление монеты из сцены — в одном кадре; Restart возвращает монету | `CoinCountHudAndCoinVisibilityChangeInTheSameFrame` | PASS |
 | Snapshot → HUD | HUD скрыт на экране результата, итог из того же snapshot; после Next HUD показывает level2 | `HudFollowsCurrentLevelAfterNextAndDisappearsOutsidePlaying` | PASS |
@@ -39,7 +39,7 @@ SHA проверенного commit указывается в описании P
 | Music loop | Один loop, пауза в Pause/Settings/потере фокуса, Continue не удваивает | `MusicLoopIsSingleAndPausedThroughPauseSettingsAndFocusLoss` | PASS |
 | SessionId | Новый сеанс после Restart снова звучит с Sequence 1; запоздавшее событие старого SessionId и повтор Sequence не звучат | `NewSessionEventsPlayAfterRestartAndLateOldSessionEventsAreIgnored` | PASS |
 | Освобождение | Next оставляет только новый loop; выход в меню закрывает музыку и эффект в полёте; `AudioCoordinator.Dispose` (в Program — `using`) закрывает backend | `NextMainMenuAndExitCloseEveryVoiceAndPlayback` | PASS |
-| Ресурсы | Все WAV разбираются и запускаются от `AppContext.BaseDirectory` через публичный `AudioDevice` (настоящий или silent backend); нет файла — `FileNotFoundException` с именем | `BundledAudioLoadsFromBaseDirectoryThroughPublicAudioDevice`, `MissingAudioFileFailsPlaybackConstructionWithFileName` | PASS |
+| Ресурсы | Все WAV разбираются и запускаются от `AppContext.BaseDirectory` через публичный `AudioDevice` (настоящий или silent backend); нет файла — `FileNotFoundException` с именем | `BundledAudioLoadsFromBaseDirectoryThroughPublicAudioDevice`, `MissingAudioFileFailsPlaybackConstructionWithFileName`, `BundledAudioShipsLicenseNextToAssets` | PASS |
 | CLI | `--help` из чужого cwd: exit 0, usage | `HelpFromForeignWorkingDirectoryExitsZeroWithUsage` | PASS |
 | CLI | 8 ошибочных комбинаций и неизвестный скин: exit 1, одна строка `Platformer: …`, до создания окна | `InvalidArgumentsFailFastWithOneReadableLine`, `UnknownSkinFailsBeforeWindowWithNamedValue` | PASS |
 | CLI | Запуск без дисплея: ограниченное время, exit 1, последняя строка — диагностика без stack trace (только Linux, иначе Inconclusive) | `LaunchWithoutDisplayEndsBoundedWithNonZeroExitAndDiagnostic` | PASS |
@@ -73,7 +73,7 @@ SHA проверенного commit указывается в описании P
 | AudioCoordinator: убрать проверку `SessionId` события | Запоздавшее событие старого сеанса |
 | AudioCoordinator: убрать проверку `Sequence <= sequence` | Повторная доставка Sequence |
 | LevelFlow: убрать `stopGameplayAudio()` из перехода | Выход в меню закрывает эффекты |
-| InputRouter: `Clear` не блокирует удержанные кнопки | Focus/старые команды |
+| InputRouter: `Clear` не блокирует удержанные кнопки | 3: удержанные Space и Escape, Focus |
 | GameplayHost: убрать `RefreshView` в `Advance` (View отстаёт на кадр) | 10 сценариев меню, HUD и звука |
 | Program: печатать исключение целиком | Все CLI-сценарии с ошибкой |
 
@@ -84,6 +84,10 @@ SHA проверенного commit указывается в описании P
 `selectedIndex` вместо `hit` — клик уже переносит выбор на `hit`.
 
 ## Команды
+
+Полный набор проверок — раздел «Работа и проверки» в [AGENTS.md](../AGENTS.md)
+(`pwsh -NoProfile -File scripts/Verify.ps1`) и `node --test scripts/review-policy.test.cjs`.
+Стыки этой задачи:
 
 ```sh
 dotnet test Platformer.sln -c Release --no-build --filter "FullyQualifiedName~Platformer.Tests.Integration"

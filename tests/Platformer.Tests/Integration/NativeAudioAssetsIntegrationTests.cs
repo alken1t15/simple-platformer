@@ -36,8 +36,12 @@ public sealed class NativeAudioAssetsIntegrationTests
         foreach (var kind in new[] { GameEventKind.Jumped, GameEventKind.CoinCollected, GameEventKind.Failed, GameEventKind.LevelCompleted })
             using (playback.PlayEffect(kind)) { }
         using (playback.PlayMusic()) { }
-        Assert.IsTrue(File.Exists(Path.Combine(directory, "LICENSE.txt")), "Лицензия звуков поставляется рядом с ассетами");
     }
+
+    [TestMethod]
+    public void BundledAudioShipsLicenseNextToAssets() =>
+        Assert.IsTrue(File.Exists(Path.Combine(AppContext.BaseDirectory, "Assets", "Audio", "LICENSE.txt")),
+            "Лицензия звуков поставляется рядом с ассетами");
 
     [TestMethod]
     public void MissingAudioFileFailsPlaybackConstructionWithFileName()

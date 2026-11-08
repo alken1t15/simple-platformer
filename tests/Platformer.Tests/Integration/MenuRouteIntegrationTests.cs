@@ -127,7 +127,9 @@ public sealed class MenuRouteIntegrationTests
             driver.Frame(down: AppButtons.D | AppButtons.Space, pressed: i == 0 ? AppButtons.Space : AppButtons.None,
                 seconds: driver.FixedStep);
         Assert.AreEqual(AppScreen.LevelResult, driver.Screen);
-        for (int i = 0; i < 5; i++) driver.Frame(down: AppButtons.Space, seconds: 0.1d);
+        // Автоповтор ОС присылает Pressed при удержании: меню реагирует на фронт, поэтому повтор
+        // старой клавиши должен гасить Router, а не отсутствие фронта.
+        for (int i = 0; i < 5; i++) driver.Frame(down: AppButtons.Space, pressed: AppButtons.Space, seconds: 0.1d);
         Assert.AreEqual(AppScreen.LevelResult, driver.Screen);
         Assert.AreEqual(IntegrationDriver.First, driver.Snapshot.LevelId);
         driver.Frame(released: AppButtons.Space);
@@ -147,12 +149,15 @@ public sealed class MenuRouteIntegrationTests
         Assert.AreEqual(AppScreen.Paused, driver.Screen);
         Assert.AreEqual(started, driver.Snapshot.SessionId, "Pause приоритетнее R в одном кадре");
         Assert.AreEqual(0L, driver.Snapshot.Tick);
-        driver.Frame(released: AppButtons.Escape | AppButtons.R);
-        driver.Press(AppButtons.Enter); // Continue
-        // Escape удерживается с прошлого нажатия: на кадре финиша это не новый фронт.
-        driver.Frame(down: AppButtons.Escape, seconds: driver.FixedStep);
+        // Escape не отпускается с паузы: Continue выбирается Enter, пока Escape зажат.
+        driver.Frame(down: AppButtons.Escape, released: AppButtons.R);
+        driver.Frame(down: AppButtons.Escape, pressed: AppButtons.Enter);
+        driver.Frame(down: AppButtons.Escape, released: AppButtons.Enter);
+        Assert.AreEqual(AppScreen.Playing, driver.Screen);
+        // Кадр финиша с тем же удержанием и автоповтором: старый Escape не ставит паузу.
+        driver.Frame(down: AppButtons.Escape, pressed: AppButtons.Escape, seconds: driver.FixedStep);
         Assert.AreEqual(AppScreen.LevelResult, driver.Screen);
-        driver.Frame(down: AppButtons.Escape, seconds: 0.1d);
+        driver.Frame(down: AppButtons.Escape, pressed: AppButtons.Escape, seconds: 0.1d);
         Assert.AreEqual(AppScreen.LevelResult, driver.Screen, "Старое удержание Escape не открывает диалог выхода");
         Assert.IsTrue(driver.Host.View.Controls.Any(control => control.Id == "next"));
     }

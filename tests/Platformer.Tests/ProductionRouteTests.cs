@@ -106,7 +106,7 @@ public sealed class ProductionRouteTests
                 PointerPosition: new(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2)), 0);
             host.Advance(new(true), 0);
         }
-        Click("levels"); Click("level:level2"); Click("start");
+        Click("levels"); Click("level:level2");
         var initial = host.Flow.Snapshot!;
         Assert.AreEqual("level2", initial.LevelId);
         driver.Go(10, 0);

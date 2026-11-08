@@ -3,7 +3,7 @@ using Platformer.Core;
 
 namespace Platformer.App;
 
-public readonly record struct MenuUpdateResult(bool ResetCamera);
+public readonly record struct MenuUpdateResult(bool ResetCamera, bool ResetInput = false);
 
 /// <summary>
 /// CPU-модель #19. Получает уже маршрутизированный InputFrame; окно/курсор/Step остаются у host #6.
@@ -16,8 +16,9 @@ public sealed class MenuController
     private readonly Action<float> applyMasterVolume;
     private AppScreen observedScreen;
     private int selectedIndex;
-    private string selectedLevelId;
-    private string selectedSkinId;
+    private bool confirmingMainMenu;
+    private int returnSelection;
+    private bool resetInputRequested;
     private Vector2? pointer;
     private Vector2? lastPointerPosition;
     private string? pressedId;
@@ -35,8 +36,6 @@ public sealed class MenuController
         this.catalog = catalog;
         this.applyMasterVolume = applyMasterVolume ?? (_ => { });
         observedScreen = flow.Screen;
-        selectedLevelId = catalog.Levels[0].Id;
-        selectedSkinId = flow.UserSettings.SkinId;
         ApplyVolume();
     }
 
@@ -82,7 +81,7 @@ public sealed class MenuController
             SynchronizeScreen();
             return default;
         }
-        if (input.RestartPressed && flow.Screen is AppScreen.Playing or AppScreen.Paused or AppScreen.Failed)
+        if (!confirmingMainMenu && input.RestartPressed && flow.Screen is AppScreen.Playing or AppScreen.Paused or AppScreen.Failed)
         {
             flow.Restart();
             SynchronizeScreen();
@@ -92,9 +91,14 @@ public sealed class MenuController
         var menu = input.Menu;
         if (menu.BackPressed)
         {
-            flow.Back();
+            bool resetInput = false;
+            if (confirmingMainMenu) { CancelMainMenu(); resetInput = true; }
+            else if (flow.Screen is AppScreen.Failed or AppScreen.LevelResult)
+            { RequestMainMenu(); resetInput = true; }
+            else flow.Back();
+            resetInputRequested = false;
             SynchronizeScreen();
-            return default;
+            return new(false, resetInput);
         }
 
         var view = BuildView(width, height);
@@ -120,7 +124,9 @@ public sealed class MenuController
             var control = view.Controls[selectedIndex];
             bool resetCamera = Execute(option, mouseActivation ? pointer : null, control.ValueBounds ?? control.Bounds);
             SynchronizeScreen();
-            return new(resetCamera);
+            var result = new MenuUpdateResult(resetCamera, resetInputRequested);
+            resetInputRequested = false;
+            return result;
         }
         if (menu.HorizontalStep != 0 && option.Action == MenuAction.Volume)
             SetVolume(EffectiveVolume + Math.Sign(menu.HorizontalStep) * 0.05f);
@@ -139,7 +145,6 @@ public sealed class MenuController
             case MenuAction.Resolution: Window.Cycle(1); break;
             case MenuAction.ApplyResolution: Window.RequestApply(); break;
             case MenuAction.Play: flow.Start(catalog.Levels[0].Id); return true;
-            case MenuAction.Start: flow.Start(selectedLevelId); return true;
             case MenuAction.Restart: flow.Restart(); return true;
             case MenuAction.Next: flow.Next(); return true;
             case MenuAction.Continue: flow.Continue(); break;
@@ -147,11 +152,15 @@ public sealed class MenuController
             case MenuAction.Settings: flow.OpenSettings(); break;
             case MenuAction.Skins: flow.OpenSkins(); break;
             case MenuAction.Back: flow.Back(); break;
-            case MenuAction.MainMenu: flow.MainMenu(); break;
+            case MenuAction.MainMenu: RequestMainMenu(); break;
+            case MenuAction.CancelMainMenu: CancelMainMenu(); break;
+            case MenuAction.ConfirmMainMenu:
+                confirmingMainMenu = false;
+                flow.MainMenu();
+                break;
             case MenuAction.Exit: CloseRequested = true; break;
-            case MenuAction.ChooseLevel: selectedLevelId = option.Value!; break;
-            case MenuAction.ChooseSkin: selectedSkinId = option.Value!; break;
-            case MenuAction.ApplySkin: flow.UserSettings.SkinId = selectedSkinId; break;
+            case MenuAction.ChooseLevel: flow.Start(option.Value!); return true;
+            case MenuAction.ChooseSkin: flow.UserSettings.SkinId = option.Value!; break;
             case MenuAction.Volume:
                 if (click is { } point) SetVolume((point.X - bounds.X) / bounds.Width);
                 break;
@@ -174,14 +183,34 @@ public sealed class MenuController
 
     private void ApplyVolume() => applyMasterVolume(EffectiveVolume);
 
+    private void RequestMainMenu()
+    {
+        if (flow.Snapshot is null) { flow.MainMenu(); return; }
+        returnSelection = selectedIndex;
+        confirmingMainMenu = true;
+        selectedIndex = 0; // Безопасный выбор — Cancel, не потеря текущей попытки.
+        pointer = null;
+        pressedId = null;
+        resetInputRequested = true;
+    }
+
+    private void CancelMainMenu()
+    {
+        confirmingMainMenu = false;
+        selectedIndex = returnSelection;
+        pointer = null;
+        pressedId = null;
+        resetInputRequested = true;
+    }
+
     private void SynchronizeScreen()
     {
         if (flow.Screen == observedScreen) return;
         observedScreen = flow.Screen;
         selectedIndex = 0;
+        confirmingMainMenu = false;
         pointer = null;
         pressedId = null;
-        if (flow.Screen == AppScreen.SkinSelect) selectedSkinId = flow.UserSettings.SkinId;
         if (flow.Screen == AppScreen.Settings) Window.SelectActual();
     }
 
@@ -192,17 +221,21 @@ public sealed class MenuController
         MenuOption Main() => Button("main-menu", "Main menu", MenuAction.MainMenu);
         MenuOption Retry() => Button("retry", "Retry", MenuAction.Restart);
         var settings = flow.UserSettings;
+        if (confirmingMainMenu)
+            return new("Leave this run?", ["Current level progress will be lost."],
+                [Button("cancel-main-menu", "Cancel", MenuAction.CancelMainMenu),
+                 Button("confirm-main-menu", "Leave to main menu", MenuAction.ConfirmMainMenu)]);
         return flow.Screen switch
         {
             AppScreen.MainMenu => new("Ball Adventure", ["Roll. Jump. Explore."],
             [Button("play", "Play", MenuAction.Play), Button("levels", "Levels", MenuAction.Levels),
              Button("settings", "Settings", MenuAction.Settings), Button("skins", "Skins", MenuAction.Skins),
              Button("exit", "Exit", MenuAction.Exit)]),
-            AppScreen.LevelSelect => new("Choose a level", ["Choose a card, then Start."],
+            AppScreen.LevelSelect => new("Choose a level", ["Select a level to start."],
                 catalog.Levels.Select(level => new MenuOption($"level:{level.Id}",
-                    (level.Id == selectedLevelId ? "[x] " : "[ ] ") + HudModel.LevelNameFor(level.Id),
+                    HudModel.LevelNameFor(level.Id),
                     MenuAction.ChooseLevel, MenuControlKind.Level, level.Id))
-                .Concat([Button("start", "Start", MenuAction.Start), Back()]).ToArray()),
+                .Concat([Back()]).ToArray()),
             AppScreen.Settings => new("Settings", [$"Current window: {Window.Actual}",
                 $"Current mode: {(Window.ActualFullscreen ? "Fullscreen" : "Windowed")}"],
             [new("volume", $"Master volume: {MathF.Round(EffectiveVolume * 100f):0}%", MenuAction.Volume, MenuControlKind.Volume),
@@ -210,12 +243,12 @@ public sealed class MenuController
              Button("display-mode", $"Display: < {(Window.SelectedFullscreen ? "Fullscreen" : "Windowed")} >", MenuAction.DisplayMode),
              Button("resolution", $"Resolution: < {Window.Selected} >", MenuAction.Resolution),
              Button("apply-resolution", "Apply resolution", MenuAction.ApplyResolution), Back()]),
-            AppScreen.SkinSelect => new("Choose a skin", ["Choose a sample, then Select to apply."],
+            AppScreen.SkinSelect => new("Choose a skin", ["Select a skin to apply immediately."],
                 GameSkins.All.Select(skin => new MenuOption($"skin:{skin.Id}",
-                    (skin.Id == selectedSkinId ? "[x] " : "[ ] ") + skin.DisplayName
+                    (skin.Id == settings.SkinId ? "[x] " : "[ ] ") + skin.DisplayName
                     + (skin.Id == settings.SkinId ? " (current)" : ""), MenuAction.ChooseSkin,
                     MenuControlKind.Skin, skin.Id, skin.Material.BaseColor))
-                .Concat([Button("select", "Select", MenuAction.ApplySkin), Back()]).ToArray()),
+                .Concat([Back()]).ToArray()),
             AppScreen.Paused => new("Paused", ["Take a breath. Continue when ready."],
             [Button("continue", "Continue", MenuAction.Continue), Button("restart", "Restart", MenuAction.Restart),
              Button("settings", "Settings", MenuAction.Settings), Main()]),

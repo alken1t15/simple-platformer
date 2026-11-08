@@ -53,7 +53,8 @@ public sealed class InputRouter
             Vector2 move = new(right * cos - forward * sin, -right * sin - forward * cos);
             if (move.LengthSquared() > 1f) move = Vector2.Normalize(move);
             return new InputFrame(new GameCommand(move, Press(AppButtons.Space),
-                Press(AppButtons.LeftShift | AppButtons.RightShift)), restart, Press(AppButtons.Escape), default);
+                Press(AppButtons.LeftShift | AppButtons.RightShift)), restart, Press(AppButtons.Escape), default,
+                (down & AppButtons.Space) != 0);
         }
         // Повтор — правило UI, а не повторные Pressed от ОС. Активация/Escape/R остаются фронтами.
         bool Active(AppButtons keys) => ((down | pressed) & keys) != 0;

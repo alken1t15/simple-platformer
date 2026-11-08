@@ -28,7 +28,7 @@ Program синхронизирует ClientSize/WindowedClientSizeLimits/IsFulls
 | Тип / метод | Контракт |
 |---|---|
 | `InputFrame InputRouter.Map(InputSnapshot input, AppScreen screen, float yawRadians, double frameSeconds = 0)` | То же для AppInputSnapshot; возвращает InputFrame активного экрана, не двигает шар. Время кадра даёт повтор навигации меню, старые вызовы с тремя аргументами сохраняются |
-| `FixedStepRunner.Advance(double frameSeconds, GameCommand latestHeld, Action<GameCommand> step)` | Возвращает число ticks; хранит только последние удержания и OR фронтов Jump/Boost; фронты потребляются первым tick, последующие их не повторяют |
+| `FixedStepRunner.Advance(double frameSeconds, GameCommand latestHeld, Action<GameCommand> step, bool jumpHeld = false)` | Возвращает число ticks; фронты Jump/Boost потребляются первым tick. При jumpHeld каждый tick запрашивает прыжок, Core разрешает его только на земле |
 | `FixedStepRunner.Clear()` | Сбрасывает аккумулятор, удержания и фронты вне Step при pause/focus/restart/смене уровня |
 | `FixedStepRunner.RequestClear()` | Callback LevelFlow: внутри Step откладывает очистку до конца текущего tick и прекращает catch-up; вне Step вызывает Clear |
 | `CameraPose CameraRig.Update(Vector2 relativeMouseDelta, Vector3 target, LevelDefinition level, float frameSeconds)` | Один вызов за render frame в Running; yaw затем GameCommand, pitch clamped, позиция с obstruction radius |
@@ -58,12 +58,16 @@ Update возвращает позу, из её YawRadians в этом же ка
 
 ```csharp
 public readonly record struct InputFrame(GameCommand Gameplay, bool RestartPressed,
-    bool PausePressed, MenuInput Menu);
+    bool PausePressed, MenuInput Menu, bool JumpHeld = false);
 public readonly record struct MenuInput(int HorizontalStep, int VerticalStep,
     bool ActivatePressed, bool BackPressed, bool PointerPressed, Vector2 PointerPosition);
 ```
 
 В Playing Menu=default; в меню Gameplay=default и PausePressed=false.
+JumpHeld разрешён только в Playing и отражает удержание Space после фильтрации/rearm.
+Gameplay.JumpPressed остаётся фронтом; JumpHeld отдельно включает автопрыжок после
+приземления, без прыжков в воздухе. При смене экрана/фокуса старое удержание блокируется
+до отпускания и нового нажатия. Boost остаётся однократным действием.
 RestartPressed разрешён для Playing/Paused/Failed; в остальных экранах false.
 PausePressed — Escape только в Playing. Menu.BackPressed — Escape в меню;
 ArrowUp/Down/Tab дают VerticalStep −1/+1/+1, Shift+Tab (любой Shift) — −1;
@@ -106,12 +110,12 @@ Clear вызывается до передачи нового snapshot при с
 ## Меню и переходы
 
 - MainMenu: Play (level1), LevelSelect (оба ID), Settings, Skins, Exit.
-- LevelSelect: начать любой из двух уровней, Back.
+- LevelSelect: активация карточки сразу начинает выбранный уровень, Back; кнопки Start нет.
 - Settings: master slider0–100%, mute, Back; применяется немедленно, не требует Apply.
-- Skins: два видимых образца, Select, Back; сохраняется между уровнями в процессе.
+- Skins: активация образца сразу применяет скин, Back; кнопки Select нет.
 - Playing: HUD collected/total, имя уровня, boost ready/remaining/cooldown; Escape→Paused, R→Restart.
 - Paused: Continue, Restart, Settings, MainMenu. Возврат из настроек возвращает Paused.
-- Failed: Retry, LevelSelect, MainMenu. R действует как Retry, Escape→MainMenu.
+- Failed: Retry, LevelSelect, MainMenu. R действует как Retry, Escape открывает подтверждение MainMenu.
 - LevelResult: число монет, Next, Retry, MainMenu; после последнего Next→GameComplete.
 - GameComplete: общий итог по текущему последовательному прохождению, LevelSelect, MainMenu.
   При прямом выборе level2 результат учитывает только начатый маршрут, не вымышленные монеты level1.
@@ -120,8 +124,12 @@ Mouse/клавиатура используют один UI selection model. Arr
 Left/Right — slider с шагом5%, Enter/Space или LeftMousePressed — активация.
 Если пришли и Enter, и mouse в одном frame, действие выполняется один раз для выбранной цели;
 приоритет mouse target, затем keyboard selection. Hit-test использует ту же logical geometry,
-что и overlay. Escape возвращает предыдущий экран; из MainMenu открывает подтверждение выхода
-или действует только кнопка Exit (для минимума — только Exit).
+что и overlay. Escape возвращает предыдущий экран; в MainMenu выход выполняет кнопка Exit.
+MainMenu из Paused/Failed/LevelResult требует подтверждения потери прогресса. Cancel выбран
+по умолчанию; Enter/Escape отменяет выход, R игнорируется. `MenuUpdateResult.ResetInput`
+сбрасывает ввод при открытии/отмене подтверждения даже без изменения AppScreen.
+Подтверждённый выход завершает сеанс; host сохраняет последний Presenter только как
+неподвижный фон без восстановления монет. Play/карточка уровня создаёт новый сеанс.
 В menu cursor Normal; в Playing Captured только после явного start/continue.
 Focus loss→Paused, release cursor и pause audio; focus gain не продолжает игру сам.
 

@@ -71,7 +71,7 @@ public sealed class GameplayFrameRunner
         frame = Router.Map(input, Screen, pose.YawRadians);
         try
         {
-            int ticks = Clock.Advance(frameSeconds, frame.Gameplay, step);
+            int ticks = Clock.Advance(frameSeconds, frame.Gameplay, step, frame.JumpHeld);
             return new GameplayFrameResult(frame, pose, ticks);
         }
         catch

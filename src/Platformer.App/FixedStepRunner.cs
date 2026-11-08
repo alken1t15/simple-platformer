@@ -21,7 +21,7 @@ public sealed class FixedStepRunner
         FixedStepSeconds = settings.FixedStepSeconds;
     }
 
-    public int Advance(double frameSeconds, GameCommand latestHeld, Action<GameCommand> step)
+    public int Advance(double frameSeconds, GameCommand latestHeld, Action<GameCommand> step, bool jumpHeld = false)
     {
         if (!double.IsFinite(frameSeconds) || frameSeconds < 0d)
             throw new ArgumentOutOfRangeException(nameof(frameSeconds));
@@ -46,7 +46,9 @@ public sealed class FixedStepRunner
             int ticks = 0;
             while (AccumulatedSeconds >= FixedStepSeconds && ticks < MaximumTicksPerFrame)
             {
-                step(_pending);
+                // Core принимает прыжок только с опоры. Удержание повторяет запрос после приземления,
+                // включая несколько physics ticks в одном render frame; Boost остаётся фронтом.
+                step(jumpHeld ? _pending with { JumpPressed = true } : _pending);
                 ticks++;
                 if (_clearRequested)
                 {

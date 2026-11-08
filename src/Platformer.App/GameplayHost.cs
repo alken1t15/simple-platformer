@@ -12,6 +12,7 @@ public sealed class GameplayHost
 {
     private readonly LevelCatalog _catalog;
     private readonly GameScenePresenter _preview;
+    private GameScenePresenter? _menuBackdrop;
     private bool _resetRequested;
     private bool _resetMenuPointer = true;
     private readonly AudioCoordinator? _audio;
@@ -60,9 +61,10 @@ public sealed class GameplayHost
         }
 
         GameplayFrameResult result = Frames.Advance(input, frameSeconds, Target, CurrentLevel, Flow.Step);
-        bool resetCamera = Menu.Handle(result.Input, clientWidth, clientHeight, input.IsFocused).ResetCamera;
+        var menuResult = Menu.Handle(result.Input, clientWidth, clientHeight, input.IsFocused);
+        bool resetCamera = menuResult.ResetCamera;
         if (wasPlaying && Flow.Screen != AppScreen.Playing) _resetMenuPointer = true;
-        if (_resetRequested || Frames.Screen != Flow.Screen)
+        if (_resetRequested || menuResult.ResetInput || Frames.Screen != Flow.Screen)
         {
             Frames.SetScreen(Flow.Screen, resetCamera);
             _resetRequested = false;
@@ -96,8 +98,10 @@ public sealed class GameplayHost
     {
         // Engine.Run удерживает один Scene весь lifecycle. Presenter меняется при Start/Next,
         // его объекты и удаление собранных монет переносим через публичный Scene API.
-        Scene source = (Flow.Presenter ?? _preview).Scene;
-        _preview.BallObject.Material = GameSkins.Get(Flow.UserSettings.SkinId).Material;
+        if (Flow.Presenter is { } presenter) _menuBackdrop = presenter;
+        var visible = Flow.Presenter ?? _menuBackdrop ?? _preview;
+        Scene source = visible.Scene;
+        visible.BallObject.Material = GameSkins.Get(Flow.UserSettings.SkinId).Material;
         if (Scene.Objects.SequenceEqual(source.Objects)) return;
         var desired = new HashSet<SceneObject>(source.Objects);
         foreach (var item in Scene.Objects.ToArray())

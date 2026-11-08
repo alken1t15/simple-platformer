@@ -303,12 +303,21 @@ def main():
         capture("main-menu")
         levels = click_control("levels", "LevelSelect")
         assert {control["id"] for control in levels["controls"] if control["id"].startswith("level:")} == {"level:level1", "level:level2"}
-        click_control("level:level2", "LevelSelect")
-        direct = click_control("start", "Playing")
+        direct = click_control("level:level2", "Playing")
         assert direct["level"] == "level2" and direct["coins"] == 0
         press("Escape")
         until(lambda f: f["screen"] == "Paused", "direct level2 pause")
-        click_control("main-menu", "MainMenu")
+        click_control("main-menu", "Paused")
+        confirmation = until(lambda f: any(c["id"] == "confirm-main-menu" for c in f["controls"]), "leave run confirmation")
+        assert next(c for c in confirmation["controls"] if c["selected"])["id"] == "cancel-main-menu"
+        press("Return")
+        cancelled = until(lambda f: any(c["id"] == "main-menu" for c in f["controls"]), "Enter safely cancels leave")
+        assert cancelled["screen"] == "Paused" and cancelled["session"] == confirmation["session"]
+        assert cancelled["tick"] == confirmation["tick"], "Confirmation advanced or replaced the session"
+        click_control("main-menu", "Paused")
+        capture("leave-confirmation")
+        returned = click_control("confirm-main-menu", "MainMenu")
+        assert returned["sceneCoins"] == confirmation["sceneCoins"], "Main Menu reset the visible coin backdrop"
         click_control("levels", "LevelSelect")
         # Принудительная X11-команда обходит WM. Это проверка clamping, а не drag пользователя.
         x.XResizeWindow(display, native, 80, 48)
@@ -384,7 +393,6 @@ def main():
         click_control("back", "MainMenu")
         click_control("skins", "SkinSelect")
         click_control("skin:orange", "SkinSelect")
-        click_control("select", "SkinSelect")
         until(lambda f: f["skin"] == "orange", "apply skin")
         capture("skins")
         click_control("back", "MainMenu")
@@ -451,9 +459,14 @@ def main():
         key("space", True)
         until(lambda f: f["jump"] and has(f, "pressed", "Space"), "jump edge")
         until(lambda f: f["y"] > 0.6, "jump physics")
-        assert all(not f["jump"] for f in collect(0.2)), "Повтор прыжка при удержании"
+        assert all(not f["jump"] for f in collect(0.2)), "Фронт Space повторился вместо отдельного held-сигнала"
+        until(lambda f: f["velocityY"] < -0.5 and not f["grounded"], "first held jump falling")
+        until(lambda f: f["velocityY"] > 1 and f["jumpHeld"] and not f["grounded"], "Space auto-jump after landing")
         key("space", False)
         until(lambda f: has(f, "released", "Space"), "jump release")
+        until(lambda f: f["grounded"], "land after releasing Space")
+        assert all(f["grounded"] for f in collect(0.2)), "Auto-jump continued after release"
+        print("PASS: Space auto-jump после приземления, без воздушного double-jump; release останавливает")
         for symbol, name in [("Shift_L", "LeftShift"), ("Shift_R", "RightShift")]:
             press("r")
             previous = restarted["session"]
@@ -524,7 +537,9 @@ def main():
         capture("training-track")
         press("Escape")
         until(lambda f: f["screen"] == "Paused", "final pause")
-        click_control("main-menu", "MainMenu")
+        click_control("main-menu", "Paused")
+        until(lambda f: any(c["id"] == "confirm-main-menu" for c in f["controls"]), "final leave confirmation")
+        click_control("confirm-main-menu", "MainMenu")
         press("Escape")
         assert all(f["screen"] == "MainMenu" for f in collect()), "Escape закрыл MainMenu"
         click_control("exit", "MainMenu")

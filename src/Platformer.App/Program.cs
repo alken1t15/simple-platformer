@@ -11,7 +11,7 @@ try
             Ball Adventure: Training Track and Turning Maze, menus, HUD and game audio.
             Usage: Platformer.App [--play | --legacy | --presenter [--skin classic-blue|orange] [--overview] [--still]] [--smoke]
             Default / --play: open Main Menu. Arrows/Tab: choose; Enter/Space or mouse click: select.
-            WASD: move; Space: jump; Shift: boost; R: restart; mouse: camera (up looks up).
+            WASD: move; Space: jump (hold to jump again on landing); Shift: boost; R: restart; mouse: camera (up looks up).
             Escape: pause / back; Exit in Main Menu closes. Alt-Tab pauses; Continue resumes explicitly.
             --smoke: render 3 frames and close; no input, gameplay ticks, audio device or mouse capture.
             --trace-input: with gameplay mode, emit JSON frame/UI diagnostics for the X11 driver.
@@ -101,13 +101,14 @@ try
                     tick = game.Flow.Snapshot?.Tick, session = game.Flow.Snapshot?.SessionId,
                     level = game.Flow.Snapshot?.LevelId,
                     x = ball?.Center.X, y = ball?.Center.Y, z = ball?.Center.Z,
-                    grounded = ball?.Grounded, velocityX = ball?.Velocity.X,
+                    grounded = ball?.Grounded, velocityX = ball?.Velocity.X, velocityY = ball?.Velocity.Y,
                     ballRotationX = ballRotation?.X, ballRotationY = ballRotation?.Y,
                     ballRotationZ = ballRotation?.Z, ballRotationW = ballRotation?.W,
                     boost = ball?.BoostRemainingSeconds, cooldown = ball?.BoostCooldownSeconds,
                     ticks = frameResult.Ticks, moveX = frameResult.Input.Gameplay.MoveWorldXZ.X,
                     moveZ = frameResult.Input.Gameplay.MoveWorldXZ.Y,
-                    jump = frameResult.Input.Gameplay.JumpPressed, boostPressed = frameResult.Input.Gameplay.BoostPressed,
+                    jump = frameResult.Input.Gameplay.JumpPressed, jumpHeld = frameResult.Input.JumpHeld,
+                    boostPressed = frameResult.Input.Gameplay.BoostPressed,
                     yaw = game.Frames.Camera.YawRadians, pitch = game.Frames.Camera.PitchRadians,
                     pointerX = appInput.PointerPosition.X, pointerY = appInput.PointerPosition.Y,
                     width = engine.FramebufferSize.Width, height = engine.FramebufferSize.Height,
@@ -121,6 +122,7 @@ try
                     uiTexts = game.View.Texts.Select(text => text.Text),
                     volume = game.Flow.UserSettings.MasterVolume, muted = game.Flow.UserSettings.Muted,
                     skin = game.Flow.UserSettings.SkinId, coins = game.Flow.Snapshot?.CoinCount,
+                    sceneCoins = game.Scene.Objects.Count(item => ReferenceEquals(item.Mesh, GameMeshes.Coin)),
                     audioVolume = audio?.MasterVolume, audioSilent = audio?.IsSilent,
                 }));
             }
@@ -144,7 +146,8 @@ try
         if (smoke && engine.RenderedFrames >= 3)
             engine.RequestClose();
     });
-    Console.WriteLine($"Rendered frames: {engine.RenderedFrames}");
+    if (smoke || traceInput || !gameplayMode)
+        Console.WriteLine($"Rendered frames: {engine.RenderedFrames}");
 }
 catch (Exception exception)
 {

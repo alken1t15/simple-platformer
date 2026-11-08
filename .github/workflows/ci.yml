@@ -101,6 +101,9 @@ jobs:
       - name: Check native input, menus, HUD and camera on X11
         timeout-minutes: 2
         run: timeout 60s xvfb-run -a -s '-screen 0 1280x800x24' python3 scripts/check_gameplay_x11.py
+      - name: Check detached Linux launcher and quiet normal exit
+        timeout-minutes: 2
+        run: timeout 30s xvfb-run -a python3 scripts/check_launch_x11.py
       - name: Capture presenter scene on Linux
         timeout-minutes: 2
         run: timeout 60s xvfb-run -a -s '-screen 0 1280x800x24' bash scripts/capture-presenter.sh

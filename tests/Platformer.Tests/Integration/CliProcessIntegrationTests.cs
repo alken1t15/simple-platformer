@@ -1,8 +1,6 @@
 using System.Diagnostics;
-using Engine3D.Audio;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Platformer.App;
-using Platformer.Core;
 
 namespace Platformer.Tests.Integration;
 
@@ -73,7 +71,6 @@ public sealed class CliProcessIntegrationTests
     [DataRow("--overview", "--skin, --overview and --still require --presenter.")]
     [DataRow("--skin orange", "--skin, --overview and --still require --presenter.")]
     [DataRow("--legacy --trace-input", "--trace-input requires gameplay mode.")]
-    [DataRow("--presenter --skin missing --smoke", "Неизвестный скин missing")]
     public void InvalidArgumentsFailFastWithOneReadableLine(string arguments, string message)
     {
         // Без дисплея: ошибка аргументов должна прийти раньше создания окна.
@@ -81,6 +78,17 @@ public sealed class CliProcessIntegrationTests
         Assert.AreEqual(1, run.ExitCode);
         Assert.AreEqual("", run.Output);
         Assert.AreEqual($"Platformer: {message}", run.Error.TrimEnd());
+    }
+
+    [TestMethod]
+    public void UnknownSkinFailsBeforeWindowWithNamedValue()
+    {
+        // Текст сообщения русский; кодировка stderr на Windows не гарантирует кириллицу, проверяем значение.
+        var run = Launch(["--presenter", "--skin", "missing", "--smoke"], withoutDisplay: true);
+        Assert.AreEqual(1, run.ExitCode);
+        StringAssert.StartsWith(run.Error, "Platformer: ");
+        StringAssert.Contains(run.Error, "missing");
+        Assert.AreEqual(1, run.Error.TrimEnd().Split('\n').Length);
     }
 
     [TestMethod]
@@ -97,45 +105,5 @@ public sealed class CliProcessIntegrationTests
         StringAssert.StartsWith(last, "Platformer: ");
         StringAssert.Contains(last, "window");
         Assert.DoesNotContain("   at ", run.Error, "Диагностика без stack trace");
-    }
-
-    [TestMethod]
-    public void BundledAudioLoadsFromBaseDirectoryThroughPublicAudioDevice()
-    {
-        // Program строит путь от AppContext.BaseDirectory; LoadWave разбирает WAV и в silent fallback.
-        string directory = Path.Combine(AppContext.BaseDirectory, "Assets", "Audio");
-        using var device = AudioDevice.Create(new AudioOptions());
-        device.MasterVolume = 0f;
-        using var playback = new NativeAudioPlayback(device, directory);
-        using var coordinator = new AudioCoordinator(playback);
-        var session = Guid.NewGuid();
-        coordinator.SetScreen(AppScreen.Playing);
-        coordinator.Consume(session, [
-            new(session, 1, 1, GameEventKind.Jumped, null),
-            new(session, 2, 2, GameEventKind.CoinCollected, "coin"),
-            new(session, 3, 3, GameEventKind.BoostStarted, null),
-            new(session, 4, 4, GameEventKind.Failed, null),
-            new(session, 5, 5, GameEventKind.LevelCompleted, null)]);
-        coordinator.SetScreen(AppScreen.Paused);
-        coordinator.SetScreen(AppScreen.Playing);
-        coordinator.Stop();
-        Assert.IsTrue(File.Exists(Path.Combine(directory, "LICENSE.txt")), "Лицензия звуков поставляется рядом с ассетами");
-    }
-
-    [TestMethod]
-    public void MissingAudioFileFailsConstructionAndReleasesLoadedClips()
-    {
-        string directory = Directory.CreateTempSubdirectory("platformer-audio-").FullName;
-        try
-        {
-            File.Copy(Path.Combine(AppContext.BaseDirectory, "Assets", "Audio", "music.wav"),
-                Path.Combine(directory, "music.wav"));
-            using var device = AudioDevice.Create(new AudioOptions());
-            Assert.ThrowsExactly<FileNotFoundException>(() => new NativeAudioPlayback(device, directory));
-        }
-        finally
-        {
-            Directory.Delete(directory, recursive: true);
-        }
     }
 }

@@ -27,12 +27,16 @@ public sealed class AudioLifecycleIntegrationTests
         Assert.AreEqual(1, driver.Playback.Count(GameEventKind.CoinCollected));
         driver.Frame(down: AppButtons.Space, pressed: AppButtons.Space, seconds: driver.FixedStep);
         Assert.AreEqual(1, driver.Playback.Count(GameEventKind.Jumped));
+        int effectsBeforeBoost = driver.Playback.Effects.Count;
+        driver.Frame(released: AppButtons.Space);
+        driver.Frame(down: AppButtons.LeftShift, pressed: AppButtons.LeftShift, seconds: driver.FixedStep);
+        Assert.IsGreaterThan(0f, driver.Snapshot.Ball.BoostRemainingSeconds, "Boost действительно запущен");
+        Assert.HasCount(effectsBeforeBoost, driver.Playback.Effects, "BoostStarted не имеет клипа");
+        driver.Frame(released: AppButtons.LeftShift);
         driver.HoldUntilLeavesPlaying(AppButtons.D);
         Assert.AreEqual(1, driver.Playback.Count(GameEventKind.LevelCompleted));
         for (int i = 0; i < 5; i++) driver.Frame(seconds: 0.1d);
         Assert.AreEqual(1, driver.Playback.Count(GameEventKind.LevelCompleted));
-        Assert.IsFalse(driver.Playback.Effects.Any(voice => voice.Clip == nameof(GameEventKind.BoostStarted)),
-            "BoostStarted не имеет клипа");
     }
 
     [TestMethod]

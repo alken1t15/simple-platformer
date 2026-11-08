@@ -10,7 +10,8 @@ Linux-приёмка [#11](https://github.com/alken1t15/simple-platformer/issues
 [маршрут меню](../tests/Platformer.Tests/Integration/MenuRouteIntegrationTests.cs),
 [snapshot/HUD/скин](../tests/Platformer.Tests/Integration/PresentationIntegrationTests.cs),
 [звук](../tests/Platformer.Tests/Integration/AudioLifecycleIntegrationTests.cs),
-[CLI и ресурсы](../tests/Platformer.Tests/Integration/CliProcessIntegrationTests.cs).
+[CLI](../tests/Platformer.Tests/Integration/CliProcessIntegrationTests.cs),
+[аудиоресурсы](../tests/Platformer.Tests/Integration/NativeAudioAssetsIntegrationTests.cs).
 
 Тестовый каталог драйвера: level1 — монета на spawn и финиш справа (D); level2 — финиш
 справа и неподвижная балка слева (A ведёт к Failed). Прохождение настоящих Training Track
@@ -30,21 +31,22 @@ SHA проверенного commit указывается в описании P
 | Двойная активация | Клик по Settings и Enter на Continue в одном кадре — одно действие, клик | `ClickOnSettingsWinsOverEnterOnDefaultContinueInSameFrame` | PASS |
 | Старые команды | Space, удержанный через финиш, не активирует Next; новый фронт — активирует | `ActivationKeyHeldThroughLevelEndDoesNotTriggerNext` | PASS |
 | Старые команды | Escape+R в одном кадре: Pause раньше Step и раньше R; удержанный Escape на экране результата не открывает выход | `PauseIsDecidedBeforeTicksSoTerminalFrameCannotSwallowOrDuplicateIt` | PASS |
-| Focus | Потеря фокуса: Pause, отброшенные Space/Shift; активация с зажатыми клавишами не продолжает игру и не нажимает Next | `FocusLossOnEveryScreenClearsPendingCommandsAndNeverResumesByItself` | PASS |
+| Focus | Потеря фокуса в Playing: Pause, отброшенные Space/Shift; активация с зажатыми клавишами не продолжает игру; на экране результата не нажимает Next | `FocusLossInPlayingAndResultClearsPendingCommandsAndNeverResumesByItself` | PASS |
 | Snapshot → HUD → Scene | CoinCount, текст HUD и удаление монеты из сцены — в одном кадре; Restart возвращает монету | `CoinCountHudAndCoinVisibilityChangeInTheSameFrame` | PASS |
 | Snapshot → HUD | HUD скрыт на экране результата, итог из того же snapshot; после Next HUD показывает level2 | `HudFollowsCurrentLevelAfterNextAndDisappearsOutsidePlaying` | PASS |
 | Presenter/settings | Скин и Mute сохраняются при Restart/Next; обе локации используют `GameScenePresenter` и один `Scene`; объекты level1 убраны | `SelectedSkinAndVolumeSurviveRestartNextAndBothLocationsShareOneScene` | PASS |
-| Event → clip | Каждое событие звучит один раз через кадры и Pause/Continue; у BoostStarted нет клипа | `EachEventPlaysItsClipOnceAcrossFramesPauseAndContinue` | PASS |
+| Event → clip | Каждое событие звучит один раз через кадры и Pause/Continue; запущенный Shift boost не создаёт voice | `EachEventPlaysItsClipOnceAcrossFramesPauseAndContinue` | PASS |
 | Music loop | Один loop, пауза в Pause/Settings/потере фокуса, Continue не удваивает | `MusicLoopIsSingleAndPausedThroughPauseSettingsAndFocusLoss` | PASS |
 | SessionId | Новый сеанс после Restart снова звучит с Sequence 1; запоздавшее событие старого SessionId и повтор Sequence не звучат | `NewSessionEventsPlayAfterRestartAndLateOldSessionEventsAreIgnored` | PASS |
-| Освобождение | Next оставляет только новый loop; выход в меню закрывает музыку и эффекты; Dispose закрывает backend | `NextMainMenuAndExitCloseEveryVoiceAndPlayback` | PASS |
-| Ресурсы | Все WAV загружаются от `AppContext.BaseDirectory` через публичный `AudioDevice` (настоящий или silent backend); нет файла — ошибка и освобождение | `BundledAudioLoadsFromBaseDirectoryThroughPublicAudioDevice`, `MissingAudioFileFailsConstructionAndReleasesLoadedClips` | PASS |
+| Освобождение | Next оставляет только новый loop; выход в меню закрывает музыку и эффект в полёте; `AudioCoordinator.Dispose` (в Program — `using`) закрывает backend | `NextMainMenuAndExitCloseEveryVoiceAndPlayback` | PASS |
+| Ресурсы | Все WAV разбираются и запускаются от `AppContext.BaseDirectory` через публичный `AudioDevice` (настоящий или silent backend); нет файла — `FileNotFoundException` с именем | `BundledAudioLoadsFromBaseDirectoryThroughPublicAudioDevice`, `MissingAudioFileFailsPlaybackConstructionWithFileName` | PASS |
 | CLI | `--help` из чужого cwd: exit 0, usage | `HelpFromForeignWorkingDirectoryExitsZeroWithUsage` | PASS |
-| CLI | 9 ошибочных комбинаций: exit 1, одна строка `Platformer: …`, до создания окна | `InvalidArgumentsFailFastWithOneReadableLine` | PASS |
+| CLI | 8 ошибочных комбинаций и неизвестный скин: exit 1, одна строка `Platformer: …`, до создания окна | `InvalidArgumentsFailFastWithOneReadableLine`, `UnknownSkinFailsBeforeWindowWithNamedValue` | PASS |
 | CLI | Запуск без дисплея: ограниченное время, exit 1, последняя строка — диагностика без stack trace (только Linux, иначе Inconclusive) | `LaunchWithoutDisplayEndsBoundedWithNonZeroExitAndDiagnostic` | PASS |
-| Графика, Xvfb | `--smoke`, `--play --smoke`, `--presenter --smoke`, `--presenter --skin orange --overview --smoke`, `--legacy --smoke`: 3 кадра, exit 0, 0.9–2 с | команды CI graphics-smoke | PASS |
-| X11-ввод, Xvfb | Меню, HUD, камера, focus, auto-jump, launcher из другого cwd | `scripts/check_gameplay_x11.py`, `scripts/check_launch_x11.py` | PASS |
-| CI Windows/Linux | compile ×2, documents, graphics-smoke | статус CI в PR | см. PR |
+| Графика, Xvfb | `--smoke`, `--play --smoke`, `--presenter --smoke`, `--presenter --skin orange --overview --smoke`, `--legacy --smoke`: 3 кадра, exit 0; ручной замер 0.9–2 с | команды CI graphics-smoke | PASS |
+| Камера | Знаки мыши и ограничение pitch, независимость от частоты кадров, стены между шаром и камерой (`CameraRigTests`); мышь в том же кадре и сброс очереди при Pause/Restart/Next (`GameplayFrameRunnerTests`) | существующие тесты, новых нет | PASS |
+| X11-ввод, Xvfb | Меню, HUD, камера, focus, auto-jump, launcher из другого cwd (`cwd=/tmp`, gameplay с аудио) | `scripts/check_gameplay_x11.py`, `scripts/check_launch_x11.py` | PASS |
+| CI Windows/Linux | compile ×2, documents, graphics-smoke | статус CI в PR | после push: итог в PR |
 | Native audio | Слышимость эффектов и музыки на реальном устройстве | ручная Linux-приёмка #11 | SKIP: в окружении нет звуковой карты (ALSA: no card 0) |
 | Native overlay/mouse | Реальный монитор, захват мыши, оконный менеджер | ручная Linux-приёмка #11 | SKIP: только Xvfb |
 | Защита репозитория | Настройки main и обязательные проверки | — | Не входит: выполняет TL |
@@ -73,7 +75,7 @@ SHA проверенного commit указывается в описании P
 | LevelFlow: убрать `stopGameplayAudio()` из перехода | Выход в меню закрывает эффекты |
 | InputRouter: `Clear` не блокирует удержанные кнопки | Focus/старые команды |
 | GameplayHost: убрать `RefreshView` в `Advance` (View отстаёт на кадр) | 10 сценариев меню, HUD и звука |
-| Program: печатать исключение целиком | Все 12 CLI-сценариев с ошибкой |
+| Program: печатать исключение целиком | Все CLI-сценарии с ошибкой |
 
 Эквивалентные мутации (не ловятся, защита дублируется в другом слое): InputRouter без
 повторной блокировки после фокуса — runner очищает router при смене фокуса; host без

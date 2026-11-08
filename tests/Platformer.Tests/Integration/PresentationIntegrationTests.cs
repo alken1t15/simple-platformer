@@ -42,8 +42,7 @@ public sealed class PresentationIntegrationTests
         Assert.AreEqual(1, texts.Count(text => text == "Coins 1/2"), "Итог уровня берётся из того же snapshot");
         driver.Press(AppButtons.Enter);
         Assert.AreEqual("Coins 0/0", driver.HudText("Coins"));
-        Assert.IsTrue(driver.Host.View.Texts.Any(text => text.Text == HudModel.Create(
-            IntegrationDriver.TwoLevels().Get(IntegrationDriver.Second), driver.Snapshot).LevelName));
+        Assert.IsTrue(driver.Host.View.Texts.Any(text => text.Text == "Turning Maze"), "Имя level2 из макета");
     }
 
     [TestMethod]

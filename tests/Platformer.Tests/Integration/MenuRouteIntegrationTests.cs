@@ -158,7 +158,7 @@ public sealed class MenuRouteIntegrationTests
     }
 
     [TestMethod]
-    public void FocusLossOnEveryScreenClearsPendingCommandsAndNeverResumesByItself()
+    public void FocusLossInPlayingAndResultClearsPendingCommandsAndNeverResumesByItself()
     {
         var driver = new IntegrationDriver();
         driver.Press(AppButtons.Enter);

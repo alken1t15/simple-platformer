@@ -28,7 +28,10 @@ public sealed class GameScenePresenter
     {
         ArgumentNullException.ThrowIfNull(level);
         _level = level;
-        var track = new MaterialData { BaseColor = new ColorRgba(0.72f, 0.75f, 0.8f) };
+        bool maze = level.Id == "level2";
+        var track = new MaterialData { BaseColor = maze
+            ? new ColorRgba(0.25f, 0.25f, 0.3f) : new ColorRgba(0.72f, 0.75f, 0.8f) };
+        var accent = new MaterialData { BaseColor = new ColorRgba(0.55f, 0.25f, 0.75f) };
         var gold = new MaterialData { BaseColor = new ColorRgba(1f, 0.72f, 0.08f) };
         var danger = new MaterialData { BaseColor = new ColorRgba(0.9f, 0.08f, 0.06f) };
         var green = new MaterialData { BaseColor = new ColorRgba(0.08f, 0.85f, 0.25f) };
@@ -37,6 +40,16 @@ public sealed class GameScenePresenter
             var item = Add(GameMeshes.Box, track);
             SetBounds(item, surface.Bounds);
             _surfaces.Add(surface.Id, item);
+        }
+        if (maze)
+        {
+            // Низкие декоративные борта оставляют открытыми развилку и повороты.
+            Rail(new Vector3(5, 0.25f, -1.32f), new Vector3(6, 0.5f, 0.14f));
+            Rail(new Vector3(5, 0.25f, 1.32f), new Vector3(6, 0.5f, 0.14f));
+            Rail(new Vector3(8.68f, 0.25f, -4.5f), new Vector3(0.14f, 0.5f, 5));
+            Rail(new Vector3(11.32f, 0.25f, -4.5f), new Vector3(0.14f, 0.5f, 5));
+            Rail(new Vector3(8.68f, 0.25f, 5), new Vector3(0.14f, 0.5f, 6));
+            Rail(new Vector3(13.5f, 0.25f, 9.32f), new Vector3(5, 0.5f, 0.14f));
         }
         foreach (var coin in level.Coins)
         {
@@ -49,7 +62,7 @@ public sealed class GameScenePresenter
         {
             _hazards.Add(hazard.Id, Add(GameMeshes.Box, danger));
             // Декоративная ось не добавляет коллайдер, позу самой балки задаёт snapshot
-            var axle = Add(GameMeshes.Box, track);
+            var axle = Add(GameMeshes.Box, maze ? accent : track);
             axle.Transform.Position = hazard.Pivot - Vector3.UnitY * 0.25f;
             axle.Transform.Scale = new Vector3(0.12f, 0.5f, 0.12f);
         }
@@ -76,6 +89,13 @@ public sealed class GameScenePresenter
             item.Transform.Rotation = level.Finish.Orientation;
             item.Transform.Scale = size;
             frame.Add(item);
+        }
+
+        void Rail(Vector3 position, Vector3 size)
+        {
+            var item = Add(GameMeshes.Box, accent);
+            item.Transform.Position = position;
+            item.Transform.Scale = size;
         }
     }
 

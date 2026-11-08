@@ -3,8 +3,8 @@
 set -euo pipefail
 game_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 assembly="$game_root/src/Platformer.App/bin/Release/net10.0/Platformer.App.dll"
-if [[ $# -ne 0 ]]; then
-    printf '%s\n' 'Play.sh запускает обычную игру без аргументов. Для диагностики используйте dotnet run по README.' >&2
+if [[ $# -gt 1 || ( $# -eq 1 && $1 != --visual ) ]]; then
+    printf '%s\n' 'Использование: bash scripts/Play.sh [--visual]. Для диагностики используйте dotnet run по README.' >&2
     exit 2
 fi
 if [[ ! -f "$assembly" ]]; then
@@ -21,5 +21,5 @@ log_dir="$game_root/artifacts/run"
 mkdir -p -- "$log_dir"
 log_file="$log_dir/ball-adventure-$(date +%Y%m%d-%H%M%S)-$$.log"
 # Новая session/process group: Ctrl+C и закрытие исходного терминала не завершают игру.
-setsid --fork dotnet "$assembly" </dev/null >"$log_file" 2>&1
+setsid --fork dotnet "$assembly" "$@" </dev/null >"$log_file" 2>&1
 printf 'Ball Adventure started. Log: %s\n' "$log_file"

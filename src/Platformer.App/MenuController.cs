@@ -14,6 +14,7 @@ public sealed class MenuController
     private readonly LevelFlow flow;
     private readonly LevelCatalog catalog;
     private readonly Action<float> applyMasterVolume;
+    private readonly bool visual;
     private AppScreen observedScreen;
     private int selectedIndex;
     private bool confirmingMainMenu;
@@ -28,12 +29,13 @@ public sealed class MenuController
     public WindowSettings Window { get; } = new();
     private float EffectiveVolume => flow.UserSettings.Muted ? 0f : flow.UserSettings.MasterVolume;
 
-    public MenuController(LevelFlow flow, LevelCatalog catalog, Action<float>? applyMasterVolume = null)
+    public MenuController(LevelFlow flow, LevelCatalog catalog, Action<float>? applyMasterVolume = null, bool visual = false)
     {
         ArgumentNullException.ThrowIfNull(flow);
         ArgumentNullException.ThrowIfNull(catalog);
         this.flow = flow;
         this.catalog = catalog;
+        this.visual = visual;
         this.applyMasterVolume = applyMasterVolume ?? (_ => { });
         observedScreen = flow.Screen;
         ApplyVolume();
@@ -46,7 +48,7 @@ public sealed class MenuController
         HudModel? hud = flow.Screen == AppScreen.Playing && snapshot is not null
             ? HudModel.Create(catalog.Get(snapshot.LevelId), snapshot) : null;
         return MenuLayout.Build(flow.Screen, Page(), hud, EffectiveVolume, selectedIndex,
-            focused ? pointer : null, pressedId, width, height);
+            focused ? pointer : null, pressedId, width, height, visual);
     }
 
     /// <summary>Первый Normal snapshot после capture/focus задаёт базу, а не движение выбора.</summary>
@@ -134,13 +136,19 @@ public sealed class MenuController
             Window.Cycle(menu.HorizontalStep);
         if (menu.HorizontalStep != 0 && option.Action == MenuAction.DisplayMode)
             Window.ToggleMode();
+        if (menu.HorizontalStep != 0 && option.Action == MenuAction.Music)
+            flow.UserSettings.MusicTrackId = MusicTracks.Cycle(flow.UserSettings.MusicTrackId, menu.HorizontalStep);
         return default;
     }
 
     private bool Execute(MenuOption option, Vector2? click, MenuRect bounds)
     {
+        if (!option.Enabled) return false;
         switch (option.Action)
         {
+            case MenuAction.Music:
+                flow.UserSettings.MusicTrackId = MusicTracks.Cycle(flow.UserSettings.MusicTrackId, 1);
+                break;
             case MenuAction.DisplayMode: Window.ToggleMode(); break;
             case MenuAction.Resolution: Window.Cycle(1); break;
             case MenuAction.ApplyResolution: Window.RequestApply(); break;
@@ -160,7 +168,9 @@ public sealed class MenuController
                 break;
             case MenuAction.Exit: CloseRequested = true; break;
             case MenuAction.ChooseLevel: flow.Start(option.Value!); return true;
-            case MenuAction.ChooseSkin: flow.UserSettings.SkinId = option.Value!; break;
+            case MenuAction.ChooseSkin:
+                if (flow.Progress.IsSkinUnlocked(option.Value!)) flow.UserSettings.SkinId = option.Value!;
+                break;
             case MenuAction.Volume:
                 if (click is { } point) SetVolume((point.X - bounds.X) / bounds.Width);
                 break;
@@ -222,24 +232,27 @@ public sealed class MenuController
         MenuOption Retry() => Button("retry", "Retry", MenuAction.Restart);
         var settings = flow.UserSettings;
         if (confirmingMainMenu)
-            return new("Leave this run?", ["Current level progress will be lost."],
+            return new("Leave this run?", ["Best results stay. This run will end."],
                 [Button("cancel-main-menu", "Cancel", MenuAction.CancelMainMenu),
                  Button("confirm-main-menu", "Leave to main menu", MenuAction.ConfirmMainMenu)]);
         return flow.Screen switch
         {
-            AppScreen.MainMenu => new("Ball Adventure", ["Roll. Jump. Explore."],
+            AppScreen.MainMenu => new("Ball Adventure", [$"Adventure stars: {flow.Progress.TotalStars}/15"],
             [Button("play", "Play", MenuAction.Play), Button("levels", "Levels", MenuAction.Levels),
              Button("settings", "Settings", MenuAction.Settings), Button("skins", "Skins", MenuAction.Skins),
              Button("exit", "Exit", MenuAction.Exit)]),
-            AppScreen.LevelSelect => new("Choose a level", ["Select a level to start."],
+            AppScreen.LevelSelect => new("Choose a level", [$"Final unlock: {Math.Min(12, flow.Progress.BaseStars)}/12 base stars"],
                 catalog.Levels.Select(level => new MenuOption($"level:{level.Id}",
                     HudModel.LevelNameFor(level.Id),
-                    MenuAction.ChooseLevel, MenuControlKind.Level, level.Id))
+                    MenuAction.ChooseLevel, MenuControlKind.Level, level.Id,
+                    Enabled: flow.Progress.IsLevelUnlocked(level.Id), Detail: LevelDetail(level),
+                    Locked: !flow.Progress.IsLevelUnlocked(level.Id), Rating: flow.Progress.StarsFor(level.Id)))
                 .Concat([Back()]).ToArray()),
             AppScreen.Settings => new("Settings", [$"Current window: {Window.Actual}",
                 $"Current mode: {(Window.ActualFullscreen ? "Fullscreen" : "Windowed")}"],
             [new("volume", $"Master volume: {MathF.Round(EffectiveVolume * 100f):0}%", MenuAction.Volume, MenuControlKind.Volume),
              Button("mute", settings.Muted ? "Mute: ON" : "Mute: OFF", MenuAction.Mute),
+             Button("music", $"Music: < {MusicTracks.Get(settings.MusicTrackId).DisplayName} >", MenuAction.Music),
              Button("display-mode", $"Display: < {(Window.SelectedFullscreen ? "Fullscreen" : "Windowed")} >", MenuAction.DisplayMode),
              Button("resolution", $"Resolution: < {Window.Selected} >", MenuAction.Resolution),
              Button("apply-resolution", "Apply resolution", MenuAction.ApplyResolution), Back()]),
@@ -247,19 +260,34 @@ public sealed class MenuController
                 GameSkins.All.Select(skin => new MenuOption($"skin:{skin.Id}",
                     (skin.Id == settings.SkinId ? "[x] " : "[ ] ") + skin.DisplayName
                     + (skin.Id == settings.SkinId ? " (current)" : ""), MenuAction.ChooseSkin,
-                    MenuControlKind.Skin, skin.Id, skin.Material.BaseColor))
+                    MenuControlKind.Skin, skin.Id, skin.SwatchColor,
+                    Enabled: flow.Progress.IsSkinUnlocked(skin.Id), Detail: !flow.Progress.IsSkinUnlocked(skin.Id)
+                        ? $"Locked: {skin.RequiredStars} stars" : skin.Id == settings.SkinId ? "Current" : "Unlocked",
+                    Locked: !flow.Progress.IsSkinUnlocked(skin.Id)))
                 .Concat([Back()]).ToArray()),
             AppScreen.Paused => new("Paused", ["Take a breath. Continue when ready."],
             [Button("continue", "Continue", MenuAction.Continue), Button("restart", "Restart", MenuAction.Restart),
              Button("settings", "Settings", MenuAction.Settings), Main()]),
             AppScreen.Failed => new("Try again", ["You fell or touched an obstacle.", "R: retry this level"],
             [Retry(), Button("levels", "Level select", MenuAction.Levels), Main()]),
-            AppScreen.LevelResult => new("Level complete!", [CurrentCoins()],
+            AppScreen.LevelResult => new("Level complete!", [CurrentCoins(), $"Rating: {Stars(PlayerProgress.Rating(flow.Snapshot!.CoinCount, catalog.Get(flow.Snapshot.LevelId).Coins.Count))}   Best: {Stars(flow.Progress.StarsFor(flow.Snapshot.LevelId))}"],
             [Button("next", "Next", MenuAction.Next), Retry(), Main()]),
-            AppScreen.GameComplete => new("Adventure complete!", [$"Total coins: {flow.TotalCoinCount}"],
+            AppScreen.GameComplete => new(!catalog.Levels.Any(level => level.Id == GameLevels.FinalLevelId) || flow.Progress.StarsFor(GameLevels.FinalLevelId) > 0
+                ? "Adventure complete!" : "Journey complete!", [$"Total coins: {flow.TotalCoinCount}", $"Adventure stars: {flow.Progress.TotalStars}/15",
+                    flow.Progress.BaseStars < 12 ? "Earn 3 stars on each base level to unlock Sky Storm." : "Sky Storm is unlocked. Aim for 15/15 stars!"],
             [Button("levels", "Level select", MenuAction.Levels), Main()]),
             _ => new("", [], []),
         };
+    }
+
+    private static string Stars(int count) => "[" + new string('*', count) + new string('-', 3 - count) + "]";
+
+    private string LevelDetail(LevelDefinition level)
+    {
+        if (!flow.Progress.IsLevelUnlocked(level.Id)) return $"Locked: {Math.Min(12, flow.Progress.BaseStars)}/12 base stars";
+        return flow.Progress.BestCoins.TryGetValue(level.Id, out int coins)
+            ? $"{Stars(flow.Progress.StarsFor(level.Id))}  Best coins {coins}/{level.Coins.Count}"
+            : "[---]  Not completed";
     }
 
     private string CurrentCoins()

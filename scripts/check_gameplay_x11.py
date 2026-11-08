@@ -15,13 +15,17 @@ import shutil
 import subprocess
 import sys
 import threading
+import tempfile
 import time
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", default="artifacts/input-camera", help="Каталог лога и снимка сцены.")
-    output = Path(parser.parse_args().output)
+    parser.add_argument("--visual", action="store_true", help="Проверить тропическое оформление сцены и меню.")
+    parser.add_argument("--assembly", type=Path, help="Проверить отдельную локальную сборку Platformer.App.dll.")
+    args = parser.parse_args()
+    output = Path(args.output)
     output.mkdir(parents=True, exist_ok=True)
     trace = (output / "trace.log").open("w", encoding="utf-8")
     if not sys.platform.startswith("linux") or not os.environ.get("DISPLAY"):
@@ -91,6 +95,7 @@ def main():
     rx, ry, wx, wy, mask = c.c_int(), c.c_int(), c.c_int(), c.c_int(), c.c_uint()
     restore_pointer = x.XQueryPointer(display, root, c.byref(rr), c.byref(child), c.byref(rx), c.byref(ry), c.byref(wx), c.byref(wy), c.byref(mask))
     process = None
+    progress_directory = tempfile.TemporaryDirectory(prefix="ball-adventure-x11-")
     focus_sink = None
     held_keys, held_buttons = set(), set()
     messages = queue.Queue()
@@ -113,8 +118,8 @@ def main():
             raise AssertionError(value["text"])
         return value
 
-    def until(predicate, label):
-        deadline = time.monotonic() + 4
+    def until(predicate, label, timeout=4):
+        deadline = time.monotonic() + timeout
         last = None
         while time.monotonic() < deadline:
             try:
@@ -184,14 +189,17 @@ def main():
         return None
 
     try:
-        assembly = Path(__file__).resolve().parents[1] / "src/Platformer.App/bin/Release/net10.0/Platformer.App.dll"
-        env = dict(os.environ, XDG_SESSION_TYPE="x11", ALSOFT_DRIVERS="null")
+        assembly = args.assembly or Path(__file__).resolve().parents[1] / "src/Platformer.App/bin/Release/net10.0/Platformer.App.dll"
+        env = dict(os.environ, XDG_SESSION_TYPE="x11", ALSOFT_DRIVERS="null", XDG_DATA_HOME=progress_directory.name)
         env.pop("WAYLAND_DISPLAY", None)
-        process = subprocess.Popen(["dotnet", str(assembly), "--play", "--trace-input"], stdout=subprocess.PIPE,
+        command = ["dotnet", str(assembly), "--play", "--trace-input"]
+        if args.visual:
+            command.append("--visual")
+        process = subprocess.Popen(command, stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT, text=True, env=env)
         reader = threading.Thread(target=read_lines, daemon=True)
         reader.start()
-        until(lambda f: f.get("frame", 0) >= 3, "startup/render")
+        until(lambda f: f.get("frame", 0) >= 3, "startup/render", timeout=20)
         native = find_window(root, "Ball Adventure")
         assert native, "Окно Ball Adventure не найдено."
 
@@ -302,7 +310,12 @@ def main():
 
         capture("main-menu")
         levels = click_control("levels", "LevelSelect")
-        assert {control["id"] for control in levels["controls"] if control["id"].startswith("level:")} == {"level:level1", "level:level2"}
+        assert {control["id"] for control in levels["controls"] if control["id"].startswith("level:")} == {"level:level1", "level:level2", "level:jump-circuit", "level:island-circuit", "level:sky-storm"}
+        final_card = next(control for control in levels["controls"] if control["id"] == "level:sky-storm")
+        assert not final_card["enabled"] and final_card["locked"]
+        blocked = click_control("level:sky-storm", "LevelSelect")
+        assert blocked["baseStars"] == 0 and blocked["level"] is None
+        capture("final-locked")
         direct = click_control("level:level2", "Playing")
         assert direct["level"] == "level2" and direct["coins"] == 0
         press("Escape")
@@ -318,6 +331,15 @@ def main():
         capture("leave-confirmation")
         returned = click_control("confirm-main-menu", "MainMenu")
         assert returned["sceneCoins"] == confirmation["sceneCoins"], "Main Menu reset the visible coin backdrop"
+        for level_id in ("jump-circuit", "island-circuit"):
+            click_control("levels", "LevelSelect")
+            frame = click_control("level:" + level_id, "Playing")
+            assert frame["level"] == level_id and frame["coins"] == 0
+            capture(level_id)
+            press("Escape")
+            until(lambda f: f["screen"] == "Paused", level_id + " pause")
+            click_control("main-menu", "Paused")
+            click_control("confirm-main-menu", "MainMenu")
         click_control("levels", "LevelSelect")
         # Принудительная X11-команда обходит WM. Это проверка clamping, а не drag пользователя.
         x.XResizeWindow(display, native, 80, 48)
@@ -332,6 +354,15 @@ def main():
         capture("level-select")
         click_control("back", "MainMenu")
         click_control("settings", "Settings")
+        assert "Music: < Original >" in latest()["uiTexts"], "Original music must remain default"
+        click_control("music", "Settings")
+        until(lambda f: "Music: < Exploration Theme >" in f["uiTexts"], "choose extra music")
+        capture("settings-music")
+        press("Left")
+        until(lambda f: "Music: < Original >" in f["uiTexts"], "previous music by keyboard")
+        press("Right")
+        until(lambda f: "Music: < Exploration Theme >" in f["uiTexts"], "next music by keyboard")
+        print("PASS: Settings music original default, click/Left/Right choose bundled Exploration Theme")
         click_control("volume", "Settings")
         until(lambda f: abs(f["audioVolume"] - 0.5) < 0.02, "volume slider -> AudioDevice")
         press("Left")
@@ -376,7 +407,7 @@ def main():
         # Fullscreen uses the full monitor, not its windowed work area. Same scene/session/menu.
         click_control("display-mode", "Settings")
         until(lambda f: any(control["label"] == "Display: < Fullscreen >" for control in f["controls"]), "select fullscreen")
-        assert not collect(0.05)[-1]["fullscreen"], "Mode selection must wait for Apply"
+        assert not latest()["fullscreen"], "Mode selection must wait for Apply"
         click_control("apply-resolution", "Settings")
         full = until(lambda f: f["fullscreen"] and f["clientWidth"] == f["fullscreenWidth"]
                      and f["clientHeight"] == f["fullscreenHeight"], "fullscreen desktop mode")
@@ -392,6 +423,17 @@ def main():
         capture("settings")
         click_control("back", "MainMenu")
         click_control("skins", "SkinSelect")
+        assert {control["id"] for control in latest()["controls"] if control["id"].startswith("skin:")} == {
+            "skin:classic-blue", "skin:orange", "skin:emerald", "skin:violet", "skin:basketball", "skin:football", "skin:neon", "skin:aurora", "skin:champion"}
+        for skin_id in ("emerald", "violet", "basketball", "football"):
+            click_control("skin:" + skin_id, "SkinSelect")
+            until(lambda f: f["skin"] == skin_id, "apply " + skin_id)
+        chosen = latest()["skin"]
+        for skin_id in ("neon", "aurora", "champion"):
+            assert not next(control for control in latest()["controls"] if control["id"] == "skin:" + skin_id)["enabled"]
+            click_control("skin:" + skin_id, "SkinSelect")
+            assert latest()["skin"] == chosen, "Locked reward was applied"
+        capture("sports-skins")
         click_control("skin:orange", "SkinSelect")
         until(lambda f: f["skin"] == "orange", "apply skin")
         capture("skins")
@@ -409,7 +451,7 @@ def main():
         key("w", False)
         until(lambda f: has(f, "released", "W"), "W release")
         # Engine намеренно подавляет первое событие motion после смены cursor mode.
-        before = collect(0.1)[-1]
+        before = latest()
         xt.XTestFakeRelativeMotionEvent(display, 2, 2, 0)
         x.XFlush(display)
         first_motion = until(lambda f: abs(f["pointerX"] - before["pointerX"]) > 1, "first capture motion")
@@ -570,6 +612,7 @@ def main():
         if process is not None:
             reader.join(timeout=2)
         trace.close()
+        progress_directory.cleanup()
 
 
 if __name__ == "__main__":

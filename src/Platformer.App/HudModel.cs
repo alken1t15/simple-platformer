@@ -7,7 +7,7 @@ public enum BoostStatus { Ready, Active, Cooldown }
 
 /// <summary>HUD читает принятый snapshot, а не считает монеты/время независимо от сеанса.</summary>
 public sealed record HudModel(string LevelName, int CoinCount, int TotalCoins,
-    BoostStatus Boost, float RemainingSeconds, bool ShowHelp)
+    BoostStatus Boost, float RemainingSeconds, bool ShowHelp, string? Hint = null)
 {
     public string BoostText => Boost switch
     {
@@ -29,13 +29,22 @@ public sealed record HudModel(string LevelName, int CoinCount, int TotalCoins,
             : ball.BoostCooldownSeconds > 0f ? BoostStatus.Cooldown : BoostStatus.Ready;
         float remaining = status == BoostStatus.Active ? ball.BoostRemainingSeconds : ball.BoostCooldownSeconds;
         return new(LevelNameFor(level.Id), snapshot.CoinCount, level.Coins.Count, status, remaining,
-            snapshot.SimulationSeconds < 8d);
+            snapshot.SimulationSeconds < 8d, level.Id switch
+            {
+                "jump-circuit" => "Jump over striped walls. Touching one means retry.",
+                "island-circuit" => "Follow the curves. Avoid the beam. Jump the final gap.",
+                "sky-storm" => "Climb the loop. Cracked tiles crumble after touch: keep moving!",
+                _ => null,
+            });
     }
 
     internal static string LevelNameFor(string id) => id switch
     {
         "level1" => "Training Track",
         "level2" => "Turning Maze",
+        "jump-circuit" => "Jump Circuit",
+        "island-circuit" => "Island Circuit",
+        "sky-storm" => "Sky Storm",
         _ => new string(id.Select(character => character is >= ' ' and <= '~' ? character : '?').ToArray()),
     };
 }

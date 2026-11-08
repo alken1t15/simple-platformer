@@ -12,6 +12,7 @@ public sealed class GameplayHost
 {
     private readonly LevelCatalog _catalog;
     private readonly GameScenePresenter _preview;
+    private readonly bool _visual;
     private GameScenePresenter? _menuBackdrop;
     private bool _resetRequested;
     private bool _resetMenuPointer = true;
@@ -27,10 +28,11 @@ public sealed class GameplayHost
     public bool CaptureRequested => !CloseRequested && Flow.Screen == AppScreen.Playing && Frames.CaptureRequested;
 
     public GameplayHost(LevelCatalog catalog, SimulationSettings settings, UserSettings userSettings, bool smoke = false,
-        Action<float>? applyMasterVolume = null, AudioCoordinator? audio = null)
+        Action<float>? applyMasterVolume = null, AudioCoordinator? audio = null, bool visual = false, PlayerProgress? progress = null)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         _catalog = catalog;
+        _visual = visual;
         _audio = smoke ? null : audio;
         Frames = new GameplayFrameRunner(settings, smoke);
         Flow = new LevelFlow(catalog, settings, userSettings, resetTransientState: () =>
@@ -38,10 +40,15 @@ public sealed class GameplayHost
             // LevelFlow вызывает callback и из Step: Clear здесь был бы рекурсивным.
             Frames.Clock.RequestClear();
             _resetRequested = true;
-        }, stopGameplayAudio: () => _audio?.Stop(), setAudioPaused: value => _audio?.SetPaused(value));
-        Menu = new MenuController(Flow, catalog, applyMasterVolume);
+        }, stopGameplayAudio: () => _audio?.Stop(), setAudioPaused: value => _audio?.SetPaused(value), visual: visual, progress: progress);
+        Menu = new MenuController(Flow, catalog, applyMasterVolume, visual);
         View = Menu.BuildView(960f, 640f);
-        _preview = new GameScenePresenter(catalog.Levels[0]);
+        _preview = new GameScenePresenter(catalog.Levels[0], visual);
+        if (visual)
+        {
+            VisualScene.ConfigureLighting(Scene);
+            Camera.FarPlane = 220f;
+        }
         ApplyCamera(Frames.Camera.Update(Vector2.Zero, Target, CurrentLevel, 0f));
         SynchronizeScene();
     }
@@ -60,7 +67,7 @@ public sealed class GameplayHost
             _resetMenuPointer = false;
         }
 
-        GameplayFrameResult result = Frames.Advance(input, frameSeconds, Target, CurrentLevel, Flow.Step);
+        GameplayFrameResult result = Frames.Advance(input, frameSeconds, Target, CurrentLevel, Flow.Step, Flow.Snapshot?.Platforms);
         var menuResult = Menu.Handle(result.Input, clientWidth, clientHeight, input.IsFocused);
         bool resetCamera = menuResult.ResetCamera;
         if (wasPlaying && Flow.Screen != AppScreen.Playing) _resetMenuPointer = true;
@@ -75,6 +82,7 @@ public sealed class GameplayHost
         RefreshView(clientWidth, clientHeight);
         if (_audio is not null)
         {
+            _audio.SelectMusic(Flow.UserSettings.MusicTrackId);
             if (Flow.Snapshot is { } snapshot) _audio.Consume(snapshot.SessionId, Flow.DrainEvents());
             _audio.SetScreen(Flow.Screen);
         }
@@ -101,7 +109,8 @@ public sealed class GameplayHost
         if (Flow.Presenter is { } presenter) _menuBackdrop = presenter;
         var visible = Flow.Presenter ?? _menuBackdrop ?? _preview;
         Scene source = visible.Scene;
-        visible.BallObject.Material = GameSkins.Get(Flow.UserSettings.SkinId).Material;
+        var skin = GameSkins.Get(Flow.UserSettings.SkinId);
+        visible.BallObject.Material = _visual ? VisualScene.BallMaterial(skin) : skin.Material;
         if (Scene.Objects.SequenceEqual(source.Objects)) return;
         var desired = new HashSet<SceneObject>(source.Objects);
         foreach (var item in Scene.Objects.ToArray())

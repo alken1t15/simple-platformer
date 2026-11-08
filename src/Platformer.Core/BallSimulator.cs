@@ -55,13 +55,18 @@ public sealed class BallSimulator
         return new BallState(center, Vector3.Zero, settings.BallRadius, normal != Vector3.Zero, normal, 0f, 0f);
     }
 
-    public BallStepResult Step(BallState before, GameCommand command)
+    public BallStepResult Step(BallState before, GameCommand command) => Step(before, command, null);
+
+    internal bool HasSupport(BallState ball, IReadOnlySet<string> removed) =>
+        ProbeGround(ball.Center, ball.Velocity, removed) != Vector3.Zero;
+
+    internal BallStepResult Step(BallState before, GameCommand command, IReadOnlySet<string>? removed)
     {
         Vector2 move = command.ValidatedMove();
         Validate(before);
         // Геометрическая проекция spawn выполняется CreateInitialState, а не телепортом
         // внутри временного Path. Произвольное проникающее состояние отклоняется до tick.
-        CheckPenetration(before.Center, true);
+        CheckPenetration(before.Center, true, removed);
         float dt = settings.FixedStepSeconds;
         float boost = before.BoostRemainingSeconds;
         float cooldown = before.BoostCooldownSeconds;
@@ -70,7 +75,7 @@ public sealed class BallSimulator
         float speed = settings.MoveSpeed * (boost > 0f ? settings.BoostMultiplier : 1f);
 
         Vector3 velocity = before.Velocity;
-        Vector3 ground = ProbeGround(before.Center, velocity);
+        Vector3 ground = ProbeGround(before.Center, velocity, removed);
         bool grounded = ground != Vector3.Zero;
         if (grounded && command.JumpPressed)
         {
@@ -83,7 +88,25 @@ public sealed class BallSimulator
         {
             velocity -= ground * Vector3.Dot(velocity, ground);
             desired -= ground * Vector3.Dot(desired, ground);
-            velocity = Approach(velocity, desired, acceleration * dt);
+            Vector3 gravity = -Vector3.UnitY * settings.Gravity;
+            Vector3 downhill = gravity - ground * Vector3.Dot(gravity, ground);
+            bool slope = downhill.LengthSquared() > 1e-10f;
+            if (move == Vector2.Zero && slope)
+            {
+                // Постоянное торможение до нуля удерживало шар на любом склоне.
+                // Вязкое сопротивление качению допускает старт под действием тяжести
+                // и конечную скорость: dv/dt = downhill - drag * v.
+                float drag = settings.BrakingAcceleration / settings.MoveSpeed;
+                velocity = (velocity + downhill * dt) / (1f + drag * dt);
+            }
+            else
+            {
+                velocity = Approach(velocity, desired, acceleration * dt);
+                velocity += downhill * dt;
+            }
+            // Та же граница скорости, что у управляемого движения/boost.
+            if (slope && velocity.LengthSquared() > speed * speed)
+                velocity = Vector3.Normalize(velocity) * speed;
         }
         else
         {
@@ -101,17 +124,17 @@ public sealed class BallSimulator
         Vector3 center = before.Center;
         var path = new List<MotionSegment>();
         for (int substep = 0; substep < substeps; substep++)
-            Move(ref center, ref velocity, (double)substep / substeps, (double)(substep + 1) / substeps, path);
+            Move(ref center, ref velocity, (double)substep / substeps, (double)(substep + 1) / substeps, path, removed);
 
         LevelValidation.Position(center, nameof(before.Center));
-        CheckPenetration(center, false);
-        ground = ProbeGround(center, velocity);
+        CheckPenetration(center, false, removed);
+        ground = ProbeGround(center, velocity, removed);
         AdvanceTimers(ref boost, ref cooldown);
         var ball = new BallState(center, velocity, settings.BallRadius, ground != Vector3.Zero, ground, boost, cooldown);
         return new BallStepResult(ball, path);
     }
 
-    private void Move(ref Vector3 center, ref Vector3 velocity, double start, double end, List<MotionSegment> path)
+    private void Move(ref Vector3 center, ref Vector3 velocity, double start, double end, List<MotionSegment> path, IReadOnlySet<string>? removed)
     {
         double time = start;
         int contacts = 0;
@@ -128,6 +151,7 @@ public sealed class BallSimulator
             for (int surfaceIndex = 0; surfaceIndex < surfaces.Length; surfaceIndex++)
             {
                 var surface = surfaces[surfaceIndex];
+                if (removed?.Contains(surface.Id) == true) continue;
                 if (SphereGeometry.Sweep(surface.Bounds, center, displacement, settings.BallRadius + ContactPadding(center, surface.Bounds),
                     out double fraction, out Vector3 candidateNormal)
                     && Dot(velocity, candidateNormal) < 0d
@@ -230,7 +254,7 @@ public sealed class BallSimulator
             throw BudgetError(level.Id, "точность временного Path");
     }
 
-    private Vector3 ProbeGround(Vector3 center, Vector3 velocity)
+    private Vector3 ProbeGround(Vector3 center, Vector3 velocity, IReadOnlySet<string>? removed = null)
     {
         Vector3 normal = Vector3.Zero;
         float nearest = float.PositiveInfinity;
@@ -238,6 +262,7 @@ public sealed class BallSimulator
         int supportCount = 0;
         foreach (var surface in surfaces)
         {
+            if (removed?.Contains(surface.Id) == true) continue;
             var contact = SphereGeometry.Contact(surface.Bounds, center, settings.BallRadius);
             if (contact.Separation >= -settings.PenetrationSlop
                 && contact.Separation <= ContactPadding(center, surface.Bounds) + settings.PositionEpsilon
@@ -271,10 +296,11 @@ public sealed class BallSimulator
         return MathF.Max(settings.SkinWidth, 4f * ulp);
     }
 
-    private void CheckPenetration(Vector3 center, bool argument)
+    private void CheckPenetration(Vector3 center, bool argument, IReadOnlySet<string>? removed = null)
     {
         foreach (var surface in surfaces)
         {
+            if (removed?.Contains(surface.Id) == true) continue;
             if (SphereGeometry.Contact(surface.Bounds, center, settings.BallRadius).Separation >= -settings.PenetrationSlop)
                 continue;
             string message = $"Проникновение шара в поверхность '{surface.Id}'; начальное состояние создаётся CreateInitialState";

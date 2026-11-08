@@ -47,6 +47,11 @@ SetClientSize в fullscreen запрещён: сначала SetFullscreen(false
 На Wayland лимит консервативен по наименьшей логической области мониторов; панели compositor API не сообщает.
 Input/cursor/audio adapters, меню/HUD и каталог Training Track/Turning Maze подключены;
 AudioCoordinator использует собственные PCM16 WAV, lifecycle описан в docs/game-audio.md.
+Settings / Music выбирает исходный loop (по умолчанию) или Exploration Theme Cleyton Kauffman
+под CC0; notices поставляются с аудио. Выбор хранится в текущем процессе. В паузе новый
+музыкальный voice запускается только после Continue, эффекты при смене трека не сбрасываются.
+С `--visual` MenuPanelKind задаёт роли панелей, TropicalMenuTheme применяет общую
+тёмно-бирюзовую тему меню/HUD; главное меню слева. Геометрия и hit-test остаются в MenuLayout.
 Overlay использует logical client pixels и встроенный ASCII-атлас; реальный framebuffer≠client
 HiDPI проверен автоматическим native Wayland compositor с framebuffer/client=2,
 включая реальные pointer coordinates/hit-test; physical монитор/устройство этим не подтверждаются.
@@ -58,6 +63,8 @@ Synthetic viewport scale=2 не заменяет такую проверку. Li
 требует подтверждения с Cancel по умолчанию; последний вид уровня остаётся только фоном.
 В Playing удержание Space повторяет прыжок после приземления, в меню Space остаётся фронтом.
 Обычный Linux-запуск после сборки — bash scripts/Play.sh, отдельно от терминала;
+--visual включает оформление со скриншотов. scripts/install_desktop.py создаёт личный
+Linux-ярлык в меню приложений (опционально --desktop); общие PNG/ICO — assets/branding.
 dotnet run предназначен для диагностики. Счётчик кадров печатается только в диагностических режимах.
 
 ## Работа и проверки

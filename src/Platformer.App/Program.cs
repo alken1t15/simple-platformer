@@ -8,8 +8,9 @@ try
     if (args is ["--help"])
     {
         Console.WriteLine("""
-            Ball Adventure: Training Track and Turning Maze, menus, HUD and game audio.
-            Usage: Platformer.App [--play | --legacy | --presenter [--skin classic-blue|orange] [--overview] [--still]] [--smoke]
+            Ball Adventure: five levels, nine ball skins, menus, HUD and game audio.
+            Usage: Platformer.App [--play | --legacy | --presenter [--skin ID] [--overview] [--still]] [--visual] [--smoke]
+            Skins: classic-blue, orange, emerald, violet, basketball, football, neon, aurora, champion.
             Default / --play: open Main Menu. Arrows/Tab: choose; Enter/Space or mouse click: select.
             WASD: move; Space: jump (hold to jump again on landing); Shift: boost; R: restart; mouse: camera (up looks up).
             Escape: pause / back; Exit in Main Menu closes. Alt-Tab pauses; Continue resumes explicitly.
@@ -17,10 +18,11 @@ try
             --trace-input: with gameplay mode, emit JSON frame/UI diagnostics for the X11 driver.
             --legacy: show the old integration preview; Escape closes.
             --presenter: show scripted 3D objects; Space switches skin, R resets, Escape closes.
+            --visual: local tropical art experiment; works in gameplay and presenter modes.
             """);
         return;
     }
-    bool smoke = false, playMode = false, legacyMode = false, traceInput = false, presenterMode = false, overview = false, still = false;
+    bool smoke = false, playMode = false, legacyMode = false, traceInput = false, presenterMode = false, overview = false, still = false, visual = false;
     string skin = "classic-blue";
     for (int index = 0; index < args.Length; index++)
     {
@@ -33,6 +35,7 @@ try
             case "--presenter": presenterMode = true; break;
             case "--overview": overview = true; break;
             case "--still": still = true; break;
+            case "--visual": visual = true; break;
             case "--skin" when index + 1 < args.Length: skin = args[++index]; break;
             default: throw new ArgumentException("Unknown arguments. Use --help.");
         }
@@ -43,15 +46,25 @@ try
         throw new ArgumentException("--play, --legacy and --presenter cannot be combined.");
     bool gameplayMode = !legacyMode && !presenterMode;
     if (traceInput && !gameplayMode) throw new ArgumentException("--trace-input requires gameplay mode.");
+    if (visual && legacyMode) throw new ArgumentException("--visual is available in gameplay or presenter mode.");
 
     using var audio = gameplayMode && !smoke ? AudioDevice.Create(new AudioOptions()) : null;
     if (audio is { IsSilent: true }) Console.Error.WriteLine($"Audio: silent mode. {audio.Diagnostic}");
     using var gameAudio = audio is null ? null : new AudioCoordinator(
         new NativeAudioPlayback(audio, Path.Combine(AppContext.BaseDirectory, "Assets", "Audio")));
-    var game = gameplayMode ? new GameplayHost(GameLevels.CreateCatalog(),
+    var catalog = GameLevels.CreateCatalog();
+    var progressStore = gameplayMode && !smoke ? new ProgressStore(ProgressStore.DefaultPath) : null;
+    var progress = progressStore?.Load(catalog) ?? new PlayerProgress(catalog);
+    if (progressStore?.Diagnostic is { } loadDiagnostic) Console.Error.WriteLine(loadDiagnostic);
+    var game = gameplayMode ? new GameplayHost(catalog,
         SimulationSettings.Default, new UserSettings(), smoke,
-        applyMasterVolume: audio is null ? null : value => audio.MasterVolume = value, audio: gameAudio) : null;
-    var preview = presenterMode ? new PresenterPreview(skin, overview) : null;
+        applyMasterVolume: audio is null ? null : value => audio.MasterVolume = value, audio: gameAudio, visual: visual, progress: progress) : null;
+    if (game is not null && progressStore is not null)
+        game.Flow.ProgressChanged += () =>
+        {
+            if (!progressStore.Save(progress)) Console.Error.WriteLine(progressStore.Diagnostic);
+        };
+    var preview = presenterMode ? new PresenterPreview(skin, overview, visual) : null;
     var snapshot = preview is null && game is null ? PreviewScene.Create() : null;
     using var engine = Engine.Create(new EngineOptions
     {
@@ -85,7 +98,7 @@ try
                 if (!display.Fullscreen) engine.SetClientSize(display.Resolution.Width, display.Resolution.Height);
             }
             if (smoke) game.RefreshView(client.Width, client.Height);
-            engine.SetOverlay(MenuOverlayAdapter.Build(game.View));
+            engine.SetOverlay(MenuOverlayAdapter.Build(game.View, visual));
             var cursorMode = game.CaptureRequested ? CursorMode.Captured : CursorMode.Normal;
             if (engine.CursorMode != cursorMode) engine.CursorMode = cursorMode;
             if (game.CloseRequested) engine.RequestClose();
@@ -116,13 +129,14 @@ try
                     fullscreen = engine.IsFullscreen, fullscreenWidth = fullscreenSize.Width, fullscreenHeight = fullscreenSize.Height,
                     controls = game.View.Controls.Select(control => new
                     {
-                        id = control.Id, label = control.Label, selected = control.Selected,
+                        id = control.Id, label = control.Label, selected = control.Selected, enabled = control.Enabled, locked = control.Locked,
                         x = control.Bounds.X, y = control.Bounds.Y, width = control.Bounds.Width, height = control.Bounds.Height,
                     }),
                     uiTexts = game.View.Texts.Select(text => text.Text),
                     volume = game.Flow.UserSettings.MasterVolume, muted = game.Flow.UserSettings.Muted,
                     skin = game.Flow.UserSettings.SkinId, coins = game.Flow.Snapshot?.CoinCount,
-                    sceneCoins = game.Scene.Objects.Count(item => ReferenceEquals(item.Mesh, GameMeshes.Coin)),
+                    baseStars = game.Flow.Progress.BaseStars, adventureStars = game.Flow.Progress.TotalStars,
+                    sceneCoins = game.Scene.Objects.Count(item => ReferenceEquals(item.Mesh, visual ? VisualScene.Coin : GameMeshes.Coin)),
                     audioVolume = audio?.MasterVolume, audioSilent = audio?.IsSilent,
                 }));
             }

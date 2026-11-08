@@ -1,145 +1,201 @@
+<div align="center">
+
 # Ball Adventure
 
-3D-платформер на C#/.NET 10 и [Simple 3D Engine](https://github.com/alken1t15/simple-3d-engine).
-Шар перемещается в X/Z, Y вверх; мышь поворачивает камеру от третьего лица.
-Цель проекта — Linux, две локации с наклонами/мостами, монетами, вращающимися
-опасностями, звуком и меню уровней/громкости/скинов. План — три недели с 02.11.2026,
-готовность не позднее 23.11.2026; это план, а не подтверждение полной готовности.
+**Кати шар. Собирай монеты. Покоряй воздушные острова.**
 
-**Подключены управление, камера, меню, HUD и звук для двух локаций.**
-Обычный запуск открывает графическое Main Menu в том же окне, что и 3D-сцена.
-Работают Play, выбор доступного уровня, настройки master volume/mute, скины,
-пауза, повтор и результаты. Каталог содержит Training Track и Turning Maze;
-Next ведёт на следующую локацию, после второй — к общему результату.
+3D-платформер на собственном [Simple 3D Engine](https://github.com/alken1t15/simple-3d-engine).
+Пять уровней, девять скинов и путь к финальному испытанию Sky Storm.
 
-В Settings доступны Resolution и Apply resolution: размер окна выбирается мышью
-или Left/Right и применяется отдельной кнопкой; Current window показывает результат ОС.
-Display: Fullscreen занимает весь монитор в текущем разрешении (1920×1080 на Full HD
-при масштабе 100%); Display: Windowed возвращает обычное окно. Apply применяет оба выбора.
-Растягивание окна за края и углы отключено — используйте Resolution → Apply resolution.
-Обычное окно ограничено минимумом 800×450 и доступной областью экрана с учётом рамки;
-на маленьком экране минимум уменьшается. [Подробности и ограничения Wayland](docs/menu.md#window-size).
-Автоматический маршрут через настоящий renderer проходит обе локации с 25/25 монетами.
-Ручная приёмка на целевом компьютере и слышимость ещё требуют проверки.
+[![CI](https://github.com/alken1t15/simple-platformer/actions/workflows/ci.yml/badge.svg)](https://github.com/alken1t15/simple-platformer/actions/workflows/ci.yml)
+[![.NET 10](https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white)](global.json)
+[![Linux](https://img.shields.io/badge/Linux-целевая_платформа-FCC624?logo=linux&logoColor=black)](#запуск)
+[![MIT](https://img.shields.io/badge/License-MIT-22c55e)](LICENSE)
 
-В Core реализованы [Training Track](docs/training-track.md),
-[физика шара](docs/ball-physics.md), [сеанс/монеты/опасности](docs/game-session.md).
-[Presenter](docs/scene-presenter.md) показывает настоящий snapshot сеанса;
-[ввод/камера](docs/input-camera.md) и [меню/HUD](docs/menu.md) связаны через один LevelFlow.
-Технические preview сохранены отдельными режимами.
+[Запуск](#запуск) · [Управление](#управление) · [Уровни](#пять-уровней--одно-приключение) · [Документация](#для-команды)
 
-## Подготовка и проверки
+![Training Track: шар на шахматной дорожке среди воздушных островов](docs/images/training-track.png)
 
-Нужны Git и .NET 10 **SDK** по [global.json](global.json). SDK 8/9 и один Runtime не подходят.
-Графический запуск требует дисплей и OpenGL 3.3. Для первого restore нужен NuGet.
+*Реальный кадр игры с оформлением `--visual`.*
+
+</div>
+
+## Пять уровней — одно приключение
+
+Начни с безопасных дорожек, освой прыжки и ускорение, а затем пройди лабиринт,
+вращающиеся препятствия и платформы на разной высоте. Монеты не обязательны для
+финиша, но именно они помогают заработать звёзды и открыть награды.
+
+| Локация | Что ждёт игрока |
+|---|---|
+| **Training Track** | Первые мосты, наклоны и прыжки |
+| **Turning Maze** | Развилка с бонусным тупиком, повороты и вращающаяся балка |
+| **Jump Circuit** | Смертельные стены, которые нужно перепрыгивать |
+| **Island Circuit** | Изогнутые мосты, подъём и финальный прыжок |
+| **Sky Storm** | Поднимающаяся петля, путепровод и рассыпающиеся опоры |
+
+Первые четыре уровня доступны сразу. **Sky Storm открывается за 12 звёзд** на них.
+Всего в пяти локациях **66 монет** и **15 звёзд**.
+
+### Собирай и открывай
+
+- **1 звезда** — доберись до финиша; **2** — собери хотя бы половину монет; **3** — собери все.
+- Лучший результат каждого уровня сохраняется между запусками. Повторная попытка не снижает рекорд.
+- Шесть скинов открыты сразу; **Neon circuit**, **Aurora** и **Golden champion** — награды за 6, 9 и 15 звёзд.
+- Меню позволяет выбирать уровни и скины, менять громкость, разрешение и полноэкранный режим.
+- В режиме `--visual` главное меню компактно расположено слева; меню и HUD используют
+  тёмно-бирюзовые панели, светлый текст и мятное выделение выбранной кнопки.
+- **Settings → Music** переключает исходную музыку и Exploration Theme. Прежний трек выбран по умолчанию;
+  новый — музыка [Cleyton Kauffman](https://opengameart.org/content/exploration-theme) под CC0.
+
+[Правила прогресса и расположение сохранения](docs/progression.md) · [Содержание уровней](docs/extra-levels.md)
+
+## Кадры из игры
+
+| Вращающаяся балка в Turning Maze | Прыжок к финишной платформе |
+|:---:|:---:|
+| ![Арена Turning Maze: шар перед вращающейся балкой](docs/images/turning-maze.png) | ![Верхние платформы Turning Maze с разрывом перед финишем](docs/images/platform-jump.png) |
+
+Скриншоты сняты через настоящий renderer в режиме `--visual` на Linux/Xvfb/Mesa.
+Обычный запуск сохраняет исходное оформление; уровни и правила игры в обоих режимах одинаковы.
+[Версия и происхождение снимков](docs/images/README.md).
+
+## Запуск
+
+### 1. Собери проект
+
+Нужны **Git**, **.NET 10 SDK** согласно [global.json](global.json), графический сеанс
+и **OpenGL 3.3**. Для первого восстановления пакетов нужен доступ к NuGet.
+Один .NET Runtime и SDK 8/9 не заменяют SDK 10 для сборки.
 
 ```sh
 git clone --recurse-submodules https://github.com/alken1t15/simple-platformer.git
 cd simple-platformer
 git submodule update --init --recursive
-dotnet --version
 dotnet restore Platformer.sln
 dotnet build Platformer.sln -c Release --no-restore
-dotnet test Platformer.sln -c Release --no-build
-python scripts/check_docs.py
-git diff --check
 ```
 
-PowerShell 7: `pwsh -NoProfile -File scripts/Verify.ps1` выполняет проверки с остановкой при ошибке.
+На Debian/Ubuntu/Mint для звука нужна `libopenal1`. При отсутствии устройства игра
+может перейти в silent mode с диагностикой. [Подробнее о звуке](docs/game-audio.md).
 
-Движок закреплён на **`04cd6fd441e7974060d5a47b69e49c3598bb047d`**:
-input/cursor [PR #52](https://github.com/alken1t15/simple-3d-engine/pull/52),
-audio [PR #51](https://github.com/alken1t15/simple-3d-engine/pull/51) и
-ASCII overlay [PR #53](https://github.com/alken1t15/simple-3d-engine/pull/53).
-Текущий SHA — merge [engine PR #57](https://github.com/alken1t15/simple-3d-engine/pull/57):
-fullscreen в текущем разрешении монитора. [Engine PR #56](https://github.com/alken1t15/simple-3d-engine/pull/56)
-добавил Resizable=false для запрета растягивания за края. [Engine PR #55](https://github.com/alken1t15/simple-3d-engine/pull/55)
-добавил ограничения окна и SetClientSize/ClientSizeLimits для выбора разрешения.
-Ранее [game PR #39](https://github.com/alken1t15/simple-platformer/pull/39)
-подключил ClientSize для Wayland из [engine PR #54](https://github.com/alken1t15/simple-3d-engine/pull/54).
-Исходники движка и gitlink в интеграции #6/#19 не редактируются.
-Атлас и FONT-LICENSE.txt поставляет движок; английский UI соответствует его ASCII-шрифту.
-[Сторонние компоненты](THIRD_PARTY.md), [возможности/ограничения движка](docs/engine-integration.md).
+### 2. Начни приключение
 
-App создаёт один AudioDevice при игровом запуске на потоке окна; настройки немедленно
-меняют его MasterVolume, mute сохраняет предпочитаемую громкость. На Debian/Ubuntu/Mint
-для native audio нужна `libopenal1`; без устройства возможен диагностируемый silent fallback.
-AudioCoordinator подключает jump/coin/fail/finish и один музыкальный loop;
-пауза приостанавливает voices, Restart/Next останавливают прежние эффекты.
-Собственные PCM16 WAV поставляются относительно пути приложения; [источники и lifecycle](docs/game-audio.md).
-OpenAL null/silent-проверка не подтверждает слышимость. Smoke не создаёт AudioDevice.
+Для оформления со скриншотов:
 
-## Запуск
+```sh
+dotnet run --project src/Platformer.App -c Release --no-build -- --visual
+```
 
-После сборки обычный **Linux-запуск отдельно от терминала**:
+Для исходного оформления:
+
+```sh
+dotnet run --project src/Platformer.App -c Release --no-build
+```
+
+Оба варианта открывают главное меню. `dotnet run` связан с терминалом: Ctrl+C завершает игру.
+
+**Отдельный Linux-запуск после сборки:**
 
 ```sh
 bash scripts/Play.sh
 ```
 
-Лаунчер требует `dotnet` (.NET 10 Runtime), `setsid` из util-linux и графический сеанс.
-Игра получает отдельную session/process group: Ctrl+C и закрытие исходного терминала
-не завершают её. stdout/stderr сохраняются в игнорируемом `artifacts/run/`, путь выводится
-при запуске. Лаунчер не собирает проект; завершайте игру через Exit/закрытие окна.
-Обычный выход не печатает счётчик кадров. Для диагностики используйте команды ниже:
-`dotnet run` остаётся связанным с терминалом и управляется Ctrl+C;
-`Rendered frames` выводится только в smoke/trace/preview-режимах.
+Без аргументов лаунчер использует исходное оформление; `bash scripts/Play.sh --visual`
+включает оформление со скриншотов. Нужны .NET 10 Runtime в `PATH`, `setsid` из util-linux и графический сеанс.
+Ctrl+C и закрытие исходного терминала не завершают игру; логи сохраняются в `artifacts/run/`.
+Лаунчер не выполняет сборку. Закрывай игру через Exit или системную кнопку окна.
 
-**Windows/WSL:** [пошаговая инструкция](docs/windows-wsl.md) — сборка в WSL,
-прямой Windows-запуск и локальная OpenAL Soft для звука. Если через WSLg камера
-вращается слишком сильно, сравните с native Windows-запуском той же сборки.
+**Linux-ярлык с фирменным значком** — после сборки:
 
 ```sh
-dotnet run --project src/Platformer.App -c Release --no-build
-dotnet run --project src/Platformer.App -c Release --no-build -- --play
-dotnet run --project src/Platformer.App -c Release --no-build -- --smoke
-dotnet run --project src/Platformer.App -c Release --no-build -- --help
-dotnet run --project src/Platformer.App -c Release --no-build -- --legacy --smoke
-dotnet run --project src/Platformer.App -c Release --no-build -- --presenter
-dotnet run --project src/Platformer.App -c Release --no-build -- --presenter --skin orange --overview --smoke
+python3 scripts/install_desktop.py            # Ball Adventure в меню приложений
+python3 scripts/install_desktop.py --desktop  # дополнительно на рабочем столе
 ```
 
-Обычный запуск и `--play` открывают Main Menu. Стрелки/Tab выбирают пункт,
-Enter/Space или клик активирует его; мышь и клавиатура используют один выбор.
-В игре WASD двигает шар относительно yaw камеры, Space прыгает (удержание повторяет
-прыжок после приземления), любой Shift даёт boost,
-R перезапускает уровень. Мышь вверх поднимает взгляд, вниз опускает.
-Escape ставит паузу; из Paused Escape/Continue продолжает игру, из подменю — возвращает назад.
-Main Menu закрывается кнопкой Exit либо системным закрытием окна.
-Карточка в Levels сразу запускает уровень, карточка в Skins сразу применяет скин.
-Возврат из текущей попытки в Main Menu требует подтверждения; Cancel выбран по умолчанию,
-Escape отменяет. После подтверждения попытка завершается, фон остаётся последним кадром
-уровня без восстановления собранных монет. Новая игра начинается только по Play/карточке уровня.
+Ярлык запускает `--visual` без терминального окна. `sudo` не нужен; при переносе
+клона установи его заново. [Инструкция и ограничения](docs/desktop-launcher.md).
 
-В меню курсор свободен; Play/Continue захватывает его. Потеря фокуса ставит паузу,
-возврат фокуса не продолжает игру. Удержанные при переходе кнопки требуют release/new press.
-HUD показывает уровень, Coins collected/total и boost ready/active/cooldown.
-Settings, открытые из Paused, сохраняют паузу и возвращаются в неё.
+**Windows / WSL:** [пошаговая инструкция](docs/windows-wsl.md). Доступны сборка в WSL,
+прямой Windows-запуск и локальная OpenAL Soft для звука. При слишком резкой камере
+через WSLg сравни с прямым Windows-запуском той же сборки.
+Общий [значок ICO](assets/branding/ball-adventure.ico) можно выбрать в свойствах Windows-ярлыка.
 
-Любой `--smoke` ограничен тремя показанными кадрами: без игрового ввода, ticks и capture.
-По умолчанию он проверяет меню; `--legacy` — старую сцену, `--presenter` — сценарный 3D-preview.
-В Presenter Space меняет скин, R сбрасывает сценарий, `--still` останавливает его;
-это отдельный preview без игрового управления.
+## Управление
 
-`--trace-input` в игровом режиме выводит JSON снимков/кадров/UI для native-драйвера.
-[Автоматические проверки и ручная Linux-приёмка](docs/input-camera-testing.md).
-Smoke/CPU/X11 не заменяют физическую мышь, настоящий Alt-Tab, HiDPI, FPS или полное прохождение.
+| Действие | Клавиши |
+|---|---|
+| Катить шар относительно камеры | **W A S D** |
+| Прыгнуть; повторять прыжок после приземления | **Space**; удерживать для автопрыжка |
+| Кратковременно ускориться | **Shift** |
+| Перезапустить уровень | **R** |
+| Повернуть камеру | **Мышь** |
+| Пауза / продолжить / назад | **Escape** |
+| Выбрать пункт меню | **↑ / ↓**, **Tab / Shift+Tab** |
+| Активировать пункт | **Enter / Space / клик** |
 
-## Документы
+Карточка уровня сразу запускает его, карточка открытого скина — применяет выбор.
+Потеря фокуса ставит игру на паузу; продолжение требует Continue. Выход из попытки
+в главное меню запрашивает подтверждение, **Cancel выбран по умолчанию**.
 
-- [С чего начать свою задачу и куда отправлять PR](docs/task-guide.md)
-- [Инструкции агентам](AGENTS.md)
-- [Участие и команды](CONTRIBUTING.md)
-- [Архитектура и границы](docs/architecture.md)
-- [План разработки и зависимости](project_plan.md)
-- [Даты всех задач](docs/schedule.md)
-- [Сценарии приёмки](docs/acceptance.md)
-- [Команда и роли](docs/team.md)
-- [Доска и распределённые issues](docs/github-project.md)
-- [Проект игрового API](docs/game-api.md)
-- [Пробелы и расширения движка](docs/engine-integration.md)
-- [Требования и открытые решения](docs/requirements.md)
-- [Содержание уровней, меню, моделей и звуков](docs/content-design.md)
-- [Объём подготовки и следующие решения](docs/project-scope.md)
-- [Разработка, ревью и защита main](docs/development-process.md)
-- [Сторонние компоненты](THIRD_PARTY.md), [лицензия](LICENSE)
+Размер окна меняется через **Settings → Resolution → Apply resolution**; растягивание
+за края отключено. **Display → Fullscreen → Apply** использует текущее разрешение монитора.
+[Меню, звук и ограничения оконных режимов](docs/menu.md#window-size).
+
+## Для команды
+
+Игра построена на **C# / .NET 10**. Логика, ввод и представление разделены:
+
+```text
+Platformer.Core   физика, уровни, монеты, препятствия и сеанс — без окна и GPU
+Platformer.App    меню, камера, прогресс, звук и адаптация к API движка
+Platformer.Tests CPU-регрессии и интеграционные проверки; графика проверяется отдельно
+```
+
+Движок закреплён в `external/engine` на `04cd6fd441e7974060d5a47b69e49c3598bb047d`.
+Его изменения проходят отдельный upstream PR и интеграцию точного gitlink:
+[порядок engine-first](docs/engine-integration.md#engine-first).
+
+| Начать работу | Разобраться в проекте |
+|---|---|
+| [Участие и команды](CONTRIBUTING.md) | [Архитектура](docs/architecture.md) · [API](docs/game-api.md) |
+| [Команда и роли](docs/team.md) | [Требования](docs/requirements.md) · [Объём и готовность](docs/project-scope.md) |
+| [Карта задач и документов](docs/task-guide.md) | [Содержание игры](docs/content-design.md) · [Сценарии приёмки](docs/acceptance.md) |
+| [План и зависимости](project_plan.md) · [Календарь](docs/schedule.md) | [Процесс разработки](docs/development-process.md) · [Доска](docs/github-project.md) |
+| [Инструкции агентам](AGENTS.md) | [Сторонние компоненты](THIRD_PARTY.md) · [Лицензия MIT](LICENSE) |
+
+### Проверки
+
+```sh
+dotnet test Platformer.sln -c Release --no-build
+python scripts/check_docs.py
+git diff --check
+```
+
+Полный цикл restore/build/test/docs: `pwsh -NoProfile -File scripts/Verify.ps1` (PowerShell 7).
+Проверенная интеграция пяти уровней включает **340 тестов** и автоматический маршрут
+с 66/66 монетами. Это результаты конкретной проверки, а не обещание производительности.
+Ручной прогон реального устройства, слышимость, HiDPI и FPS фиксируются отдельно.
+[Интеграционный отчёт](docs/integration-qa.md) · [Графика и ввод](docs/input-camera-testing.md).
+
+<details>
+<summary>Диагностические режимы и preview</summary>
+
+```sh
+# Три кадра главного меню и штатное завершение
+dotnet run --project src/Platformer.App -c Release --no-build -- --visual --smoke
+
+# Сценарный preview: Space меняет скин, R сбрасывает, Escape закрывает
+dotnet run --project src/Platformer.App -c Release --no-build -- --visual --presenter --skin football --overview --still
+
+# JSON-диагностика ввода и UI
+dotnet run --project src/Platformer.App -c Release --no-build -- --trace-input
+```
+
+`--play` — явный вариант обычного игрового запуска. `--legacy` показывает старую
+интеграционную сцену; `--presenter` — сценарные объекты, а не игровой сеанс.
+Любой `--smoke` ограничен тремя кадрами без игрового ввода, ticks и захвата курсора.
+Счётчик `Rendered frames` выводится в диагностических режимах; обычный выход его не печатает.
+Smoke не создаёт AudioDevice и не подтверждает слышимость.
+
+</details>

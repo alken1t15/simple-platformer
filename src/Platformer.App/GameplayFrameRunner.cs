@@ -57,7 +57,7 @@ public sealed class GameplayFrameRunner
             return default;
         }
         // Переходы определяются до движения камеры и до любого Step.
-        InputFrame frame = Router.Map(input, Screen, Camera.YawRadians);
+        InputFrame frame = Router.Map(input, Screen, Camera.YawRadians, frameSeconds);
         if (frame.PausePressed || frame.RestartPressed)
         {
             SetScreen(frame.PausePressed ? AppScreen.Paused : Screen);

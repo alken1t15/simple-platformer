@@ -25,6 +25,7 @@ public sealed class MenuController
 
     public bool CloseRequested { get; private set; }
     public WindowSettings Window { get; } = new();
+    private float EffectiveVolume => flow.UserSettings.Muted ? 0f : flow.UserSettings.MasterVolume;
 
     public MenuController(LevelFlow flow, LevelCatalog catalog, Action<float>? applyMasterVolume = null)
     {
@@ -45,7 +46,7 @@ public sealed class MenuController
         var snapshot = flow.Snapshot;
         HudModel? hud = flow.Screen == AppScreen.Playing && snapshot is not null
             ? HudModel.Create(catalog.Get(snapshot.LevelId), snapshot) : null;
-        return MenuLayout.Build(flow.Screen, Page(), hud, flow.UserSettings.MasterVolume, selectedIndex,
+        return MenuLayout.Build(flow.Screen, Page(), hud, EffectiveVolume, selectedIndex,
             focused ? pointer : null, pressedId, width, height);
     }
 
@@ -122,7 +123,7 @@ public sealed class MenuController
             return new(resetCamera);
         }
         if (menu.HorizontalStep != 0 && option.Action == MenuAction.Volume)
-            SetVolume(flow.UserSettings.MasterVolume + Math.Sign(menu.HorizontalStep) * 0.05f);
+            SetVolume(EffectiveVolume + Math.Sign(menu.HorizontalStep) * 0.05f);
         if (menu.HorizontalStep != 0 && option.Action == MenuAction.Resolution)
             Window.Cycle(menu.HorizontalStep);
         if (menu.HorizontalStep != 0 && option.Action == MenuAction.DisplayMode)
@@ -164,11 +165,14 @@ public sealed class MenuController
 
     private void SetVolume(float value)
     {
-        flow.UserSettings.MasterVolume = Math.Clamp(MathF.Round(value * 20f) / 20f, 0f, 1f);
+        value = Math.Clamp(MathF.Round(value * 20f) / 20f, 0f, 1f);
+        if (flow.UserSettings.Muted && value == 0f) return; // Нулевая шкала не изменилась; сохраняем громкость для Unmute.
+        flow.UserSettings.Muted = false;
+        flow.UserSettings.MasterVolume = value;
         ApplyVolume();
     }
 
-    private void ApplyVolume() => applyMasterVolume(flow.UserSettings.Muted ? 0f : flow.UserSettings.MasterVolume);
+    private void ApplyVolume() => applyMasterVolume(EffectiveVolume);
 
     private void SynchronizeScreen()
     {
@@ -201,7 +205,7 @@ public sealed class MenuController
                 .Concat([Button("start", "Start", MenuAction.Start), Back()]).ToArray()),
             AppScreen.Settings => new("Settings", [$"Current window: {Window.Actual}",
                 $"Current mode: {(Window.ActualFullscreen ? "Fullscreen" : "Windowed")}"],
-            [new("volume", $"Master volume: {MathF.Round(settings.MasterVolume * 100f):0}%", MenuAction.Volume, MenuControlKind.Volume),
+            [new("volume", $"Master volume: {MathF.Round(EffectiveVolume * 100f):0}%", MenuAction.Volume, MenuControlKind.Volume),
              Button("mute", settings.Muted ? "Mute: ON" : "Mute: OFF", MenuAction.Mute),
              Button("display-mode", $"Display: < {(Window.SelectedFullscreen ? "Fullscreen" : "Windowed")} >", MenuAction.DisplayMode),
              Button("resolution", $"Resolution: < {Window.Selected} >", MenuAction.Resolution),

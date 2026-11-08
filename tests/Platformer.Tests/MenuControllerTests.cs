@@ -142,8 +142,13 @@ public sealed class MenuControllerTests
         f.Click("settings");
         f.Click("volume", fraction: 0.25f);
         Assert.AreEqual(0.25f, settings.MasterVolume);
-        Assert.AreEqual(0f, f.Volumes[^1]);
+        Assert.IsFalse(settings.Muted);
+        Assert.AreEqual(0.25f, f.Volumes[^1]);
         f.Send(new(1, 0, false, false, false, default));
+        Assert.AreEqual(0.3f, settings.MasterVolume, 1e-6f);
+        f.Click("mute");
+        Assert.IsTrue(settings.Muted);
+        Assert.AreEqual(0f, f.Volumes[^1]);
         Assert.AreEqual(0.3f, settings.MasterVolume, 1e-6f);
         f.Click("mute");
         Assert.AreEqual(0.3f, f.Volumes[^1], 1e-6f);

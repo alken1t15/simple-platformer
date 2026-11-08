@@ -27,7 +27,7 @@ Program синхронизирует ClientSize/WindowedClientSizeLimits/IsFulls
 
 | Тип / метод | Контракт |
 |---|---|
-| `InputFrame InputRouter.Map(InputSnapshot input, AppScreen screen, float yawRadians)` | Возвращает ненулевое значение InputFrame для активного экрана; не двигает шар |
+| `InputFrame InputRouter.Map(InputSnapshot input, AppScreen screen, float yawRadians, double frameSeconds = 0)` | То же для AppInputSnapshot; возвращает InputFrame активного экрана, не двигает шар. Время кадра даёт повтор навигации меню, старые вызовы с тремя аргументами сохраняются |
 | `FixedStepRunner.Advance(double frameSeconds, GameCommand latestHeld, Action<GameCommand> step)` | Возвращает число ticks; хранит только последние удержания и OR фронтов Jump/Boost; фронты потребляются первым tick, последующие их не повторяют |
 | `FixedStepRunner.Clear()` | Сбрасывает аккумулятор, удержания и фронты вне Step при pause/focus/restart/смене уровня |
 | `FixedStepRunner.RequestClear()` | Callback LevelFlow: внутри Step откладывает очистку до конца текущего tick и прекращает catch-up; вне Step вызывает Clear |
@@ -41,6 +41,8 @@ Program синхронизирует ClientSize/WindowedClientSizeLimits/IsFulls
 `AppScreen`: MainMenu, LevelSelect, Settings, SkinSelect, Playing, Paused, Failed,
 LevelResult, GameComplete. Core SessionPhase не содержит эти UI-состояния.
 UserSettings: MasterVolume∈[0,1], Muted, выбранный SkinId; всего минимум два skin IDs.
+При Muted MasterVolume хранит предпочтение для Unmute, но UI и эффективный gain показывают 0.
+Изменение шкалы выше нуля снимает Muted и применяет новую громкость.
 SkinDefinition: Id, DisplayName, материал/опциональный asset ID; не содержит Radius/Mass/Collider.
 Сначала достаточно цветных материалов, отдельная новая текстура необязательна.
 Минимальные SkinId: classic-blue и orange; материалы различаются синим/оранжевым базовым цветом.
@@ -64,8 +66,12 @@ public readonly record struct MenuInput(int HorizontalStep, int VerticalStep,
 В Playing Menu=default; в меню Gameplay=default и PausePressed=false.
 RestartPressed разрешён для Playing/Paused/Failed; в остальных экранах false.
 PausePressed — Escape только в Playing. Menu.BackPressed — Escape в меню;
-ArrowUp/Down/Tab дают VerticalStep −1/+1/+1, Left/Right дают HorizontalStep −1/+1,
-противоположные фронты отменяются. PointerPressed — фронт левой кнопки, позиция берётся
+ArrowUp/Down/Tab дают VerticalStep −1/+1/+1, Shift+Tab (любой Shift) — −1;
+Left/Right дают HorizontalStep −1/+1, противоположные направления отменяются.
+Только навигация повторяется при удержании (задержка 350 мс, интервал 80 мс), по времени
+кадра App, с одним шагом по оси за кадр и без догоняющей пачки после зависания.
+Clear/focus loss/Playing сбрасывают таймеры; старое удержание не начинает повтор без
+нового нажатия. Activate/Back/Restart не получают повторов. PointerPressed — фронт левой кнопки, позиция берётся
 из того же snapshot. Menu.ActivatePressed отражает Enter/Space; выбор цели и подавление
 дублирующего click выполняет UI selection model ниже. При IsFocused=false весь InputFrame=default.
 R/Escape обрабатываются до runner; после перехода текущий InputFrame не передаётся в Step.

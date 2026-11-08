@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """Проверка Linux launcher, terminal Ctrl+C и тихого штатного выхода на изолированном X11 DISPLAY."""
+import argparse
 import ctypes as c
 import os
 from pathlib import Path
 import signal
 import subprocess
+import sys
+import tempfile
 import time
 
 root = Path(__file__).resolve().parents[1]
@@ -39,7 +42,8 @@ def alive(pid):
     try:
         # Detached children may briefly remain zombies until reaped by init.
         return Path(f"/proc/{pid}/stat").read_text().split(") ", 1)[1][0] != "Z"
-    except FileNotFoundError:
+    except (FileNotFoundError, ProcessLookupError):
+        # Процесс может исчезнуть уже после открытия /proc/pid/stat, перед read().
         return False
 
 display = x.XOpenDisplay(None)
@@ -68,14 +72,27 @@ def find_game(parent):
             x.XFree(children)
     return None
 
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--desktop", action="store_true", help="Проверить установленный Linux-ярлык через gio")
+args = parser.parse_args()
 parent = None
 game_pid = None
+desktop_directory = None
 try:
     env = dict(os.environ, ALSOFT_DRIVERS="null", XDG_SESSION_TYPE="x11")
     env.pop("WAYLAND_DISPLAY", None)
+    target = str(root / "scripts/Play.sh")
+    launch = 'bash "$1"'
+    if args.desktop:
+        desktop_directory = tempfile.TemporaryDirectory(prefix="ball-desktop-x11-")
+        env["XDG_DATA_HOME"] = desktop_directory.name
+        subprocess.run([sys.executable, str(root / "scripts/install_desktop.py")], env=env,
+                       check=True, capture_output=True, text=True, timeout=10)
+        target = str(Path(desktop_directory.name) / "applications/org.alken1t15.BallAdventure.desktop")
+        launch = 'gio launch "$1"'
     # This session emulates the source terminal, distinct from this test's own process group.
-    parent = subprocess.Popen(["bash", "-c", 'trap "exit 0" INT; bash "$1"; while :; do sleep 1; done',
-                               "launcher-parent", str(root / "scripts/Play.sh")], start_new_session=True,
+    parent = subprocess.Popen(["bash", "-c", 'trap "exit 0" INT; ' + launch + '; while :; do sleep 1; done',
+                               "launcher-parent", target], start_new_session=True,
                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env, cwd="/tmp")
     line = parent.stdout.readline().strip()
     assert "Log: " in line, line
@@ -114,11 +131,20 @@ try:
     assert not alive(game_pid), "Game did not exit after window close"
     output = log.read_text()
     assert "Rendered frames:" not in output and "Platformer:" not in output, output
-    print("PASS: detached Linux launcher from another cwd; terminal Ctrl+C survives; normal exit has no frame counter")
+    print("PASS: " + ("installed desktop entry via gio; " if args.desktop else "")
+          + "detached Linux launcher from another cwd; terminal Ctrl+C survives; normal exit has no frame counter")
 finally:
     if game_pid and alive(game_pid):
-        os.kill(game_pid, signal.SIGTERM)
+        try:
+            os.kill(game_pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
     if parent and parent.poll() is None:
-        os.killpg(parent.pid, signal.SIGTERM)
+        try:
+            os.killpg(parent.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
         parent.wait(timeout=5)
     x.XCloseDisplay(display)
+    if desktop_directory:
+        desktop_directory.cleanup()

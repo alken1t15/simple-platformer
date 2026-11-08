@@ -86,7 +86,7 @@ public sealed class BallSimulatorTests
     }
 
     [TestMethod]
-    public void GentleSlopeIsStableWithoutInputAndMovementDoesNotGainSpeed()
+    public void GentleSlopeRollsWithoutInputAndUphillMovementRemainsControlled()
     {
         var (level, normal) = Slope(20f);
         var simulator = new BallSimulator(level, SimulationSettings.Default);
@@ -95,10 +95,11 @@ public sealed class BallSimulatorTests
         Near(normal, initial.GroundNormal);
         var state = initial;
         for (int i = 0; i < 240; i++) state = simulator.Step(state, default).Ball;
-        Near(initial.Center, state.Center);
+        Assert.IsLessThan(initial.Center.Y - 0.1f, state.Center.Y);
+        float uphillStartY = state.Center.Y;
         for (int i = 0; i < 120; i++) state = simulator.Step(state, Right).Ball;
         Assert.IsTrue(state.Grounded);
-        Assert.IsGreaterThan(initial.Center.Y + 0.5f, state.Center.Y);
+        Assert.IsGreaterThan(uphillStartY + 0.5f, state.Center.Y);
         Assert.IsLessThanOrEqualTo(4.5f + 1e-5f, state.Velocity.Length());
         Assert.AreEqual(0f, Vector3.Dot(state.Velocity, normal), 1e-5f);
     }

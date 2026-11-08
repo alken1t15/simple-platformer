@@ -88,7 +88,25 @@ public sealed class BallSimulator
         {
             velocity -= ground * Vector3.Dot(velocity, ground);
             desired -= ground * Vector3.Dot(desired, ground);
-            velocity = Approach(velocity, desired, acceleration * dt);
+            Vector3 gravity = -Vector3.UnitY * settings.Gravity;
+            Vector3 downhill = gravity - ground * Vector3.Dot(gravity, ground);
+            bool slope = downhill.LengthSquared() > 1e-10f;
+            if (move == Vector2.Zero && slope)
+            {
+                // Постоянное торможение до нуля удерживало шар на любом склоне.
+                // Вязкое сопротивление качению допускает старт под действием тяжести
+                // и конечную скорость: dv/dt = downhill - drag * v.
+                float drag = settings.BrakingAcceleration / settings.MoveSpeed;
+                velocity = (velocity + downhill * dt) / (1f + drag * dt);
+            }
+            else
+            {
+                velocity = Approach(velocity, desired, acceleration * dt);
+                velocity += downhill * dt;
+            }
+            // Та же граница скорости, что у управляемого движения/boost.
+            if (slope && velocity.LengthSquared() > speed * speed)
+                velocity = Vector3.Normalize(velocity) * speed;
         }
         else
         {

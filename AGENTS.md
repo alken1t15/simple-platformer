@@ -32,7 +32,7 @@ docs/architecture.md и docs/project-scope.md; остальные докумен
 Обязательны две локации с переходами, WASD/Space/Shift/R, мышь, монеты, наклоны,
 вращающиеся препятствия, звук, меню уровней/громкости/скинов; цель — Linux.
 Параметры проектирования и готовность реализации различай по docs/requirements.md.
-Engine snapshot `04cd6fd441e7974060d5a47b69e49c3598bb047d` поддерживает клавиши/мышь/CursorMode,
+Engine snapshot `013e3e29251ae020c9ced5fdeb46ef3d10a7b403` поддерживает клавиши/мышь/CursorMode,
 отдельный Engine3D.Audio и OverlayFrame/SetOverlay (upstream PR #52/#51/#53), ClientSize (#54).
 Ограничения окна и SetClientSize/ClientSizeLimits (#55) подключены к Settings:
 800×450 минимум (уменьшается на маленьком экране), доступные размеры фильтруются;

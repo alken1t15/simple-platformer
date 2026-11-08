@@ -3,7 +3,7 @@
 MenuController, MenuView, адаптивная раскладка и HudModel подключены к GameplayHost (#6)
 и публичному overlay движка. Обычный запуск и `--play` открывают графический Main Menu;
 это тот же Engine/Scene lifecycle, что и игра. Движок закреплён на принятом
-`04cd6fd441e7974060d5a47b69e49c3598bb047d`, upstream
+`013e3e29251ae020c9ced5fdeb46ef3d10a7b403`, upstream
 [PR #57](https://github.com/alken1t15/simple-3d-engine/pull/57) добавил fullscreen в desktop mode;
 PR #56 — запрет растягивания за края;
 PR #55 — ограничения окна и смену размера.

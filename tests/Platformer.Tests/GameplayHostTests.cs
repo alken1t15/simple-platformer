@@ -205,6 +205,9 @@ public sealed class GameplayHostTests
         Press(host, AppButtons.Escape);
         Assert.AreEqual(AppScreen.Paused, host.Flow.Screen);
         Click(host, "main-menu");
+        Assert.AreEqual(AppScreen.Paused, host.Flow.Screen);
+        Assert.IsFalse(host.CaptureRequested);
+        Click(host, "confirm-main-menu");
         Assert.AreEqual(AppScreen.MainMenu, host.Flow.Screen);
         Press(host, AppButtons.Escape);
         Assert.IsFalse(host.CloseRequested);

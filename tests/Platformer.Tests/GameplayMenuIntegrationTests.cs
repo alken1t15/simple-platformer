@@ -78,7 +78,7 @@ public sealed class GameplayMenuIntegrationTests
         Click(host, "back");
         Click(host, "skins");
         Click(host, "skin:orange");
-        Click(host, "select");
+        Assert.AreEqual("orange", host.Flow.UserSettings.SkinId);
         Click(host, "back");
         Click(host, "play");
         Assert.AreEqual("orange", host.Flow.UserSettings.SkinId);

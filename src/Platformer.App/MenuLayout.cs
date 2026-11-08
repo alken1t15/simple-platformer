@@ -3,8 +3,8 @@ using Engine3D.Core;
 
 namespace Platformer.App;
 
-internal enum MenuAction { Play, Levels, Settings, Skins, Exit, ChooseLevel, Start, Back, Volume, Mute,
-    ChooseSkin, ApplySkin, Continue, Restart, MainMenu, Next, Resolution, ApplyResolution, DisplayMode }
+internal enum MenuAction { Play, Levels, Settings, Skins, Exit, ChooseLevel, Back, Volume, Mute,
+    ChooseSkin, Continue, Restart, MainMenu, Next, Resolution, ApplyResolution, DisplayMode, CancelMainMenu, ConfirmMainMenu }
 internal sealed record MenuOption(string Id, string Label, MenuAction Action,
     MenuControlKind Kind = MenuControlKind.Button, string? Value = null, ColorRgba? Swatch = null);
 internal sealed record MenuPage(string Title, IReadOnlyList<string> Details, IReadOnlyList<MenuOption> Options);

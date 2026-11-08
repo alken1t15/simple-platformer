@@ -84,8 +84,8 @@ Core, LevelFlow, звук и текущий сеанс при выборе ра�
   меняет шкалу и не уничтожает сохранённое предпочтение.
   Легенда группирует ввод по действию: Up/Down — выбор, Tab/Shift+Tab — следующий/предыдущий,
   Enter/Space/Mouse click — активация; Escape/Exit подписаны по текущему экрану.
-- SkinSelect показывает цветовые образцы из материалов `GameSkins`, отдельно хранит
-  предварительный выбор и применяет его кнопкой Select. Back отменяет неприменённый выбор.
+- SkinSelect показывает цветовые образцы из материалов `GameSkins`; активация карточки
+  мышью/Enter/Space сразу применяет скин. Дополнительной кнопки Select нет, Back сохраняет выбор.
   Start/Restart/Next используют выбранный скин через существующий Presenter.
 - HUD читает имя уровня, CoinCount/число монет уровня и boost timers из принятого snapshot.
   Active имеет приоритет над cooldown; время отображается с точкой. Подсказка управления
@@ -101,24 +101,33 @@ Core, LevelFlow, звук и текущий сеанс при выборе ра�
 | MainMenu / Play | Start первого уровня каталога, новый маршрут |
 | MainMenu / Levels, Settings, Skins | Соответствующее подменю |
 | MainMenu / Escape | Без действия; закрывает только Exit |
-| LevelSelect / карточка, Start | Выбор ID, затем Start этого уровня |
+| LevelSelect / активация карточки | Немедленный Start выбранного уровня, без отдельной кнопки Start |
 | LevelSelect / Back или Escape | Возврат в MainMenu, Failed либо GameComplete, откуда открыли выбор |
 | Settings / Back или Escape | Возврат в MainMenu либо Paused; громкость применяется сразу, режим/размер — только через Apply |
-| SkinSelect / Select, Back | Применить скин; вернуться в MainMenu |
+| SkinSelect / активация карточки, Back | Сразу применить скин; Back возвращает в MainMenu |
 | Playing / Escape, R | Pause либо Restart; меню не выполняет Step |
 | Paused / Continue или Escape | Continue с очисткой отложенного ввода |
-| Paused / Restart, Settings, MainMenu | Соответствующий переход; Settings сохраняет audio pause |
+| Paused / Restart, Settings | Соответствующий переход; Settings сохраняет audio pause |
+| Paused / MainMenu | Подтверждение завершения текущей попытки |
 | Failed / Retry или R | Новая попытка текущего уровня |
 | Failed / LevelSelect | Выбор уровня; Back сохраняет прежнее поражение |
-| Failed / MainMenu или Escape | Снять сеанс и прежний маршрут |
+| Failed / MainMenu или Escape | Подтверждение завершения текущей попытки |
 | LevelResult / Next | Следующий уровень либо GameComplete после последнего |
 | LevelResult / Retry | Повтор текущего уровня, без повторного начисления монет |
-| LevelResult / MainMenu или Escape | Снять сеанс и маршрут |
+| LevelResult / MainMenu или Escape | Подтверждение завершения текущей попытки |
 | GameComplete / LevelSelect | Выбрать новый маршрут; Back сохраняет итог прежнего |
 | GameComplete / MainMenu или Escape | Вернуться в главное меню |
 | Потеря фокуса в Playing | Paused; активация окна сама не вызывает Continue |
 
 `OpenLevelSelect`, `OpenSettings`, `OpenSkins`, `Back` добавлены в LevelFlow.
+Перед выходом из активного сеанса появляется `Leave this run?` с предупреждением
+о потере прогресса. По умолчанию выбран Cancel; Enter или Escape отменяет выход,
+R внутри подтверждения не перезапускает уровень. Отмена сохраняет сеанс и экран;
+Leave to main menu завершает попытку. При открытии/отмене сбрасывается отложенный ввод,
+даже если `AppScreen` не изменился. После подтверждения последний вид уровня остаётся
+неподвижным фоном меню, включая уже собранные монеты. Это не сохранённая попытка:
+Play или карточка уровня начинает новую игру. Из GameComplete подтверждение не требуется.
+
 Недопустимые переходы отклоняются до reset callbacks. Переходы в подменю и обратно
 очищают отложенный ввод, сохраняя сеанс и audio pause. Остальные callbacks и правила
 подготовки/ошибок — [GameSession/LevelFlow](game-session.md#подключение-адаптеров).
@@ -129,6 +138,10 @@ Program один раз читает engine.Input в onUpdate и NativeInputAdap
 в AppInputSnapshot. GameplayFrameRunner сначала обрабатывает R/Escape/focus, затем
 mouse look и фиксированные ticks. MenuController получает уже маршрутизированный
 InputFrame; временные клавиатурные переходы прежнего стенда #6 удалены.
+В Playing удержание Space передаётся отдельно как `JumpHeld`: каждый физический tick
+запрашивает прыжок, а Core разрешает его только на земле. После приземления шар снова
+прыгает, пока Space удерживается. В меню Space активирует пункт только новым нажатием;
+после перехода/возврата фокуса удержанная клавиша требует отпускания и нового нажатия.
 
 Flow.Screen единственный источник состояния. После Menu.Handle и успешных ticks
 host синхронизирует runner с экраном, выполняет reset/rearm, обновляет Camera/Scene

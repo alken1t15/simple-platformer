@@ -209,8 +209,7 @@ public sealed class MenuControllerTests
         Assert.IsTrue(f.View().Texts.Any(text => text.Text.Contains("Training Track")));
         Assert.IsTrue(f.View().Texts.Any(text => text.Text.Contains("Turning Maze")));
         f.Click("level:level2");
-        Assert.IsNull(f.Flow.Snapshot);
-        f.Click("start");
+        Assert.AreEqual(AppScreen.Playing, f.Flow.Screen);
         Assert.AreEqual("level2", f.Flow.Snapshot!.LevelId);
         f.Finish();
         f.Click("next");
@@ -223,7 +222,6 @@ public sealed class MenuControllerTests
         Assert.AreEqual(AppScreen.GameComplete, f.Flow.Screen);
         f.Click("levels");
         f.Click("level:level1");
-        f.Click("start");
         Assert.AreEqual(0, f.Flow.TotalCoinCount);
         Assert.IsEmpty(f.Flow.CompletedLevels);
     }
@@ -236,8 +234,6 @@ public sealed class MenuControllerTests
         foreach (var skin in GameSkins.All)
             Assert.IsTrue(f.View().Panels.Any(panel => panel.Color == skin.Material.BaseColor));
         f.Click("skin:orange");
-        Assert.AreEqual("classic-blue", f.Flow.UserSettings.SkinId);
-        f.Click("select");
         Assert.AreEqual("orange", f.Flow.UserSettings.SkinId);
         f.Click("back");
         f.Click("play");
@@ -365,6 +361,7 @@ public sealed class MenuControllerTests
         Assert.IsFalse(menu.BuildView(Width, Height).Controls.Any(control => control.Pressed));
         Send(new(true));
         Send(enter);
-        Assert.IsTrue(menu.BuildView(Width, Height).Controls.Single(control => control.Id == "level:level1").Pressed);
+        Assert.AreEqual(AppScreen.Playing, flow.Screen);
+        Assert.AreEqual("level1", flow.Snapshot!.LevelId);
     }
 }

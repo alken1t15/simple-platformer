@@ -4,7 +4,7 @@ using Platformer.Core;
 namespace Platformer.App;
 
 public readonly record struct InputFrame(GameCommand Gameplay, bool RestartPressed,
-    bool PausePressed, MenuInput Menu);
+    bool PausePressed, MenuInput Menu, bool JumpHeld = false);
 
 public readonly record struct MenuInput(int HorizontalStep, int VerticalStep,
     bool ActivatePressed, bool BackPressed, bool PointerPressed, Vector2 PointerPosition);

@@ -22,7 +22,10 @@ import time
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", default="artifacts/input-camera", help="Каталог лога и снимка сцены.")
-    output = Path(parser.parse_args().output)
+    parser.add_argument("--visual", action="store_true", help="Проверить тропическое оформление сцены и меню.")
+    parser.add_argument("--assembly", type=Path, help="Проверить отдельную локальную сборку Platformer.App.dll.")
+    args = parser.parse_args()
+    output = Path(args.output)
     output.mkdir(parents=True, exist_ok=True)
     trace = (output / "trace.log").open("w", encoding="utf-8")
     if not sys.platform.startswith("linux") or not os.environ.get("DISPLAY"):
@@ -115,8 +118,8 @@ def main():
             raise AssertionError(value["text"])
         return value
 
-    def until(predicate, label):
-        deadline = time.monotonic() + 4
+    def until(predicate, label, timeout=4):
+        deadline = time.monotonic() + timeout
         last = None
         while time.monotonic() < deadline:
             try:
@@ -186,14 +189,17 @@ def main():
         return None
 
     try:
-        assembly = Path(__file__).resolve().parents[1] / "src/Platformer.App/bin/Release/net10.0/Platformer.App.dll"
+        assembly = args.assembly or Path(__file__).resolve().parents[1] / "src/Platformer.App/bin/Release/net10.0/Platformer.App.dll"
         env = dict(os.environ, XDG_SESSION_TYPE="x11", ALSOFT_DRIVERS="null", XDG_DATA_HOME=progress_directory.name)
         env.pop("WAYLAND_DISPLAY", None)
-        process = subprocess.Popen(["dotnet", str(assembly), "--play", "--trace-input"], stdout=subprocess.PIPE,
+        command = ["dotnet", str(assembly), "--play", "--trace-input"]
+        if args.visual:
+            command.append("--visual")
+        process = subprocess.Popen(command, stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT, text=True, env=env)
         reader = threading.Thread(target=read_lines, daemon=True)
         reader.start()
-        until(lambda f: f.get("frame", 0) >= 3, "startup/render")
+        until(lambda f: f.get("frame", 0) >= 3, "startup/render", timeout=20)
         native = find_window(root, "Ball Adventure")
         assert native, "Окно Ball Adventure не найдено."
 

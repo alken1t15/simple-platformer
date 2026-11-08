@@ -23,7 +23,7 @@ internal static class MenuLayout
     }
 
     internal static MenuView Build(AppScreen screen, MenuPage page, HudModel? hud, float volume,
-        int selectedIndex, Vector2? pointer, string? pressedId, float width, float height)
+        int selectedIndex, Vector2? pointer, string? pressedId, float width, float height, bool visual = false)
     {
         ValidateSize(width, height);
         var controls = new List<MenuControl>();
@@ -37,16 +37,44 @@ internal static class MenuLayout
         void Text(string text, float x, float y, float size, ColorRgba? color = null) =>
             texts.Add(new(new(left + x * scale, top + y * scale), text, size * scale, color ?? White));
 
+        if (visual && screen == AppScreen.MainMenu)
+        {
+            panels.Add(new(new(0, 0, width, height), new(1, 1, 1), MenuPanelKind.Backdrop));
+            Text("BALL", 104, 88, 70, Accent);
+            Text("ADVENTURE", 104, 163, 48);
+            Text("ROLL. JUMP. EXPLORE.", 108, 220, 16, Muted);
+            for (int i = 0; i < page.Details.Count; i++) Text(page.Details[i], 108, 255 + i * 24, 18, Muted);
+            for (int i = 0; i < page.Options.Count; i++)
+            {
+                var option = page.Options[i];
+                float y = 305 + i * 48;
+                var bounds = Rect(104, y, 360, 40);
+                bool selected = selectedIndex == i;
+                bool hovered = pointer is { } position && bounds.Contains(position);
+                bool pressed = option.Enabled && pressedId == option.Id;
+                controls.Add(new(option.Id, option.Label, option.Kind, bounds, selected, hovered, pressed,
+                    Enabled: option.Enabled, Locked: option.Locked));
+                panels.Add(new(bounds, new(1, 1, 1), MenuPanelKind.Control));
+                if (selected) panels.Add(new(Rect(104, y + 8, 3, 24), Accent, MenuPanelKind.Focus));
+                Text(option.Label, 124, y + 9, 23);
+                if (selected) Text(">", 434, y + 9, 23, Accent);
+            }
+            Text("Up / Down: choose", 108, 574, 16, Muted);
+            Text("Tab / Shift+Tab: next / previous", 108, 598, 16, Muted);
+            Text("Enter / Space / Mouse click: select", 108, 622, 16, Muted);
+            return new(screen, new(width, height), controls, panels, texts);
+        }
+
         if (screen == AppScreen.Playing && hud is not null)
         {
-            panels.Add(new(Rect(24f, 24f, 432f, 144f), new(0.025f, 0.04f, 0.07f, 0.85f)));
+            panels.Add(new(Rect(24f, 24f, 432f, 144f), new(0.025f, 0.04f, 0.07f, 0.85f), MenuPanelKind.Sheet));
             Text(hud.LevelName, 44f, 40f, 28f);
             Text($"Coins {hud.CoinCount}/{hud.TotalCoins}", 44f, 84f, 24f);
             Text(hud.BoostText, 44f, 122f, 22f, Accent);
             if (hud.ShowHelp)
             {
                 float helpTop = hud.Hint is null ? 614f : 580f;
-                panels.Add(new(Rect(24f, helpTop, 1000f, 696f - helpTop), new(0.025f, 0.04f, 0.07f, 0.85f)));
+                panels.Add(new(Rect(24f, helpTop, 1000f, 696f - helpTop), new(0.025f, 0.04f, 0.07f, 0.85f), MenuPanelKind.Sheet));
                 Text("WASD move   Mouse camera   Space jump", 44f, helpTop + 14, 22f);
                 Text("Shift boost   R restart   Esc pause", 44f, helpTop + 48, 22f, Muted);
                 if (hud.Hint is not null) Text(hud.Hint, 44f, helpTop + 82, 18f, Accent);
@@ -55,8 +83,8 @@ internal static class MenuLayout
         }
 
         // Полупрозрачное затемнение сохраняет игровую сцену под паузой и результатом.
-        panels.Add(new(new(0f, 0f, width, height), new(0.015f, 0.025f, 0.045f, 0.65f)));
-        panels.Add(new(Rect(340f, 60f, 600f, 600f), new(0.035f, 0.055f, 0.09f, 0.94f)));
+        panels.Add(new(new(0f, 0f, width, height), new(0.015f, 0.025f, 0.045f, 0.65f), MenuPanelKind.Backdrop));
+        panels.Add(new(Rect(340f, 60f, 600f, 600f), new(0.035f, 0.055f, 0.09f, 0.94f), MenuPanelKind.Sheet));
         Text(page.Title, 376f, 92f, 34f);
         for (int i = 0; i < page.Details.Count; i++) Text(page.Details[i], 376f, 152f + 30f * i, 22f, Muted);
 
@@ -79,8 +107,8 @@ internal static class MenuLayout
             bool pressed = option.Enabled && option.Id == pressedId;
             var background = pressed ? new ColorRgba(0.1f, 0.32f, 0.5f)
                 : selected || hovered ? new ColorRgba(0.12f, 0.23f, 0.36f) : new ColorRgba(0.075f, 0.11f, 0.17f);
-            panels.Add(new(bounds, background));
-            if (selected) panels.Add(new(Rect(x, y, 4f, buttonHeight), Accent));
+            panels.Add(new(bounds, background, MenuPanelKind.Control));
+            if (selected) panels.Add(new(Rect(x, y, 4f, buttonHeight), Accent, MenuPanelKind.Focus));
             MenuRect? valueBounds = option.Kind == MenuControlKind.Volume
                 ? Rect(396f, y + buttonHeight - 9f, 488f, 3f) : null;
             MenuRect? previewBounds = option.Kind == MenuControlKind.Skin ? Rect(x + 6, y + 3, 44, 44) : null;
@@ -106,8 +134,8 @@ internal static class MenuLayout
             else Text(option.Label, x + 20, y + 9f, 22f, ink);
             if (valueBounds is { } track)
             {
-                panels.Add(new(track, new(0.2f, 0.25f, 0.33f)));
-                panels.Add(new(track with { Width = track.Width * volume }, Accent));
+                panels.Add(new(track, new(0.2f, 0.25f, 0.33f), MenuPanelKind.Track));
+                panels.Add(new(track with { Width = track.Width * volume }, Accent, MenuPanelKind.Fill));
             }
         }
         Text(screen == AppScreen.Settings ? "Up / Down: choose; Left / Right: change" : "Up / Down: choose", 376f, 566f, 18f, Muted);

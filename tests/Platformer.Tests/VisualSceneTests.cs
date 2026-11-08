@@ -170,7 +170,8 @@ public sealed class VisualSceneTests
         var standard = MenuOverlayAdapter.Build(originalView);
         var themed = MenuOverlayAdapter.Build(originalView, visual: true);
         CollectionAssert.AreEqual(standard.Panels.ToArray().Select(p => p.Bounds).ToArray(),
-            themed.Panels.ToArray().Select(p => p.Bounds).ToArray(), "Presentation must preserve menu hit-test geometry");
+            themed.Images.ToArray().Take(originalView.Panels.Count).Select(p => p.Bounds).ToArray(),
+            "Rounded backgrounds must preserve the logical bounds of every source panel");
         Assert.AreEqual(standard.Texts.Length, themed.Texts.Length);
         host.Flow.Start(level.Id);
         host.Advance(new(true), 0d);

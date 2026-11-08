@@ -41,7 +41,7 @@ public sealed class GameplayHost
             Frames.Clock.RequestClear();
             _resetRequested = true;
         }, stopGameplayAudio: () => _audio?.Stop(), setAudioPaused: value => _audio?.SetPaused(value), visual: visual, progress: progress);
-        Menu = new MenuController(Flow, catalog, applyMasterVolume);
+        Menu = new MenuController(Flow, catalog, applyMasterVolume, visual);
         View = Menu.BuildView(960f, 640f);
         _preview = new GameScenePresenter(catalog.Levels[0], visual);
         if (visual)

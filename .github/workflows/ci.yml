@@ -103,6 +103,9 @@ jobs:
       - name: Check native input, menus, HUD and camera on X11
         timeout-minutes: 2
         run: timeout 60s xvfb-run -a -s '-screen 0 1280x800x24' python3 scripts/check_gameplay_x11.py
+      - name: Check tropical menus and native controls
+        timeout-minutes: 2
+        run: timeout 60s xvfb-run -a -s '-screen 0 1280x800x24' python3 scripts/check_gameplay_x11.py --visual --output artifacts/tropical-menu
       - name: Check detached Linux launcher and quiet normal exit
         timeout-minutes: 2
         run: timeout 30s xvfb-run -a python3 scripts/check_launch_x11.py
@@ -123,4 +126,10 @@ jobs:
         with:
           name: input-camera-linux
           path: artifacts/input-camera/
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: tropical-menu-linux
+          path: artifacts/tropical-menu/
           if-no-files-found: warn

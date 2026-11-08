@@ -87,8 +87,10 @@ internal static class MenuLayout
                 panels.Add(new(track with { Width = track.Width * volume }, Accent));
             }
         }
-        Text(screen == AppScreen.Settings ? "Left/Right: change   Enter: select" : "Arrows/Tab: choose   Enter: select", 376f, 594f, 20f, Muted);
-        Text(screen == AppScreen.MainMenu ? "Mouse: select   Exit: close game" : "Mouse: select   Esc: back", 376f, 622f, 20f, Muted);
+        Text(screen == AppScreen.Settings ? "Up / Down: choose; Left / Right: change" : "Up / Down: choose", 376f, 566f, 18f, Muted);
+        Text("Tab / Shift+Tab: next / previous", 376f, 588f, 18f, Muted);
+        Text("Enter / Space / Mouse click: select", 376f, 610f, 18f, Muted);
+        Text(screen == AppScreen.MainMenu ? "Exit: close game" : "Esc: back", 376f, 632f, 18f, Muted);
         return new(screen, new(width, height), controls, panels, texts);
     }
 }

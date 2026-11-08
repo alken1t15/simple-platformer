@@ -92,6 +92,7 @@ try
             if (traceInput)
             {
                 var ball = game.Flow.Snapshot?.Ball;
+                var ballRotation = game.Flow.Presenter?.BallObject.Transform.Rotation;
                 Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
                 {
                     kind = "frame", frame = engine.RenderedFrames, focused = input.IsFocused,
@@ -100,6 +101,9 @@ try
                     tick = game.Flow.Snapshot?.Tick, session = game.Flow.Snapshot?.SessionId,
                     level = game.Flow.Snapshot?.LevelId,
                     x = ball?.Center.X, y = ball?.Center.Y, z = ball?.Center.Z,
+                    grounded = ball?.Grounded, velocityX = ball?.Velocity.X,
+                    ballRotationX = ballRotation?.X, ballRotationY = ballRotation?.Y,
+                    ballRotationZ = ballRotation?.Z, ballRotationW = ballRotation?.W,
                     boost = ball?.BoostRemainingSeconds, cooldown = ball?.BoostCooldownSeconds,
                     ticks = frameResult.Ticks, moveX = frameResult.Input.Gameplay.MoveWorldXZ.X,
                     moveZ = frameResult.Input.Gameplay.MoveWorldXZ.Y,

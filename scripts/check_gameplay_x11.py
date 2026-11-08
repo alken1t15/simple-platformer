@@ -269,6 +269,37 @@ def main():
         until(lambda f: has(f, "released", "PointerLeft"), "pointer release")
         print("PASS: native adapter, клавиши/фронты/указатель; меню без ticks/capture")
 
+        def selection(frame):
+            return next(control["id"] for control in frame["controls"] if control["selected"])
+
+        for shift in ("Shift_L", "Shift_R"):
+            before = latest()
+            ids = [control["id"] for control in before["controls"]]
+            previous = ids[(ids.index(selection(before)) - 1) % len(ids)]
+            key(shift, True)
+            press("Tab")
+            until(lambda f: selection(f) == previous, "Shift+Tab previous item " + shift)
+            key(shift, False)
+            collect(0.05)
+
+        for symbol in ("Tab", "Down"):
+            before = selection(latest())
+            key(symbol, True)
+            until(lambda f: has(f, "pressed", symbol), symbol + " fresh navigation press")
+            early = collect(0.18)
+            assert early and len({selection(f) for f in early}) == 1, "Repeat started before initial delay"
+            assert selection(early[-1]) != before, "Fresh press did not navigate"
+            held = collect(0.65)
+            changes = sum(selection(a) != selection(b) for a, b in zip(held, held[1:]))
+            assert changes >= 3, f"Holding {symbol} did not repeat: {changes} changes"
+            key(symbol, False)
+            until(lambda f: has(f, "released", symbol), symbol + " repeat release")
+            stopped = selection(latest())
+            assert all(selection(f) == stopped for f in collect(0.15)), "Navigation continued after release"
+        print("PASS: оба Shift+Tab назад; удержание Tab/Down повторяет после задержки и останавливается")
+        assert "Enter / Space / Mouse click: select" in latest()["uiTexts"]
+        assert "Tab / Shift+Tab: next / previous" in latest()["uiTexts"]
+
         capture("main-menu")
         levels = click_control("levels", "LevelSelect")
         assert {control["id"] for control in levels["controls"] if control["id"].startswith("level:")} == {"level:level1", "level:level2"}
@@ -296,10 +327,31 @@ def main():
         until(lambda f: abs(f["audioVolume"] - 0.5) < 0.02, "volume slider -> AudioDevice")
         press("Left")
         until(lambda f: abs(f["audioVolume"] - 0.45) < 0.02, "keyboard volume -> AudioDevice")
+        key("Right", True)
+        until(lambda f: has(f, "pressed", "Right"), "volume Right fresh press")
+        early_volume = collect(0.18)
+        assert early_volume and all(abs(f["audioVolume"] - 0.5) < 0.02 for f in early_volume), "Volume repeated before delay"
+        held_volume = collect(0.65)
+        assert held_volume[-1]["audioVolume"] >= 0.65, "Held Right did not advance volume slider"
+        key("Right", False)
+        until(lambda f: has(f, "released", "Right"), "volume repeat release")
+        stopped_volume = latest()["audioVolume"]
+        assert all(abs(f["audioVolume"] - stopped_volume) < 0.001 for f in collect(0.15)), "Volume continued after release"
+        click_control("volume", "Settings")
+        press("Left")
+        until(lambda f: abs(f["audioVolume"] - 0.45) < 0.02, "restore volume after hold test")
         click_control("mute", "Settings")
-        until(lambda f: f["muted"] and f["audioVolume"] == 0, "mute -> AudioDevice")
+        muted = until(lambda f: f["muted"] and f["audioVolume"] == 0
+                      and "Master volume: 0%" in f["uiTexts"], "mute -> AudioDevice and zero slider")
+        assert abs(muted["volume"] - 0.45) < 0.02, "Mute lost preferred volume"
+        capture("settings-muted")
         click_control("mute", "Settings")
         until(lambda f: not f["muted"] and abs(f["audioVolume"] - 0.45) < 0.02, "unmute restores volume")
+        click_control("mute", "Settings")
+        click_control("volume", "Settings")
+        until(lambda f: not f["muted"] and abs(f["audioVolume"] - 0.5) < 0.02, "slider change automatically unmutes")
+        press("Left")
+        until(lambda f: abs(f["audioVolume"] - 0.45) < 0.02, "restore volume after unmute test")
         chosen = click_control("resolution", "Settings")
         until(lambda f: any(control["label"] == "Resolution: < 960 x 540 >" for control in f["controls"]), "resolution mouse selection")
         assert chosen["clientWidth"] == 800 and chosen["clientHeight"] == 450, "selection must wait for Apply"
@@ -413,6 +465,32 @@ def main():
             key(symbol, False)
             until(lambda f: has(f, "released", name), name + " release")
         print("PASS: pause/Continue/rearm, R reset, Space и оба Shift через реальную физику")
+
+        press("r")
+        flight_start = until(lambda f: f["session"] != restarted["session"] and f["grounded"], "ground before moving jump")
+        key("d", True)
+        until(lambda f: f["grounded"] and f["velocityX"] > 0.5, "rolling before takeoff")
+        # Первый motion после capture может быть подавлен движком; прогреваем до измерения.
+        xt.XTestFakeRelativeMotionEvent(display, 2, 0, 0)
+        x.XFlush(display)
+        collect(0.03)
+        key("space", True)
+        until(lambda f: not f["grounded"] and f["y"] > 0.6, "moving jump airborne")
+        rotation_keys = ("ballRotationX", "ballRotationY", "ballRotationZ", "ballRotationW")
+        for _ in range(3):
+            before = latest()
+            xt.XTestFakeRelativeMotionEvent(display, 15, 0, 0)
+            x.XFlush(display)
+            turned = until(lambda f: not f["grounded"] and abs(f["yaw"] - before["yaw"]) > 0.01, "camera turns in flight")
+            samples = collect(0.04) + [turned]
+            assert any(abs(sum(before[k] * f[k] for k in rotation_keys)) < 0.99999
+                       for f in samples if not f["grounded"]), "Ball spin froze while orbiting camera in flight"
+        key("d", False)
+        key("space", False)
+        collect(0.05)
+        press("r")
+        until(lambda f: f["session"] != flight_start["session"], "restart after flight spin")
+        print("PASS: вращение шара продолжается в настоящем прыжке при повороте камеры")
 
         # Удержание W при focus loss; отдельное тестовое окно не зависит от наличия WM.
         focus_sink = x.XCreateSimpleWindow(display, root, 10, 10, 160, 90, 0, 0, 0)

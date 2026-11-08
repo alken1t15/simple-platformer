@@ -16,6 +16,9 @@ public sealed class GameScenePresenter
     private Guid _sessionId;
     private long _tick;
     private BallState _lastBall;
+    private double _simulationSeconds;
+    private Vector3 _spinAxis;
+    private double _spinSpeed;
 
     public Scene Scene { get; } = new();
     public SceneObject BallObject { get; }
@@ -92,6 +95,9 @@ public sealed class GameScenePresenter
         bool reset = _sessionId != snapshot.SessionId;
         if (!reset && snapshot.Tick < _tick)
             throw new ArgumentException("Порядок snapshot нарушен", nameof(snapshot));
+        if (!reset && (snapshot.SimulationSeconds < _simulationSeconds
+            || (snapshot.Tick == _tick && snapshot.SimulationSeconds != _simulationSeconds)))
+            throw new ArgumentException("Время симуляции не может убывать или меняться внутри одного tick", nameof(snapshot));
         if (!reset && (MathF.Abs(snapshot.Ball.Radius - _lastBall.Radius) > 1e-6f
             || (snapshot.Tick == _tick && snapshot.Ball != _lastBall)))
             throw new ArgumentException("Радиус сеанса и состояние уже показанного tick неизменяемы", nameof(snapshot));
@@ -100,6 +106,8 @@ public sealed class GameScenePresenter
             throw new ArgumentException("Неизвестные или отсутствующие ID объектов", nameof(snapshot));
 
         Quaternion rotation = reset ? Quaternion.Identity : BallObject.Transform.Rotation;
+        var spinAxis = reset ? Vector3.Zero : _spinAxis;
+        double spinSpeed = reset ? 0d : _spinSpeed;
         if (!reset && snapshot.Tick > _tick)
         {
             if (motionPath is not null) ValidatePath(motionPath, _lastBall.Center, snapshot.Ball.Center);
@@ -111,7 +119,10 @@ public sealed class GameScenePresenter
                     foreach (var segment in motionPath)
                         rotation = Roll(rotation, segment.End - segment.Start, snapshot.Ball);
             }
+            else
+                rotation = Spin(rotation, spinAxis, spinSpeed, snapshot.SimulationSeconds - _simulationSeconds);
         }
+        if (snapshot.Ball.Grounded) (spinAxis, spinSpeed) = GroundSpin(snapshot.Ball);
 
         // Валидация завершена до изменения Scene и внутреннего состояния Presenter
         var collected = new HashSet<string>(snapshot.CollectedCoinIds, StringComparer.Ordinal);
@@ -131,6 +142,9 @@ public sealed class GameScenePresenter
         _sessionId = snapshot.SessionId;
         _tick = snapshot.Tick;
         _lastBall = snapshot.Ball;
+        _simulationSeconds = snapshot.SimulationSeconds;
+        _spinAxis = spinAxis;
+        _spinSpeed = spinSpeed;
     }
 
     private SceneObject Add(MeshData mesh, MaterialData material)
@@ -156,6 +170,27 @@ public sealed class GameScenePresenter
         Vector3 axis = Vector3.Normalize(Vector3.Cross(normal, tangent));
         float angle = (float)Math.IEEERemainder((double)distance / ball.Radius, Math.Tau);
         return Quaternion.Normalize(Quaternion.Concatenate(rotation, Quaternion.CreateFromAxisAngle(axis, angle)));
+    }
+
+    // В воздухе сохраняется угловая скорость последнего контакта, камера её не задаёт.
+    // double-компоненты не переполняются при конечной float-скорости snapshot.
+    private static (Vector3 Axis, double Speed) GroundSpin(BallState ball)
+    {
+        Vector3 n = Vector3.Normalize(ball.GroundNormal), v = ball.Velocity;
+        double x = (double)n.Y * v.Z - (double)n.Z * v.Y;
+        double y = (double)n.Z * v.X - (double)n.X * v.Z;
+        double z = (double)n.X * v.Y - (double)n.Y * v.X;
+        double length = Math.Sqrt(x * x + y * y + z * z);
+        if (length < 1e-7d) return (Vector3.Zero, 0d);
+        return (new((float)(x / length), (float)(y / length), (float)(z / length)), length / ball.Radius);
+    }
+
+    private static Quaternion Spin(Quaternion rotation, Vector3 axis, double speed, double seconds)
+    {
+        if (speed == 0d || seconds <= 0d) return rotation;
+        // Сначала модуль по периоду: speed*seconds может переполниться на допустимом double-времени.
+        double angle = Math.IEEERemainder(seconds, Math.Tau / speed) * speed;
+        return Quaternion.Normalize(Quaternion.Concatenate(rotation, Quaternion.CreateFromAxisAngle(axis, (float)angle)));
     }
 
     private static void ValidatePath(IReadOnlyList<MotionSegment> path, Vector3 start, Vector3 end)

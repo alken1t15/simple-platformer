@@ -1,7 +1,7 @@
 # Ball Adventure: контракты App и расширений движка v1
 
 Контракт задачи #3 принят в PR #22 (02.11.2026); реализация остаётся задачами команды. Контракт будущей реализации, не заявление о текущих возможностях.
-Core определён в [core-contract-v1.md](core-contract-v1.md); принятый engine gitlink — `04cd6fd441e7974060d5a47b69e49c3598bb047d` (overlay PR53/game PR35).
+Core определён в [core-contract-v1.md](core-contract-v1.md); принятый engine gitlink — `013e3e29251ae020c9ced5fdeb46ef3d10a7b403` (overlay принят ранее в PR53/game PR35, метрики/значок — engine PR58).
 В #6 реализованы [ввод/runner/камера и оконный host](input-camera.md): NativeInputAdapter
 переносит публичный InputSnapshot в CPU-границу AppInputSnapshot, InputRouter имеет оба overload.
 `--play` связывает GameSession/LevelFlow с окном и курсором; AppScreen используется из LevelFlow.

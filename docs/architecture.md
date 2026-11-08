@@ -2,7 +2,7 @@
 
 Статус: проект реализации, не описание готовой игры. База — три проекта .NET10;
 публичные Engine3D.Core/OpenGL используются через submodule на
-`04cd6fd441e7974060d5a47b69e49c3598bb047d`. Движок не редактируется внутри submodule.
+`013e3e29251ae020c9ced5fdeb46ef3d10a7b403`. Движок не редактируется внутри submodule.
 
 ```text
 Platformer.App → Platformer.Core (только стандартная .NET)

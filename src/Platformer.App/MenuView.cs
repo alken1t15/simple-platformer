@@ -10,7 +10,8 @@ public readonly record struct MenuRect(float X, float Y, float Width, float Heig
         && point.Y >= Y && point.Y < Y + Height;
 }
 
-public readonly record struct MenuPanel(MenuRect Bounds, ColorRgba Color);
+public enum MenuPanelKind { Flat, Backdrop, Sheet, Control, Focus, Track, Fill }
+public readonly record struct MenuPanel(MenuRect Bounds, ColorRgba Color, MenuPanelKind Kind = MenuPanelKind.Flat);
 public readonly record struct MenuText(Vector2 Position, string Text, float PixelHeight, ColorRgba Color);
 public readonly record struct MenuImage(MenuRect Bounds, TextureData Texture);
 public enum MenuControlKind { Button, Level, Volume, Skin }

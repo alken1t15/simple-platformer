@@ -1,3 +1,4 @@
+using Engine3D.Core;
 using System.Numerics;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Platformer.App;
@@ -27,7 +28,10 @@ public sealed class SkinCatalogTests
             {
                 host.RefreshView(size.X, size.Y);
                 var overlay = MenuOverlayAdapter.Build(host.View, visual);
-                Assert.HasCount(9, overlay.Images.ToArray());
+                var previewBounds = host.View.Controls.Where(c => c.PreviewBounds is not null)
+                    .Select(c => c.PreviewBounds!.Value).ToArray();
+                Assert.HasCount(9, overlay.Images.ToArray().Where(image => previewBounds.Any(b =>
+                    image.Bounds == new UiRect(b.X, b.Y, b.Width, b.Height))).ToArray());
                 var control = host.View.Controls.Single(c => c.Id == "skin:" + skin.Id);
                 Assert.IsNotNull(control.PreviewBounds);
             }

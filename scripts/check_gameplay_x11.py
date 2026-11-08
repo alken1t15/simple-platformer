@@ -22,7 +22,9 @@ import time
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", default="artifacts/input-camera", help="Каталог лога и снимка сцены.")
-    output = Path(parser.parse_args().output)
+    parser.add_argument("--visual", action="store_true", help="Проверить тропическое оформление сцены и меню.")
+    args = parser.parse_args()
+    output = Path(args.output)
     output.mkdir(parents=True, exist_ok=True)
     trace = (output / "trace.log").open("w", encoding="utf-8")
     if not sys.platform.startswith("linux") or not os.environ.get("DISPLAY"):
@@ -189,7 +191,10 @@ def main():
         assembly = Path(__file__).resolve().parents[1] / "src/Platformer.App/bin/Release/net10.0/Platformer.App.dll"
         env = dict(os.environ, XDG_SESSION_TYPE="x11", ALSOFT_DRIVERS="null", XDG_DATA_HOME=progress_directory.name)
         env.pop("WAYLAND_DISPLAY", None)
-        process = subprocess.Popen(["dotnet", str(assembly), "--play", "--trace-input"], stdout=subprocess.PIPE,
+        command = ["dotnet", str(assembly), "--play", "--trace-input"]
+        if args.visual:
+            command.append("--visual")
+        process = subprocess.Popen(command, stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT, text=True, env=env)
         reader = threading.Thread(target=read_lines, daemon=True)
         reader.start()

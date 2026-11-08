@@ -17,7 +17,7 @@
 | [#7](https://github.com/alken1t15/simple-platformer/issues/7) | [Модели](content-design.md#models), [snapshot](core-contract-v1.md) | 3D-представление и скины; экраны и HUD принадлежат #19 |
 | [#8](https://github.com/alken1t15/simple-platformer/issues/8) | [Core: Step/reset](core-contract-v1.md), [переходы](app-engine-contract-v1.md#меню-и-переходы) | Сеанс/события/reset/LevelFlow, итог маршрута без повторного начисления |
 | [#9](https://github.com/alken1t15/simple-platformer/issues/9) | [Core v1](core-contract-v1.md), [приёмка](acceptance.md), [матрица QA](qa-regression-matrix.md) | Независимые CPU-регрессии; нет утверждений о GPU/слышимости |
-| [#10](https://github.com/alken1t15/simple-platformer/issues/10) | [App v1](app-engine-contract-v1.md), [CI/процесс](development-process.md), [приёмка](acceptance.md) | Проверенные стыки модулей и интеграционные сценарии |
+| [#10](https://github.com/alken1t15/simple-platformer/issues/10) | [App v1](app-engine-contract-v1.md), [CI/процесс](development-process.md), [приёмка](acceptance.md), [стыки](integration-qa.md) | Проверенные стыки модулей и интеграционные сценарии |
 | [#11](https://github.com/alken1t15/simple-platformer/issues/11) | [A01–20](acceptance.md), [содержание](content-design.md) | Реальное Linux-прохождение, вид/звук/меню с commit и PASS/FAIL/SKIP |
 | [#12](https://github.com/alken1t15/simple-platformer/issues/12) | [Запуск](../README.md), [Linux](development-process.md#linux-и-wsl), [ресурсы](content-design.md#audio) | Чистый clone/build/run и репетиция из другого cwd |
 | [#13](https://github.com/alken1t15/simple-platformer/issues/13) | [ТЗ](requirements.md), [календарь](schedule.md), [ревью](development-process.md) | Интеграция и сдача Team Lead; принятые PR и реальные протоколы |

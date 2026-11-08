@@ -232,7 +232,8 @@ public sealed class MenuControllerTests
         var f = new Fixture();
         f.Click("skins");
         foreach (var skin in GameSkins.All)
-            Assert.IsTrue(f.View().Panels.Any(panel => panel.Color == skin.Material.BaseColor));
+            Assert.IsTrue(MenuOverlayAdapter.Build(f.View()).Images.ToArray()
+                .Any(image => ReferenceEquals(image.Texture, skin.Preview)));
         f.Click("skin:orange");
         Assert.AreEqual("orange", f.Flow.UserSettings.SkinId);
         f.Click("back");

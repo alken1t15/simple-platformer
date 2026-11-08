@@ -18,11 +18,14 @@ public sealed class LevelFlow
     private readonly Action resetTransientState;
     private readonly Action stopGameplayAudio;
     private readonly Action<bool> setAudioPaused;
+    private readonly bool visual;
     private GameSession? session;
     private AppScreen returnScreen = AppScreen.MainMenu;
     private readonly List<LevelResult> completed = [];
 
     public UserSettings UserSettings { get; }
+    public PlayerProgress Progress { get; }
+    public event Action? ProgressChanged;
     public AppScreen Screen { get; private set; } = AppScreen.MainMenu;
     public SessionSnapshot? Snapshot => session?.Snapshot;
     public GameScenePresenter? Presenter { get; private set; }
@@ -31,13 +34,16 @@ public sealed class LevelFlow
     public event Action? GameCompleted;
 
     public LevelFlow(LevelCatalog catalog, SimulationSettings settings, UserSettings userSettings,
-        Action? resetTransientState = null, Action? stopGameplayAudio = null, Action<bool>? setAudioPaused = null)
+        Action? resetTransientState = null, Action? stopGameplayAudio = null, Action<bool>? setAudioPaused = null,
+        bool visual = false, PlayerProgress? progress = null)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(userSettings);
         this.catalog = catalog;
+        Progress = progress ?? new PlayerProgress(catalog);
         this.settings = settings;
+        this.visual = visual;
         UserSettings = userSettings;
         this.resetTransientState = resetTransientState ?? (() => { });
         this.stopGameplayAudio = stopGameplayAudio ?? (() => { });
@@ -46,6 +52,7 @@ public sealed class LevelFlow
 
     public void Start(string levelId)
     {
+        if (!Progress.IsLevelUnlocked(levelId)) throw new InvalidOperationException("Финал требует 12 звёзд первых четырёх уровней");
         var (next, presenter) = Prepare(catalog.Get(levelId));
         ResetForTransition();
         completed.Clear();
@@ -69,6 +76,7 @@ public sealed class LevelFlow
         Require(AppScreen.LevelResult);
         var current = session!.Snapshot;
         string? nextId = catalog.GetNextId(current.LevelId);
+        if (nextId is not null && !Progress.IsLevelUnlocked(nextId)) nextId = null;
         var next = nextId is null ? default : Prepare(catalog.Get(nextId));
         var result = new LevelResult(current.LevelId, current.CoinCount, catalog.Get(current.LevelId).Coins.Count);
         ResetForTransition();
@@ -170,6 +178,8 @@ public sealed class LevelFlow
             _ => AppScreen.Playing,
         };
         Screen = next;
+        if (next == AppScreen.LevelResult && Progress.RecordCompletion(session.Snapshot.LevelId, session.Snapshot.CoinCount))
+            ProgressChanged?.Invoke();
         if (next != AppScreen.Playing) ResetForTransition();
     }
 
@@ -178,7 +188,7 @@ public sealed class LevelFlow
     private (GameSession Session, GameScenePresenter Presenter) Prepare(LevelDefinition level)
     {
         var next = new GameSession(level, settings);
-        var presenter = new GameScenePresenter(level);
+        var presenter = new GameScenePresenter(level, visual);
         presenter.Apply(next.Snapshot, GameSkins.Get(UserSettings.SkinId));
         return (next, presenter);
     }

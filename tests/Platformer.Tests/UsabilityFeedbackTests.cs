@@ -122,7 +122,7 @@ public sealed class UsabilityFeedbackTests
     }
 
     [TestMethod]
-    public void LegendNamesSpaceAndGroupsInputsByAction()
+    public void NavigationLegendDoesNotClutterMenuScreens()
     {
         var catalog = GameLevels.CreateCatalog();
         var flow = new LevelFlow(catalog, SimulationSettings.Default, new());
@@ -131,8 +131,9 @@ public sealed class UsabilityFeedbackTests
         {
             if (settings) flow.OpenSettings();
             var texts = menu.BuildView(800, 450).Texts.Select(text => text.Text).ToArray();
-            CollectionAssert.Contains(texts, "Enter / Space / Mouse click: select");
-            CollectionAssert.Contains(texts, "Tab / Shift+Tab: next / previous");
+            CollectionAssert.DoesNotContain(texts, "Enter / Space / Mouse click: select");
+            CollectionAssert.DoesNotContain(texts, "Tab / Shift+Tab: next / previous");
+            Assert.IsFalse(texts.Any(text => text.StartsWith("Up / Down: choose", StringComparison.Ordinal)));
         }
     }
 

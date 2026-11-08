@@ -48,10 +48,16 @@ SetClientSize в fullscreen запрещён: сначала SetFullscreen(false
 Input/cursor/audio adapters, меню/HUD и каталог Training Track/Turning Maze подключены;
 AudioCoordinator использует собственные PCM16 WAV, lifecycle описан в docs/game-audio.md.
 Settings / Music выбирает исходный loop (по умолчанию) или Exploration Theme Cleyton Kauffman
-под CC0; notices поставляются с аудио. Выбор хранится в текущем процессе. В паузе новый
+под CC0; notices поставляются с аудио. Выбор, громкость/Mute, открытый скин и подтверждённый режим/оконный размер сохраняются в settings-v1.json рядом с прогрессом. В паузе новый
 музыкальный voice запускается только после Continue, эффекты при смене трека не сбрасываются.
 С `--visual` MenuPanelKind задаёт роли панелей, TropicalMenuTheme применяет общую
 тёмно-бирюзовую тему меню/HUD; главное меню слева. Геометрия и hit-test остаются в MenuLayout.
+Легенды клавиш убраны из меню и Playing; управление — Settings → Controls.
+Controls — локальная подстраница MenuController внутри AppScreen.Settings, Back/Escape
+возвращает в Settings с прежним фокусом, сохраняя паузу/сеанс.
+Подписи кнопок центрируются только вертикально по OverlayTextMetrics.MeasureInkBounds;
+горизонтальные отступы сохранены. WindowBranding перед Run задаёт PNG 256×256 через
+Engine.SetWindowIcon (Windows/X11), ICO встроен в ресурсы Windows apphost.
 Overlay использует logical client pixels и встроенный ASCII-атлас; реальный framebuffer≠client
 HiDPI проверен автоматическим native Wayland compositor с framebuffer/client=2,
 включая реальные pointer coordinates/hit-test; physical монитор/устройство этим не подтверждаются.

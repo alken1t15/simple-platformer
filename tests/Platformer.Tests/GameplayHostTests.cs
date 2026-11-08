@@ -48,7 +48,10 @@ public sealed class GameplayHostTests
         Assert.AreEqual(4, result.Ticks);
         Assert.IsGreaterThan(0f, host.Flow.Snapshot!.Ball.Center.X);
         Assert.AreEqual(0f, host.Flow.Snapshot.Ball.Center.Z, 1e-5f);
-        Assert.AreEqual(host.Flow.Snapshot.Ball.Center, host.Flow.Presenter!.BallObject.Transform.Position);
+        var shown = host.Flow.Presenter!.BallObject.Transform.Position;
+        Assert.IsLessThanOrEqualTo(host.Flow.Snapshot.Ball.Velocity.Length() * (float)host.Frames.Clock.FixedStepSeconds + 1e-5f,
+            Vector3.Distance(host.Flow.Snapshot.Ball.Center, shown), "Отображение отстаёт не больше одного physics tick");
+        LevelDefinitionTests.Near(shown + new Vector3(0, 0.3f, 0), host.Camera.Target);
         Assert.AreSame(scene, host.Scene);
         CollectionAssert.AreEquivalent(host.Flow.Presenter.Scene.Objects.ToArray(), scene.Objects.ToArray());
         host.Camera.Validate();

@@ -5,11 +5,15 @@ namespace Platformer.App;
 /// <summary>Только внешний вид: радиус, масса и другие физические настройки отсутствуют.</summary>
 public sealed class SkinDefinition
 {
+    private readonly Lazy<TextureData> preview;
     public string Id { get; }
     public string DisplayName { get; }
     public MaterialData Material { get; }
+    public ColorRgba SwatchColor { get; }
+    public int RequiredStars { get; }
+    public TextureData Preview => preview.Value;
 
-    public SkinDefinition(string id, string displayName, MaterialData material)
+    public SkinDefinition(string id, string displayName, MaterialData material, ColorRgba? swatchColor = null, int requiredStars = 0)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
@@ -18,6 +22,13 @@ public sealed class SkinDefinition
         Id = id;
         DisplayName = displayName;
         Material = material;
+        ArgumentOutOfRangeException.ThrowIfNegative(requiredStars);
+        RequiredStars = requiredStars;
+        SwatchColor = swatchColor ?? material.BaseColor;
+        if (!new[] { SwatchColor.R, SwatchColor.G, SwatchColor.B, SwatchColor.A }
+            .All(c => float.IsFinite(c) && c >= 0 && c <= 1))
+            throw new ArgumentException("Некорректный цвет образца", nameof(swatchColor));
+        preview = new(() => SkinTextures.Preview(Material));
     }
 }
 
@@ -46,6 +57,13 @@ public static class GameSkins
         [
             new("classic-blue", "Classic blue", new MaterialData { BaseColor = new ColorRgba(0.12f, 0.48f, 1f), Texture = texture }),
             new("orange", "Orange", new MaterialData { BaseColor = new ColorRgba(1f, 0.38f, 0.06f), Texture = texture }),
+            new("emerald", "Emerald stars", new MaterialData { Texture = SkinTextures.StarBall(new(75, 246, 107)) }, new(0.29f, 0.96f, 0.42f)),
+            new("violet", "Violet stars", new MaterialData { Texture = SkinTextures.StarBall(new(177, 111, 250)) }, new(0.69f, 0.44f, 0.98f)),
+            new("basketball", "Basketball", new MaterialData { Texture = SkinTextures.Basketball() }, new(0.95f, 0.52f, 0.16f)),
+            new("football", "Football", new MaterialData { Texture = SkinTextures.Football() }, new(0.98f, 0.98f, 0.92f)),
+            new("neon", "Neon circuit", new MaterialData { Texture = SkinTextures.RewardBall(0) }, new(0.2f, 1f, 0.9f), 6),
+            new("aurora", "Aurora", new MaterialData { Texture = SkinTextures.RewardBall(1) }, new(0.7f, 0.4f, 1f), 9),
+            new("champion", "Golden champion", new MaterialData { Texture = SkinTextures.RewardBall(2) }, new(1f, 0.8f, 0.15f), 15),
         ]);
     }
 }

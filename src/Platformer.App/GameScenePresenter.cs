@@ -13,6 +13,13 @@ public sealed class GameScenePresenter
     private readonly Dictionary<string, SceneObject> _coins = new(StringComparer.Ordinal);
     private readonly Dictionary<string, SceneObject> _hazards = new(StringComparer.Ordinal);
     private readonly HashSet<string> _hiddenCoins = new(StringComparer.Ordinal);
+    private readonly VisualScene? _visual;
+    private readonly Dictionary<string, (int Index, SceneObject[] Parts, MaterialData[] Materials)> _fragile = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _hiddenPlatforms = new(StringComparer.Ordinal);
+    private readonly HashSet<int> _unshadowedSurfaceIndices = [];
+    private static readonly MaterialData FragileBody = new() { BaseColor = new(1f, 0.72f, 0.35f) };
+    private static readonly MaterialData WarningA = new() { BaseColor = new(1f, 0.43f, 0.12f) };
+    private static readonly MaterialData WarningB = new() { BaseColor = new(1f, 0.8f, 0.18f) };
     private Guid _sessionId;
     private long _tick;
     private BallState _lastBall;
@@ -27,22 +34,32 @@ public sealed class GameScenePresenter
     public IReadOnlyDictionary<string, SceneObject> HazardObjects { get; }
     public IReadOnlyList<SceneObject> FinishObjects { get; }
 
-    public GameScenePresenter(LevelDefinition level)
+    public GameScenePresenter(LevelDefinition level, bool visual = false)
     {
         ArgumentNullException.ThrowIfNull(level);
         _level = level;
         bool maze = level.Id == "level2";
-        var track = new MaterialData { BaseColor = maze
-            ? new ColorRgba(0.25f, 0.25f, 0.3f) : new ColorRgba(0.72f, 0.75f, 0.8f) };
         var accent = new MaterialData { BaseColor = new ColorRgba(0.55f, 0.25f, 0.75f) };
-        var gold = new MaterialData { BaseColor = new ColorRgba(1f, 0.72f, 0.08f) };
-        var danger = new MaterialData { BaseColor = new ColorRgba(0.9f, 0.08f, 0.06f) };
-        var green = new MaterialData { BaseColor = new ColorRgba(0.08f, 0.85f, 0.25f) };
-        foreach (var surface in level.Surfaces)
+        _visual = visual ? new VisualScene(Scene, level.Surfaces) : null;
+        var track = visual ? VisualScene.Track : new MaterialData { BaseColor = maze ? new ColorRgba(0.25f, 0.25f, 0.3f) : new ColorRgba(0.72f, 0.75f, 0.8f) };
+        var gold = visual ? VisualScene.Gold : new MaterialData { BaseColor = new ColorRgba(1f, 0.72f, 0.08f) };
+        var danger = visual ? VisualScene.Danger : new MaterialData { BaseColor = new ColorRgba(0.9f, 0.08f, 0.06f) };
+        var green = visual ? VisualScene.Finish : new MaterialData { BaseColor = new ColorRgba(0.08f, 0.85f, 0.25f) };
+        for (int surfaceIndex = 0; surfaceIndex < level.Surfaces.Count; surfaceIndex++)
         {
-            var item = Add(GameMeshes.Box, track);
+            var surface = level.Surfaces[surfaceIndex];
+            int firstPart = Scene.Objects.Count;
+            bool fragile = surface.CollapseDelaySeconds > 0;
+            var item = Add(visual ? VisualScene.RoadBody : GameMeshes.Box, fragile ? FragileBody : track);
             SetBounds(item, surface.Bounds);
             _surfaces.Add(surface.Id, item);
+            _visual?.SurfaceDetail(surfaceIndex, surface.Bounds, fragile);
+            if (fragile)
+            {
+                _unshadowedSurfaceIndices.Add(surfaceIndex);
+                var parts = Scene.Objects.Skip(firstPart).ToArray();
+                _fragile.Add(surface.Id, (surfaceIndex, parts, parts.Select(part => part.Material).ToArray()));
+            }
         }
         if (maze)
         {
@@ -56,16 +73,16 @@ public sealed class GameScenePresenter
         }
         foreach (var coin in level.Coins)
         {
-            var item = Add(GameMeshes.Coin, gold);
+            var item = Add(visual ? VisualScene.Coin : GameMeshes.Coin, gold);
             item.Transform.Position = coin.Center;
             item.Transform.Scale = new Vector3(coin.Radius);
             _coins.Add(coin.Id, item);
         }
         foreach (var hazard in level.Hazards)
         {
-            _hazards.Add(hazard.Id, Add(GameMeshes.Box, danger));
+            _hazards.Add(hazard.Id, Add(GameMeshes.Box, hazard.AngularSpeed == 0 && visual ? VisualScene.StaticDanger : danger));
             // Декоративная ось не добавляет коллайдер, позу самой балки задаёт snapshot
-            var axle = Add(GameMeshes.Box, maze ? accent : track);
+            var axle = Add(visual ? VisualScene.SoftBox : GameMeshes.Box, maze ? accent : track);
             axle.Transform.Position = hazard.Pivot - Vector3.UnitY * 0.25f;
             axle.Transform.Scale = new Vector3(0.12f, 0.5f, 0.12f);
         }
@@ -78,7 +95,9 @@ public sealed class GameScenePresenter
         FramePart(new Vector3(0f, level.Finish.HalfExtents.Y, 0f),
             new Vector3(level.Finish.HalfExtents.X * 2f + thickness, thickness, thickness));
         FinishObjects = frame.AsReadOnly();
-        BallObject = Add(GameMeshes.Sphere, GameSkins.All[0].Material);
+        _visual?.FinishDetail(level.Finish);
+        BallObject = Add(visual ? VisualScene.Ball : GameMeshes.Sphere,
+            visual ? VisualScene.BallMaterial(GameSkins.All[0]) : GameSkins.All[0].Material);
         BallObject.Transform.Position = level.Spawn;
         BallObject.Transform.Scale = new Vector3(SimulationSettings.Default.BallRadius);
         SurfaceObjects = new ReadOnlyDictionary<string, SceneObject>(_surfaces);
@@ -87,7 +106,7 @@ public sealed class GameScenePresenter
 
         void FramePart(Vector3 localCenter, Vector3 size)
         {
-            var item = Add(GameMeshes.Box, green);
+            var item = Add(visual ? VisualScene.SoftBox : GameMeshes.Box, green);
             item.Transform.Position = level.Finish.ToWorld(localCenter);
             item.Transform.Rotation = level.Finish.Orientation;
             item.Transform.Scale = size;
@@ -96,7 +115,7 @@ public sealed class GameScenePresenter
 
         void Rail(Vector3 position, Vector3 size)
         {
-            var item = Add(GameMeshes.Box, accent);
+            var item = Add(visual ? VisualScene.SoftBox : GameMeshes.Box, accent);
             item.Transform.Position = position;
             item.Transform.Scale = size;
         }
@@ -124,6 +143,9 @@ public sealed class GameScenePresenter
         if (snapshot.CollectedCoinIds.Any(id => !_coins.ContainsKey(id))
             || snapshot.Hazards.Count != _hazards.Count || snapshot.Hazards.Any(pose => !_hazards.ContainsKey(pose.Id)))
             throw new ArgumentException("Неизвестные или отсутствующие ID объектов", nameof(snapshot));
+
+        if (snapshot.Platforms.Count != _fragile.Count || snapshot.Platforms.Any(state => !_fragile.ContainsKey(state.Id)))
+            throw new ArgumentException("Неизвестные или отсутствующие платформы", nameof(snapshot));
 
         Quaternion rotation = reset ? Quaternion.Identity : BallObject.Transform.Rotation;
         var spinAxis = reset ? Vector3.Zero : _spinAxis;
@@ -154,11 +176,37 @@ public sealed class GameScenePresenter
             }
             else if (_hiddenCoins.Remove(id)) Scene.Add(item);
         }
+        foreach (var state in snapshot.Platforms)
+        {
+            var group = _fragile[state.Id];
+            bool wasHidden = _hiddenPlatforms.Contains(state.Id);
+            if (state.Collapsed && !wasHidden)
+            {
+                foreach (var part in group.Parts) Scene.Remove(part);
+                _hiddenPlatforms.Add(state.Id);
+                _unshadowedSurfaceIndices.Add(group.Index);
+            }
+            else if (!state.Collapsed && wasHidden)
+            {
+                foreach (var part in group.Parts) Scene.Add(part);
+                _hiddenPlatforms.Remove(state.Id);
+            }
+            bool flash = ((int)((snapshot.SimulationSeconds - (state.TriggeredAtSeconds ?? 0)) * 8) & 1) == 0;
+            for (int i = 0; i < group.Parts.Length; i++)
+                group.Parts[i].Material = state.TriggeredAtSeconds is null ? group.Materials[i]
+                    : _visual is not null ? (flash ? VisualScene.CrumbleWarningA : VisualScene.CrumbleWarningB)
+                    : flash ? WarningA : WarningB;
+        }
         foreach (var pose in snapshot.Hazards) SetBounds(_hazards[pose.Id], pose.Bounds);
         BallObject.Transform.Position = snapshot.Ball.Center;
         BallObject.Transform.Scale = new Vector3(snapshot.Ball.Radius);
         BallObject.Transform.Rotation = rotation;
-        BallObject.Material = skin.Material;
+        BallObject.Material = _visual is not null ? VisualScene.BallMaterial(skin) : skin.Material;
+        if (_visual is not null)
+        {
+            VisualScene.AnimateCoins(_coins, snapshot.SimulationSeconds);
+            _visual.UpdateContactShadow(snapshot.Ball, snapshot.SimulationSeconds, _unshadowedSurfaceIndices);
+        }
         _sessionId = snapshot.SessionId;
         _tick = snapshot.Tick;
         _lastBall = snapshot.Ball;

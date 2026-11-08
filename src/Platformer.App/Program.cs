@@ -74,12 +74,16 @@ try
         {
             var appInput = NativeInputAdapter.Map(input);
             var client = engine.ClientSize;
-            var limits = engine.ClientSizeLimits;
+            var limits = engine.WindowedClientSizeLimits;
+            var fullscreenSize = engine.FullscreenSize;
             game.Menu.Window.Synchronize(client.Width, client.Height, limits.MinimumWidth, limits.MinimumHeight,
-                limits.MaximumWidth, limits.MaximumHeight);
+                limits.MaximumWidth, limits.MaximumHeight, engine.IsFullscreen, fullscreenSize.Width, fullscreenSize.Height);
             var frameResult = !smoke ? game.Advance(appInput, frameSeconds, client.Width, client.Height) : default;
-            if (game.Menu.Window.TakeRequest() is { } resolution)
-                engine.SetClientSize(resolution.Width, resolution.Height);
+            if (game.Menu.Window.TakeDisplayRequest() is { } display)
+            {
+                engine.SetFullscreen(display.Fullscreen);
+                if (!display.Fullscreen) engine.SetClientSize(display.Resolution.Width, display.Resolution.Height);
+            }
             if (smoke) game.RefreshView(client.Width, client.Height);
             engine.SetOverlay(MenuOverlayAdapter.Build(game.View));
             var cursorMode = game.CaptureRequested ? CursorMode.Captured : CursorMode.Normal;
@@ -104,6 +108,7 @@ try
                     pointerX = appInput.PointerPosition.X, pointerY = appInput.PointerPosition.Y,
                     width = engine.FramebufferSize.Width, height = engine.FramebufferSize.Height,
                     clientWidth = client.Width, clientHeight = client.Height,
+                    fullscreen = engine.IsFullscreen, fullscreenWidth = fullscreenSize.Width, fullscreenHeight = fullscreenSize.Height,
                     controls = game.View.Controls.Select(control => new
                     {
                         id = control.Id, label = control.Label, selected = control.Selected,

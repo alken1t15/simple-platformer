@@ -38,6 +38,9 @@ def main():
     bind(x, "XOpenDisplay", pointer, c.c_char_p)
     bind(x, "XCloseDisplay", c.c_int, pointer)
     bind(x, "XDefaultRootWindow", window, pointer)
+    bind(x, "XDefaultScreen", c.c_int, pointer)
+    bind(x, "XDisplayWidth", c.c_int, pointer, c.c_int)
+    bind(x, "XDisplayHeight", c.c_int, pointer, c.c_int)
     bind(x, "XQueryTree", c.c_int, pointer, window, c.POINTER(window), c.POINTER(window), c.POINTER(c.POINTER(window)), c.POINTER(c.c_uint))
     bind(x, "XFetchName", c.c_int, pointer, window, c.POINTER(pointer))
     bind(x, "XFree", c.c_int, pointer)
@@ -80,6 +83,8 @@ def main():
     if not display:
         raise RuntimeError("Не удалось открыть DISPLAY.")
     root = x.XDefaultRootWindow(display)
+    screen = x.XDefaultScreen(display)
+    screen_width, screen_height = x.XDisplayWidth(display, screen), x.XDisplayHeight(display, screen)
     old_focus, revert = window(), c.c_int()
     x.XGetInputFocus(display, c.byref(old_focus), c.byref(revert))
     rr, child = window(), window()
@@ -280,7 +285,7 @@ def main():
         until(lambda f: f["clientWidth"] == 800 and f["clientHeight"] == 450, "minimum resize constraint")
         x.XResizeWindow(display, native, 10000, 10000)
         x.XFlush(display)
-        until(lambda f: 800 <= f["clientWidth"] <= 1280 and 450 <= f["clientHeight"] <= 800, "maximum resize constraint")
+        until(lambda f: 800 <= f["clientWidth"] <= screen_width and 450 <= f["clientHeight"] <= screen_height, "maximum resize constraint")
         x.XResizeWindow(display, native, 800, 450)
         x.XFlush(display)
         until(lambda f: f["clientWidth"] == 800 and f["clientHeight"] == 450, "menu resize logical geometry")
@@ -306,6 +311,22 @@ def main():
         until(lambda f: any(control["label"] == "Resolution: < 1024 x 576 >" for control in f["controls"]), "resolution keyboard selection")
         click_control("apply-resolution", "Settings")
         until(lambda f: f["clientWidth"] == 1024 and f["clientHeight"] == 576, "apply keyboard resolution")
+        assert_fixed_size(1024, 576)
+        # Fullscreen uses the full monitor, not its windowed work area. Same scene/session/menu.
+        click_control("display-mode", "Settings")
+        until(lambda f: any(control["label"] == "Display: < Fullscreen >" for control in f["controls"]), "select fullscreen")
+        assert not collect(0.05)[-1]["fullscreen"], "Mode selection must wait for Apply"
+        click_control("apply-resolution", "Settings")
+        full = until(lambda f: f["fullscreen"] and f["clientWidth"] == f["fullscreenWidth"]
+                     and f["clientHeight"] == f["fullscreenHeight"], "fullscreen desktop mode")
+        assert full["clientWidth"] == screen_width and full["clientHeight"] == screen_height, "Expected the full Xvfb screen"
+        print(f"PASS: Settings Apply fullscreen {screen_width}x{screen_height}, native monitor size")
+        capture("settings-fullscreen")
+        assert full["screen"] == "Settings" and full["audioVolume"] == 0.45
+        click_control("display-mode", "Settings")
+        click_control("apply-resolution", "Settings")
+        until(lambda f: not f["fullscreen"] and f["clientWidth"] == 1024 and f["clientHeight"] == 576,
+              "restore windowed selection")
         assert_fixed_size(1024, 576)
         capture("settings")
         click_control("back", "MainMenu")

@@ -125,6 +125,8 @@ public sealed class MenuController
             SetVolume(flow.UserSettings.MasterVolume + Math.Sign(menu.HorizontalStep) * 0.05f);
         if (menu.HorizontalStep != 0 && option.Action == MenuAction.Resolution)
             Window.Cycle(menu.HorizontalStep);
+        if (menu.HorizontalStep != 0 && option.Action == MenuAction.DisplayMode)
+            Window.ToggleMode();
         return default;
     }
 
@@ -132,6 +134,7 @@ public sealed class MenuController
     {
         switch (option.Action)
         {
+            case MenuAction.DisplayMode: Window.ToggleMode(); break;
             case MenuAction.Resolution: Window.Cycle(1); break;
             case MenuAction.ApplyResolution: Window.RequestApply(); break;
             case MenuAction.Play: flow.Start(catalog.Levels[0].Id); return true;
@@ -196,9 +199,11 @@ public sealed class MenuController
                     (level.Id == selectedLevelId ? "[x] " : "[ ] ") + HudModel.LevelNameFor(level.Id),
                     MenuAction.ChooseLevel, MenuControlKind.Level, level.Id))
                 .Concat([Button("start", "Start", MenuAction.Start), Back()]).ToArray()),
-            AppScreen.Settings => new("Settings", [$"Current window: {Window.Actual}", "Volume changes apply immediately."],
+            AppScreen.Settings => new("Settings", [$"Current window: {Window.Actual}",
+                $"Current mode: {(Window.ActualFullscreen ? "Fullscreen" : "Windowed")}"],
             [new("volume", $"Master volume: {MathF.Round(settings.MasterVolume * 100f):0}%", MenuAction.Volume, MenuControlKind.Volume),
              Button("mute", settings.Muted ? "Mute: ON" : "Mute: OFF", MenuAction.Mute),
+             Button("display-mode", $"Display: < {(Window.SelectedFullscreen ? "Fullscreen" : "Windowed")} >", MenuAction.DisplayMode),
              Button("resolution", $"Resolution: < {Window.Selected} >", MenuAction.Resolution),
              Button("apply-resolution", "Apply resolution", MenuAction.ApplyResolution), Back()]),
             AppScreen.SkinSelect => new("Choose a skin", ["Choose a sample, then Select to apply."],

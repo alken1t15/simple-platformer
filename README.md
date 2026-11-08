@@ -59,6 +59,10 @@ OpenAL null/silent-проверка не подтверждает слышимо
 
 ## Запуск
 
+**Windows/WSL:** [пошаговая инструкция](docs/windows-wsl.md) — сборка в WSL,
+прямой Windows-запуск и локальная OpenAL Soft для звука. Если через WSLg камера
+вращается слишком сильно, сравните с native Windows-запуском той же сборки.
+
 ```sh
 dotnet run --project src/Platformer.App -c Release --no-build
 dotnet run --project src/Platformer.App -c Release --no-build -- --play

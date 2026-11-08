@@ -6,6 +6,7 @@
 | DejaVu Sans Mono 2.37, встроенный ASCII-атлас движка | Растр/метрики из upstream PR #53; TTF не включён | https://dejavu-fonts.github.io/ | Bitstream Vera font license; DejaVu changes public domain. [Copyright и полный текст](external/engine/src/Engine3D.OpenGL/Assets/FONT-LICENSE.txt); atlas не объявляется MIT |
 | OpenTK.Audio.OpenAL | 4.9.4, транзитивно через Engine3D.Audio | https://github.com/opentk/opentk | MIT; подробности в `external/engine/THIRD_PARTY.md` |
 | OpenAL Soft | Системная Linux-библиотека `libopenal.so.1` (`libopenal1`); binary не включён | https://github.com/kcat/openal-soft | LGPL-2.0-or-later; upstream notices в `external/engine/THIRD_PARTY.md` |
+| OpenAL Soft для личного Windows-запуска | 1.25.2 Win64, устанавливается пользователем рядом с output по [инструкции](docs/windows-wsl.md); binary не включён | https://github.com/kcat/openal-soft/releases/tag/1.25.2 | LGPL-2.0-or-later; полный `COPYING` из архива сохраняется рядом с DLL |
 | libX11 | Системная `libX11.so.6` для физического keyboard rearm Linux/X11; binary не включён | https://gitlab.freedesktop.org/xorg/lib/libx11 | MIT/X11-варианты и notices системного пакета; `external/engine/THIRD_PARTY.md` |
 | libXtst (XTest) | Системная `libXtst.so.6`, только Python-драйвер native X11-проверок; binary не включён | https://gitlab.freedesktop.org/xorg/lib/libxtst | MIT/X11; notices системного пакета |
 | Microsoft.NET.Test.Sdk | 18.0.1 | https://github.com/microsoft/vstest | MIT |

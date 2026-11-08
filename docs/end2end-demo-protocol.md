@@ -27,6 +27,8 @@ git submodule update --init --recursive
     - Пример: `3385f487b8f670a0024c30561a5f22f1ca619173`
 - [ ] `git submodule status` печатает ` <SHA> external/engine <version>`
     - Пример: ` 04cd6fd441e7974060d5a47b69e49c3598bb047d external/engine (v1.0.0-9-g04cd6fd)`
+- [ ] `git -C external/engine status --porcelain` пуст: движок не изменён локально
+
 
 ## 3. Сборка по README без личных артефактов
 
@@ -35,20 +37,25 @@ git submodule update --init --recursive
 - [ ] `find . -name obj -not -path "./external/*"` — пусто
 
 Сборка, запуск тестов и других проверок:
+- [ ] `dotnet --version` — не ниже `10.0.112`
 - [ ] `dotnet restore Platformer.sln` — без ошибок
 - [ ] `dotnet build Platformer.sln -c Release --no-restore` — без ошибок и предупреждений
 - [ ] `dotnet test Platformer.sln -c Release --no-build` — все тесты пройдены (`N passed / 0 failed`)
 - [ ] `python3 scripts/check_docs.py` — PASS
 - [ ] `git diff --check` — чисто
 
-
 ## 4. Ресурсы из другого cwd
 
 Из корня клона запомнить путь к игре и запустить её из другого рабочего каталога:
 ```sh
 SIMPLE_PLATFORMER_ROOT="$PWD" # корень репо simple-platformer
-cd "$(mktemp -d)"             # переход в другую директорию
+cd "$(mktemp -d)"             # изменение cwd, чтобы он не совпадал с каталогом игры
 dotnet run --project "$SIMPLE_PLATFORMER_ROOT/src/Platformer.App" -c Release
+```
+
+Smoke-проверка без игрового ввода:
+```sh
+dotnet run --project "$SIMPLE_PLATFORMER_ROOT/src/Platformer.App" -c Release --no-build -- --smoke
 ```
 
 Опционально, проверить вручную, что все ресурсы имеются (из корня клона):
@@ -56,24 +63,25 @@ dotnet run --project "$SIMPLE_PLATFORMER_ROOT/src/Platformer.App" -c Release
 find src/Platformer.App/bin/Release/net10.0/Assets -type f | sort
 ```
 
-Ожидаемый вывод команд:
+Ожидаемый вывод команд (актуальный каталог main на `cb3c2583630a4aa0a647a22cb49f87feacca182d`):
 ```text
-src/Platformer.App/bin/Release/net10.0/Assets/Audio/LICENSE.txt
-src/Platformer.App/bin/Release/net10.0/Assets/Audio/README.md
+src/Platformer.App/bin/Release/net10.0/Assets/Audio/CC0-1.0.txt
 src/Platformer.App/bin/Release/net10.0/Assets/Audio/coin.wav
+src/Platformer.App/bin/Release/net10.0/Assets/Audio/exploration-theme-NOTICE.txt
+src/Platformer.App/bin/Release/net10.0/Assets/Audio/exploration-theme.wav
 src/Platformer.App/bin/Release/net10.0/Assets/Audio/fail.wav
 src/Platformer.App/bin/Release/net10.0/Assets/Audio/finish.wav
 src/Platformer.App/bin/Release/net10.0/Assets/Audio/jump.wav
+src/Platformer.App/bin/Release/net10.0/Assets/Audio/LICENSE.txt
 src/Platformer.App/bin/Release/net10.0/Assets/Audio/music.wav
+src/Platformer.App/bin/Release/net10.0/Assets/Audio/README.md
 src/Platformer.App/bin/Release/net10.0/Assets/FONT-LICENSE.txt
 ```
 
-Пять клипов — собственные PCM16 WAV проекта; `README.md` и `LICENSE.txt` в том же
-каталоге описывают источники. ASCII-атлас и шрифт поставляет движок: атлас встроен
-в `Engine3D.OpenGL`, а `FONT-LICENSE.txt` копируется в output его проектом.
-Ресурсы загружаются относительно `AppContext.BaseDirectory`, поэтому запуск из
-другого cwd не должен менять поведение. Если аудиоустройство недоступно, в stderr
-печатается `Audio: silent mode. <диагностика>`, и игра продолжает работу без звука.
+- Шесть WAV — пять собственных эффектов/фона и внешний `exploration-theme.wav`; `README.md`, `LICENSE.txt`, `CC0-1.0.txt` и `exploration-theme-NOTICE.txt` описывают источники.
+- Шрифт и ASCII-атлас поставляет движок: атлас встроен в `Engine3D.OpenGL`, `FONT-LICENSE.txt` копируется в output его проектом.
+- Внешних файлов текстур у игры нет: меши и текстуры скинов создаются процедурно.
+- Ресурсы загружаются относительно `AppContext.BaseDirectory`, поэтому запуск из другого cwd не должен менять поведение.
 
 ## 5. Репетиция демонстрационного маршрута
 

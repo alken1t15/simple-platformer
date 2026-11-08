@@ -19,6 +19,8 @@ public sealed class CliProcessIntegrationTests
     {
         string app = typeof(GameplayHost).Assembly.Location;
         string workingDirectory = Directory.CreateTempSubdirectory("platformer-cwd-").FullName;
+        // Пустой runtime-dir без сокета compositor: иначе Wayland найдёт wayland-0 через XDG_RUNTIME_DIR.
+        string? runtimeDirectory = withoutDisplay ? Directory.CreateTempSubdirectory("platformer-xdg-").FullName : null;
         try
         {
             var start = new ProcessStartInfo(Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet")
@@ -32,8 +34,10 @@ public sealed class CliProcessIntegrationTests
             foreach (var argument in arguments) start.ArgumentList.Add(argument);
             if (withoutDisplay)
             {
-                start.Environment.Remove("DISPLAY");
-                start.Environment.Remove("WAYLAND_DISPLAY");
+                // Заведомо недоступные адреса только для дочернего процесса; окружение тестовой сессии не меняется.
+                start.Environment["DISPLAY"] = ":65535";
+                start.Environment["WAYLAND_DISPLAY"] = "platformer-no-wayland";
+                start.Environment["XDG_RUNTIME_DIR"] = runtimeDirectory;
             }
             using var process = Process.Start(start) ?? throw new AssertFailedException("Процесс не запущен");
             var output = process.StandardOutput.ReadToEndAsync();
@@ -49,6 +53,7 @@ public sealed class CliProcessIntegrationTests
         finally
         {
             Directory.Delete(workingDirectory, recursive: true);
+            if (runtimeDirectory is not null) Directory.Delete(runtimeDirectory, recursive: true);
         }
     }
 
@@ -88,7 +93,7 @@ public sealed class CliProcessIntegrationTests
         Assert.AreEqual(1, run.ExitCode);
         StringAssert.StartsWith(run.Error, "Platformer: ");
         StringAssert.Contains(run.Error, "missing");
-        Assert.AreEqual(1, run.Error.TrimEnd().Split('\n').Length);
+        Assert.HasCount(1, run.Error.TrimEnd().Split('\n'));
     }
 
     [TestMethod]
@@ -97,7 +102,7 @@ public sealed class CliProcessIntegrationTests
     [DataRow("--play --trace-input")]
     public void LaunchWithoutDisplayEndsBoundedWithNonZeroExitAndDiagnostic(string arguments)
     {
-        if (!OperatingSystem.IsLinux()) Assert.Inconclusive("Отсутствие DISPLAY/WAYLAND_DISPLAY моделируется только на Linux");
+        if (!OperatingSystem.IsLinux()) Assert.Inconclusive("Недоступные X11/Wayland моделируются только на Linux");
         var run = Launch(arguments.Split(' '), withoutDisplay: true);
         Assert.AreEqual(1, run.ExitCode, run.Output);
         // Gameplay без --smoke сначала открывает аудио: строки ALSA/OpenAL пишет нативная библиотека.

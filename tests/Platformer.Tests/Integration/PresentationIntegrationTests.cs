@@ -76,7 +76,7 @@ public sealed class PresentationIntegrationTests
         CollectionAssert.AreEquivalent(secondPresenter.Scene.Objects.ToArray(), scene.Objects.ToArray());
         Assert.IsFalse(firstPresenter.Scene.Objects.Any(scene.Objects.Contains), "Объекты level1 убраны из сцены");
         Assert.IsTrue(driver.Flow.UserSettings.Muted);
-        Assert.AreEqual(volumeCalls, driver.AppliedVolumes.Count, "Переходы уровней не переприменяют громкость");
+        Assert.HasCount(volumeCalls, driver.AppliedVolumes, "Переходы уровней не переприменяют громкость");
         driver.Press(AppButtons.Escape);
         driver.Click("settings");
         Assert.AreEqual("Mute: ON", driver.Host.View.Controls.Single(control => control.Id == "mute").Label);

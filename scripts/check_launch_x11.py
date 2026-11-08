@@ -42,7 +42,8 @@ def alive(pid):
     try:
         # Detached children may briefly remain zombies until reaped by init.
         return Path(f"/proc/{pid}/stat").read_text().split(") ", 1)[1][0] != "Z"
-    except FileNotFoundError:
+    except (FileNotFoundError, ProcessLookupError):
+        # Процесс может исчезнуть уже после открытия /proc/pid/stat, перед read().
         return False
 
 display = x.XOpenDisplay(None)
@@ -134,9 +135,15 @@ try:
           + "detached Linux launcher from another cwd; terminal Ctrl+C survives; normal exit has no frame counter")
 finally:
     if game_pid and alive(game_pid):
-        os.kill(game_pid, signal.SIGTERM)
+        try:
+            os.kill(game_pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
     if parent and parent.poll() is None:
-        os.killpg(parent.pid, signal.SIGTERM)
+        try:
+            os.killpg(parent.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
         parent.wait(timeout=5)
     x.XCloseDisplay(display)
     if desktop_directory:

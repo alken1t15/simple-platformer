@@ -9,6 +9,11 @@
 
 Заполняется на машине прогона. Ниже — значения подтверждённого прогона 09.11.2026.
 
+По авторскому отчёту в PR #60 прогон выполнен на
+`23233dd3db812e8669943583a9357056af03ada3`. Уточнения ниже о временном профиле,
+12 звёздах и негативной проверке отсутствующего WAV добавлены при ревью
+09.11.2026; отдельный ручной PASS этих уточнений пока не записан.
+
 | Параметр | Значение прогона | Как посмотреть |
 | --- | --- | --- |
 | Дата прогона | `Mon Nov  9 13:20 MSK 2026` | `date` |
@@ -62,14 +67,18 @@ git submodule update --init --recursive
 ## 5. Ресурсы, запуск из другого cwd и диагностика
 
 - Ресурсы читаются от каталога сборки (`AppContext.BaseDirectory`), а не от текущего каталога, поэтому запуск из чужого cwd не должен приводить к ошибкам.
-- Если файл ресурса отсутствует, игра печатает `Platformer: Could not find file '...'` и завершается с кодом 1, поэтому пропажа ресурсов проверяется обычным запуском.
+- Если обязательный runtime-ресурс отсутствует, игра печатает диагностику `Platformer:` с путём файла и завершается с кодом 1. Точный текст сообщения зависит от ОС/локали. Это не относится к отсутствию сопровождающих LICENSE/README: их наличие проверяется отдельно в составе поставки.
 
 Запомнить путь к игре и запустить из другого каталога:
 
 ```sh
 SIMPLE_PLATFORMER_ROOT="$PWD" # корень репо simple-platformer
+# Отдельный профиль для всего маршрута и повторного запуска; личное сохранение не меняется.
+export XDG_DATA_HOME="$(mktemp -d)"
 cd "$(mktemp -d)"             # cwd больше не совпадает с проектом
 dotnet run --project "$SIMPLE_PLATFORMER_ROOT/src/Platformer.App" -c Release --no-build -- --visual
+game_exit_code=$?             # сохранить сразу после закрытия игры
+printf 'Game exit code: %s\n' "$game_exit_code"
 ```
 
 Опционально, проверить вручную, что все ресурсы имеются (из корня репо):
@@ -96,7 +105,44 @@ src/Platformer.App/bin/Release/net10.0/Assets/FONT-LICENSE.txt
 - Звуки — шесть WAV: пять собственных (монета, поражение, финиш, прыжок, основной фон) и второй музыкальный трек `exploration-theme.wav`.
 - `Assets/Branding/ball-adventure-window.png` — иконка окна игры.
 - Текстовые файлы — лицензии и описание источников.
-- Своих файлов текстур у игры нет: геометрия и текстуры скинов генерируются процедурно.  
+- Своих файлов текстур у игры нет: геометрия и текстуры скинов генерируются процедурно.
+
+### Негативная проверка обязательного ресурса
+
+Выполнять после штатного выхода, на временной копии полного output. Рабочая
+сборка и личный профиль не меняются. Переменная `SIMPLE_PLATFORMER_ROOT` задана выше.
+
+```sh
+resource_probe="$(mktemp -d)"
+cp -a "$SIMPLE_PLATFORMER_ROOT/src/Platformer.App/bin/Release/net10.0/." "$resource_probe/"
+mv "$resource_probe/Assets/Audio/jump.wav" "$resource_probe/Assets/Audio/jump.wav.saved"
+(
+    cd "$(mktemp -d)"
+    export XDG_DATA_HOME="$(mktemp -d)"
+    # Ветка if сохраняет ожидаемый ненулевой код даже в shell с set -e.
+    if dotnet "$resource_probe/Platformer.App.dll" --visual >"$resource_probe/missing-resource.log" 2>&1; then
+        resource_exit_code=0
+    else
+        resource_exit_code=$?
+    fi
+    printf 'Missing resource exit code: %s\n' "$resource_exit_code"
+    cat "$resource_probe/missing-resource.log"
+    test "$resource_exit_code" -eq 1 &&
+        grep -F 'Platformer:' "$resource_probe/missing-resource.log" &&
+        grep -F 'jump.wav' "$resource_probe/missing-resource.log"
+)
+# Восстановить файл и проверить штатное открытие меню, затем Exit (код 0).
+mv "$resource_probe/Assets/Audio/jump.wav.saved" "$resource_probe/Assets/Audio/jump.wav"
+(
+    cd "$(mktemp -d)"
+    export XDG_DATA_HOME="$(mktemp -d)"
+    dotnet "$resource_probe/Platformer.App.dll" --visual
+)
+```
+
+Ожидание негативной ветки: код 1 и диагностика с `Platformer:` и `jump.wav`.
+После восстановления — меню без ошибки отсутствующего файла, штатный выход с кодом 0.
+Логи в `resource_probe` сохранить вместе с exact SHA и окружением прогона.
 
 ## 6. Репетиция демонстрационного маршрута
 
@@ -110,10 +156,12 @@ src/Platformer.App/bin/Release/net10.0/Assets/FONT-LICENSE.txt
 2. Прохождение игры
     - Шаги:
         - Нажать на Play
-        - Пройти пять уровней
+        - В новом временном профиле пройти Training Track, Turning Maze, Jump Circuit и Island Circuit, собрав все монеты на каждом (по 3 звезды)
+        - После четвёртого уровня проверить сумму 12 звёзд первых четырёх локаций и открытие Sky Storm; нажать Next и пройти Sky Storm, затем Next
     - Проверки:
         - [ ] Выбор Play вызывает переход на первый уровень
-        - [ ] Прохождение очередного уровня и нажатие Next вызывает переход на следующий уровень
+        - [ ] Next после уровней 1–3 запускает следующий уровень; после 4 при 12 звёздах запускает Sky Storm; после 5 открывает GameComplete
+        - [ ] Если первых четырёх уровней недостаточно для 12 звёзд, Sky Storm остаётся закрыт, а Next после 4 открывает GameComplete; недостающие звёзды можно получить повторным прохождением через Levels
         - [ ] Уровни проходятся штатно: WASD, Space, Shift, сбор монет работают
         - [ ] Счетчик монет и подсчет звезд работают
         - [ ] В процессе игры слышна фоновая мелодия
@@ -144,10 +192,10 @@ src/Platformer.App/bin/Release/net10.0/Assets/FONT-LICENSE.txt
     - Проверки:
         - Окно с игрой закрылось, курсор освобожден
         - Процесс завершён (`pgrep -f Platformer.App` пусто), звук не висит, второго окна нет
-        - Код возврата 0 (`echo $?`)
+        - Сразу после выхода сохранён `game_exit_code=0` (см. команду в разделе 5); не проверять `$?` после `pgrep`, поскольку это уже код другой команды
 6. Сохранение состояния при перезапуске
     - Шаги:
-        - Повторно запустить игру
+        - Повторно запустить игру в том же терминале с тем же `XDG_DATA_HOME` из раздела 5, не создавая новый профиль
     - Проверки:
         - [ ] Выбранный скин шара сохранился (см. в Skins)
         - [ ] Настройки звука сохранились (см. в Settings)

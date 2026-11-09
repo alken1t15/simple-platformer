@@ -50,7 +50,7 @@ git submodule update --init --recursive
 ```sh
 SIMPLE_PLATFORMER_ROOT="$PWD" # корень репо simple-platformer
 cd "$(mktemp -d)"             # изменение cwd, чтобы он не совпадал с каталогом проекта
-dotnet run --project "$SIMPLE_PLATFORMER_ROOT/src/Platformer.App" -c Release
+dotnet run --project "$SIMPLE_PLATFORMER_ROOT/src/Platformer.App" -c Release --visual
 ```
 
 Smoke-проверка без игрового ввода:
@@ -58,12 +58,12 @@ Smoke-проверка без игрового ввода:
 dotnet run --project "$SIMPLE_PLATFORMER_ROOT/src/Platformer.App" -c Release --no-build -- --smoke
 ```
 
-Опционально, проверить вручную, что все ресурсы имеются (из корня клона):
+Опционально, проверить вручную, что все ресурсы имеются (из корня репо):
 ```sh
 find src/Platformer.App/bin/Release/net10.0/Assets -type f | sort
 ```
 
-Ожидаемый вывод команд (актуальный каталог main на `cb3c2583630a4aa0a647a22cb49f87feacca182d`):
+Ожидаемый вывод команд (актуальный каталог main на `1edd7d6e646360eddc16daf26d99394921ba79e4`):
 ```text
 src/Platformer.App/bin/Release/net10.0/Assets/Audio/CC0-1.0.txt
 src/Platformer.App/bin/Release/net10.0/Assets/Audio/coin.wav
@@ -75,13 +75,15 @@ src/Platformer.App/bin/Release/net10.0/Assets/Audio/jump.wav
 src/Platformer.App/bin/Release/net10.0/Assets/Audio/LICENSE.txt
 src/Platformer.App/bin/Release/net10.0/Assets/Audio/music.wav
 src/Platformer.App/bin/Release/net10.0/Assets/Audio/README.md
+src/Platformer.App/bin/Release/net10.0/Assets/Branding/ball-adventure-window.png
 src/Platformer.App/bin/Release/net10.0/Assets/FONT-LICENSE.txt
 ```
 
-- Шесть WAV — пять собственных эффектов/фона и внешний `exploration-theme.wav`; `README.md`, `LICENSE.txt`, `CC0-1.0.txt` и `exploration-theme-NOTICE.txt` описывают источники.
-- Шрифт и ASCII-атлас поставляет движок: атлас встроен в `Engine3D.OpenGL`, `FONT-LICENSE.txt` копируется в output его проектом.
-- Внешних файлов текстур у игры нет: меши и текстуры скинов создаются процедурно.
-- Ресурсы загружаются относительно `AppContext.BaseDirectory`, поэтому запуск из другого cwd не должен менять поведение.
+- Звуки — шесть WAV: пять собственных (монета, поражение, финиш, прыжок, основной фон) и второй музыкальный трек `exploration-theme.wav`.
+- `Assets/Branding/ball-adventure-window.png` — иконка окна игры.
+- Текстовые файлы — лицензии и описание источников.
+- Своих файлов текстур у игры нет: геометрия и текстуры скинов генерируются процедурно.
+- Все ресурсы читаются относительно каталога с игрой, поэтому смена рабочей директории запуска не должна приводить к ошибкам.
 
 ## 5. Репетиция демонстрационного маршрута
 
@@ -106,13 +108,17 @@ src/Platformer.App/bin/Release/net10.0/Assets/FONT-LICENSE.txt
         - [ ] Прыжок, сбор монет, завершение уровня сопровождаются звуковыми эффектами
 3. Дополнительные пункты Main menu (Settings, Skins, Levels)
     - Шаги:
-        - Убавить звук через Settings
-        - Перейти в Skins и выбрать оранжевый скин
+        - Убавить звук через Settings -> Master Volume
+        - Поменять музыку через Settings -> Music
+        - Поменять разрешение экрана через Settings -> Resolution -> Apply Resolution
+        - Перейти в Skins и поменять скин
         - Перейти сразу на второй уровень через Levels
     - Проверки:
-        - [ ] Звук фоновой мелодии и звуковых эффектов убавился
-        - [ ] Скин шара поменялся на оранжевый
         - [ ] Второй уровень загрузился без необходимости проходить первый
+        - [ ] Звук фоновой мелодии и звуковых эффектов убавился
+        - [ ] Мелодия на фоне изменилась
+        - [ ] Разрешение экрана изменилось
+        - [ ] Скин шара изменился
 4. Возможность поражения и рестарта
     - Шаги:
         - Перейти на второй уровень (уже выполнено после третьего этапа)
@@ -127,11 +133,11 @@ src/Platformer.App/bin/Release/net10.0/Assets/FONT-LICENSE.txt
         - Окно с игрой закрылось, курсор освобожден
         - Процесс завершён (`pgrep -f Platformer.App` пусто), звук не висит, второго окна нет
         - Код возврата 0 (`echo $?`)
-6. Повторный заход в игру
+6. Сохранение состояния при перезапуске
     - Шаги:
         - Повторно запустить игру
     - Проверки:
-        - [ ] Текущим скином является оранжевый скин (см. в Skins)
+        - [ ] Выбранный скин шара сохранился (см. в Skins)
         - [ ] Настройки звука сохранились (см. в Settings)
         - [ ] Разрешение экрана сохранилось (см. в Settings)
         - [ ] Количество заработанных звезд сохранилось (см. в Levels)

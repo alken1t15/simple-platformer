@@ -74,10 +74,19 @@ public sealed class GameplayHost
         if (_resetRequested || menuResult.ResetInput || Frames.Screen != Flow.Screen)
         {
             Frames.SetScreen(Flow.Screen, resetCamera);
+            Flow.Presenter?.ResetInterpolation();
             _resetRequested = false;
         }
-        if (resetCamera) ApplyCamera(Frames.Camera.Update(Vector2.Zero, Target, CurrentLevel, 0f));
-        else if (result.Camera is { } pose) ApplyCamera(pose);
+        if (Flow.Screen == AppScreen.Playing && Flow.Presenter is { } presenter)
+            presenter.InterpolateBall((float)Math.Clamp(Frames.Clock.AccumulatedSeconds / Frames.Clock.FixedStepSeconds, 0, 1));
+        if (resetCamera || result.Camera is not null)
+        {
+            var target = Flow.Presenter is { } current
+                ? current.BallObject.Transform.Position + new Vector3(0, 0.3f, 0) : Target;
+            var pose = Frames.Camera.Update(Vector2.Zero, target, CurrentLevel, 0f, Flow.Snapshot?.Platforms);
+            ApplyCamera(pose);
+            result = result with { Camera = pose };
+        }
         SynchronizeScene();
         RefreshView(clientWidth, clientHeight);
         if (_audio is not null)

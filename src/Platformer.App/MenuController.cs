@@ -18,6 +18,8 @@ public sealed class MenuController
     private AppScreen observedScreen;
     private int selectedIndex;
     private bool confirmingMainMenu;
+    private bool showingControls;
+    private int controlsReturnSelection;
     private int returnSelection;
     private bool resetInputRequested;
     private Vector2? pointer;
@@ -94,7 +96,8 @@ public sealed class MenuController
         if (menu.BackPressed)
         {
             bool resetInput = false;
-            if (confirmingMainMenu) { CancelMainMenu(); resetInput = true; }
+            if (showingControls) { ShowControls(false); resetInput = true; }
+            else if (confirmingMainMenu) { CancelMainMenu(); resetInput = true; }
             else if (flow.Screen is AppScreen.Failed or AppScreen.LevelResult)
             { RequestMainMenu(); resetInput = true; }
             else flow.Back();
@@ -159,7 +162,11 @@ public sealed class MenuController
             case MenuAction.Levels: flow.OpenLevelSelect(); break;
             case MenuAction.Settings: flow.OpenSettings(); break;
             case MenuAction.Skins: flow.OpenSkins(); break;
-            case MenuAction.Back: flow.Back(); break;
+            case MenuAction.Controls: ShowControls(true); break;
+            case MenuAction.Back:
+                if (showingControls) ShowControls(false);
+                else flow.Back();
+                break;
             case MenuAction.MainMenu: RequestMainMenu(); break;
             case MenuAction.CancelMainMenu: CancelMainMenu(); break;
             case MenuAction.ConfirmMainMenu:
@@ -193,6 +200,16 @@ public sealed class MenuController
 
     private void ApplyVolume() => applyMasterVolume(EffectiveVolume);
 
+    private void ShowControls(bool show)
+    {
+        if (show) controlsReturnSelection = selectedIndex;
+        showingControls = show;
+        selectedIndex = show ? 0 : controlsReturnSelection;
+        pointer = null;
+        pressedId = null;
+        resetInputRequested = true;
+    }
+
     private void RequestMainMenu()
     {
         if (flow.Snapshot is null) { flow.MainMenu(); return; }
@@ -219,6 +236,7 @@ public sealed class MenuController
         observedScreen = flow.Screen;
         selectedIndex = 0;
         confirmingMainMenu = false;
+        showingControls = false;
         pointer = null;
         pressedId = null;
         if (flow.Screen == AppScreen.Settings) Window.SelectActual();
@@ -231,6 +249,11 @@ public sealed class MenuController
         MenuOption Main() => Button("main-menu", "Main menu", MenuAction.MainMenu);
         MenuOption Retry() => Button("retry", "Retry", MenuAction.Restart);
         var settings = flow.UserSettings;
+        if (showingControls && flow.Screen == AppScreen.Settings)
+            return new("Controls", ["WASD - roll / move", "Mouse - rotate camera",
+                "Space - jump (hold to repeat)", "Shift - short boost", "R - restart level",
+                "Esc - pause / back", "Up / Down, Tab / Shift+Tab - menu",
+                "Left / Right - change setting", "Enter / Space / Mouse click - select"], [Back()], IsControlsPage: true);
         if (confirmingMainMenu)
             return new("Leave this run?", ["Best results stay. This run will end."],
                 [Button("cancel-main-menu", "Cancel", MenuAction.CancelMainMenu),
@@ -255,7 +278,8 @@ public sealed class MenuController
              Button("music", $"Music: < {MusicTracks.Get(settings.MusicTrackId).DisplayName} >", MenuAction.Music),
              Button("display-mode", $"Display: < {(Window.SelectedFullscreen ? "Fullscreen" : "Windowed")} >", MenuAction.DisplayMode),
              Button("resolution", $"Resolution: < {Window.Selected} >", MenuAction.Resolution),
-             Button("apply-resolution", "Apply resolution", MenuAction.ApplyResolution), Back()]),
+             Button("apply-resolution", "Apply resolution", MenuAction.ApplyResolution),
+             Button("controls", "Controls", MenuAction.Controls), Back()]),
             AppScreen.SkinSelect => new("Choose a skin", ["Select a skin to apply immediately."],
                 GameSkins.All.Select(skin => new MenuOption($"skin:{skin.Id}",
                     (skin.Id == settings.SkinId ? "[x] " : "[ ] ") + skin.DisplayName

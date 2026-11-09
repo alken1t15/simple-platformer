@@ -1,6 +1,6 @@
 # Движок: возможности и план расширений для Ball Adventure
 
-Закреплённый SHA: **`04cd6fd441e7974060d5a47b69e49c3598bb047d`**, обновление 08.11.2026.
+Закреплённый SHA: **`013e3e29251ae020c9ced5fdeb46ef3d10a7b403`**, обновление 08.11.2026.
 Он включает принятые [input/cursor PR #52](https://github.com/alken1t15/simple-3d-engine/pull/52)
 и [audio PR #51](https://github.com/alken1t15/simple-3d-engine/pull/51),
 а также [overlay PR #53](https://github.com/alken1t15/simple-3d-engine/pull/53).
@@ -157,3 +157,12 @@ UI/input/audio могут идти параллельно после фикса�
 Native nested Wayland scale=2: client960x640/framebuffer1920x1280 и GPU pixel test PASS;
 это проверка buffer scale, не физического HiDPI-монитора/мыши или FPS.
 Воспроизведение: [скрипт и ограничения](../external/engine/docs/client-size-wayland.md).
+
+## Метрики текста и значок окна
+
+Закреплён engine `013e3e29251ae020c9ced5fdeb46ef3d10a7b403` из
+[upstream PR #58](https://github.com/alken1t15/simple-3d-engine/pull/58).
+Он добавляет CPU `OverlayTextMetrics.MeasureInkBounds` и `Engine.SetWindowIcon` для
+Windows/X11; прежние input/overlay/audio/window APIs сохранены. Это подготовка
+зависимости: игровое выравнивание и подключение PNG выполняются отдельно через
+публичный API. На Wayland/macOS значок остаётся задачей desktop entry/app bundle.

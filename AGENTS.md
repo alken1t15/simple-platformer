@@ -32,7 +32,7 @@ docs/architecture.md и docs/project-scope.md; остальные докумен
 Обязательны две локации с переходами, WASD/Space/Shift/R, мышь, монеты, наклоны,
 вращающиеся препятствия, звук, меню уровней/громкости/скинов; цель — Linux.
 Параметры проектирования и готовность реализации различай по docs/requirements.md.
-Engine snapshot `04cd6fd441e7974060d5a47b69e49c3598bb047d` поддерживает клавиши/мышь/CursorMode,
+Engine snapshot `013e3e29251ae020c9ced5fdeb46ef3d10a7b403` поддерживает клавиши/мышь/CursorMode,
 отдельный Engine3D.Audio и OverlayFrame/SetOverlay (upstream PR #52/#51/#53), ClientSize (#54).
 Ограничения окна и SetClientSize/ClientSizeLimits (#55) подключены к Settings:
 800×450 минимум (уменьшается на маленьком экране), доступные размеры фильтруются;
@@ -48,10 +48,16 @@ SetClientSize в fullscreen запрещён: сначала SetFullscreen(false
 Input/cursor/audio adapters, меню/HUD и каталог Training Track/Turning Maze подключены;
 AudioCoordinator использует собственные PCM16 WAV, lifecycle описан в docs/game-audio.md.
 Settings / Music выбирает исходный loop (по умолчанию) или Exploration Theme Cleyton Kauffman
-под CC0; notices поставляются с аудио. Выбор хранится в текущем процессе. В паузе новый
+под CC0; notices поставляются с аудио. Выбор, громкость/Mute, открытый скин и подтверждённый режим/оконный размер сохраняются в settings-v1.json рядом с прогрессом. В паузе новый
 музыкальный voice запускается только после Continue, эффекты при смене трека не сбрасываются.
 С `--visual` MenuPanelKind задаёт роли панелей, TropicalMenuTheme применяет общую
 тёмно-бирюзовую тему меню/HUD; главное меню слева. Геометрия и hit-test остаются в MenuLayout.
+Легенды клавиш убраны из меню и Playing; управление — Settings → Controls.
+Controls — локальная подстраница MenuController внутри AppScreen.Settings, Back/Escape
+возвращает в Settings с прежним фокусом, сохраняя паузу/сеанс.
+Подписи кнопок центрируются только вертикально по OverlayTextMetrics.MeasureInkBounds;
+горизонтальные отступы сохранены. WindowBranding перед Run задаёт PNG 256×256 через
+Engine.SetWindowIcon (Windows/X11), ICO встроен в ресурсы Windows apphost.
 Overlay использует logical client pixels и встроенный ASCII-атлас; реальный framebuffer≠client
 HiDPI проверен автоматическим native Wayland compositor с framebuffer/client=2,
 включая реальные pointer coordinates/hit-test; physical монитор/устройство этим не подтверждаются.
@@ -59,6 +65,9 @@ Synthetic viewport scale=2 не заменяет такую проверку. Li
 с 25/25 монетами проверен автоматически; ручное полное прохождение/слышимый звук/FPS не заявлены.
 Новые расширения следуют docs/engine-integration.md и требуют upstream PR и точного gitlink.
 Сохраняй Y вверх, правую систему координат и матричные соглашения движка.
+GameplayHost интерполирует шар между physics ticks и направляет камеру на ту же
+визуальную позицию. Presenter хранит физическое вращение отдельно от render transform;
+не используй сглаженный transform как исходное состояние следующего tick.
 Карточки Levels/Skins сразу запускают уровень/применяют скин. Выход из попытки в MainMenu
 требует подтверждения с Cancel по умолчанию; последний вид уровня остаётся только фоном.
 В Playing удержание Space повторяет прыжок после приземления, в меню Space остаётся фронтом.

@@ -22,6 +22,7 @@ public sealed class WindowSettings
     public WindowResolution Actual { get; private set; } = new(960, 640);
     public WindowResolution Selected { get; private set; } = new(960, 640);
     public bool ActualFullscreen { get; private set; }
+    public WindowResolution WindowedActual => windowedActual;
     public bool SelectedFullscreen { get; private set; }
     public IReadOnlyList<WindowResolution> Choices { get; private set; } = Array.AsReadOnly(Presets);
 

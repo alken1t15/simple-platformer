@@ -155,7 +155,7 @@ HUD полностью реализуется в #19: данные из SessionS
 | LevelSelect | Четыре записи Training Track / Turning Maze / Jump Circuit / Island Circuit, Start выбранного, Back; все доступны сразу |
 | Settings | Master volume 0–100%, значение числом, mute с видимым состоянием, Back. Изменения немедленны |
 | SkinSelect | Шесть карточек с изображениями classic-blue/orange/emerald/violet/basketball/football, отметка выбора, Select, Back |
-| Playing / HUD | Имя уровня; Coins collected/total; Boost ready / active remaining / cooldown remaining; короткая подсказка WASD, Space, Shift, R, Esc на стартовом участке |
+| Playing / HUD | Имя уровня; Coins collected/total; Boost ready / active remaining / cooldown remaining. Управление вынесено в Settings → Controls, поверх игры подсказка не показывается |
 | Paused | Затемнённая игровая сцена; Continue, Restart, Settings, MainMenu. Из Settings возвращаемся в Paused |
 | Failed | Понятное сообщение о поражении; Retry, LevelSelect, MainMenu. R повторяет уровень |
 | LevelResult | Уровень пройден; collected/total; Next, Retry, MainMenu. После последнего Next ведёт в GameComplete |

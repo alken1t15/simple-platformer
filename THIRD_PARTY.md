@@ -2,7 +2,7 @@
 
 | Компонент | Версия | Источник | Лицензия |
 |---|---|---|---|
-| Simple 3D Engine | 04cd6fd441e7974060d5a47b69e49c3598bb047d (input/cursor + audio + overlay API) | https://github.com/alken1t15/simple-3d-engine | MIT; `external/engine/LICENSE` |
+| Simple 3D Engine | 013e3e29251ae020c9ced5fdeb46ef3d10a7b403 (input/cursor, audio, overlay, window/fullscreen, icon/text metrics) | https://github.com/alken1t15/simple-3d-engine | MIT; `external/engine/LICENSE` |
 | DejaVu Sans Mono 2.37, встроенный ASCII-атлас движка | Растр/метрики из upstream PR #53; TTF не включён | https://dejavu-fonts.github.io/ | Bitstream Vera font license; DejaVu changes public domain. [Copyright и полный текст](external/engine/src/Engine3D.OpenGL/Assets/FONT-LICENSE.txt); atlas не объявляется MIT |
 | OpenTK.Audio.OpenAL | 4.9.4, транзитивно через Engine3D.Audio | https://github.com/opentk/opentk | MIT; подробности в `external/engine/THIRD_PARTY.md` |
 | OpenAL Soft | Системная Linux-библиотека `libopenal.so.1` (`libopenal1`); binary не включён | https://github.com/kcat/openal-soft | LGPL-2.0-or-later; upstream notices в `external/engine/THIRD_PARTY.md` |

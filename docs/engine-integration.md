@@ -1,16 +1,19 @@
 # Движок: возможности и план расширений для Ball Adventure
 
-Закреплённый SHA: **`013e3e29251ae020c9ced5fdeb46ef3d10a7b403`**, обновление 08.11.2026.
+Закреплённый SHA: **`013e3e29251ae020c9ced5fdeb46ef3d10a7b403`**, сверка 09.11.2026.
 Он включает принятые [input/cursor PR #52](https://github.com/alken1t15/simple-3d-engine/pull/52)
 и [audio PR #51](https://github.com/alken1t15/simple-3d-engine/pull/51),
 а также [overlay PR #53](https://github.com/alken1t15/simple-3d-engine/pull/53).
-Текущий SHA — merge [upstream PR #57](https://github.com/alken1t15/simple-3d-engine/pull/57):
-SetFullscreen/IsFullscreen/FullscreenSize и WindowedClientSizeLimits подключены к Settings.
+Текущий SHA — merge [upstream PR #58](https://github.com/alken1t15/simple-3d-engine/pull/58)
+(значок окна/метрики текста), подключённый [game PR #58](https://github.com/alken1t15/simple-platformer/pull/58).
+Предыдущий [upstream PR #57](https://github.com/alken1t15/simple-3d-engine/pull/57)
+добавил SetFullscreen/IsFullscreen/FullscreenSize и WindowedClientSizeLimits, подключённые к Settings.
 Fullscreen использует текущий desktop video mode; оконные ограничения не вычитают из него рамку/панели.
-PR #56 добавил фиксированную рамку:
+[PR #56](https://github.com/alken1t15/simple-3d-engine/pull/56) добавил фиксированную рамку:
 Resizable=false запрещает пользовательский drag resize, SetClientSize остаётся рабочим.
-ClientSizeLimits/SetClientSize и ограничения окна — PR #55. Overlay ранее подключён
-[игровым PR #35](https://github.com/alken1t15/simple-platformer/pull/35), ClientSize — PR #39.
+ClientSizeLimits/SetClientSize и ограничения окна — [PR #55](https://github.com/alken1t15/simple-3d-engine/pull/55).
+Overlay ранее подключён [игровым PR #35](https://github.com/alken1t15/simple-platformer/pull/35),
+ClientSize — [PR #39](https://github.com/alken1t15/simple-platformer/pull/39).
 Ниже различаются доступное API, подключённые меню/управление и оставшиеся ресурсы игры.
 
 | Возможность | Что есть | Что требуется / граница |
@@ -163,6 +166,7 @@ Native nested Wayland scale=2: client960x640/framebuffer1920x1280 и GPU pixel t
 Закреплён engine `013e3e29251ae020c9ced5fdeb46ef3d10a7b403` из
 [upstream PR #58](https://github.com/alken1t15/simple-3d-engine/pull/58).
 Он добавляет CPU `OverlayTextMetrics.MeasureInkBounds` и `Engine.SetWindowIcon` для
-Windows/X11; прежние input/overlay/audio/window APIs сохранены. Это подготовка
-зависимости: игровое выравнивание и подключение PNG выполняются отдельно через
-публичный API. На Wayland/macOS значок остаётся задачей desktop entry/app bundle.
+Windows/X11; прежние input/overlay/audio/window APIs сохранены. Игровое выравнивание
+и подключение PNG выполнены через публичный API в
+[game PR #59](https://github.com/alken1t15/simple-platformer/pull/59).
+На Wayland/macOS значок остаётся задачей desktop entry/app bundle.

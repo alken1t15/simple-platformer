@@ -42,11 +42,11 @@ public sealed class GameScenePresenter
         ArgumentNullException.ThrowIfNull(level);
         _level = level;
         bool maze = level.Id == "level2";
-        var accent = new MaterialData { BaseColor = new ColorRgba(0.55f, 0.25f, 0.75f) };
+        var accent = visual ? VisualScene.GuardRail : new MaterialData { BaseColor = new ColorRgba(0.55f, 0.25f, 0.75f) };
         _visual = visual ? new VisualScene(Scene, level.Surfaces) : null;
         var track = visual ? VisualScene.Track : new MaterialData { BaseColor = maze ? new ColorRgba(0.25f, 0.25f, 0.3f) : new ColorRgba(0.72f, 0.75f, 0.8f) };
         var gold = visual ? VisualScene.Gold : new MaterialData { BaseColor = new ColorRgba(1f, 0.72f, 0.08f) };
-        var danger = visual ? VisualScene.Danger : new MaterialData { BaseColor = new ColorRgba(0.9f, 0.08f, 0.06f) };
+        var danger = new MaterialData { BaseColor = new ColorRgba(0.9f, 0.08f, 0.06f) };
         var green = visual ? VisualScene.Finish : new MaterialData { BaseColor = new ColorRgba(0.08f, 0.85f, 0.25f) };
         for (int surfaceIndex = 0; surfaceIndex < level.Surfaces.Count; surfaceIndex++)
         {
@@ -74,7 +74,9 @@ public sealed class GameScenePresenter
         }
         foreach (var hazard in level.Hazards)
         {
-            _hazards.Add(hazard.Id, Add(GameMeshes.Box, hazard.AngularSpeed == 0 && visual ? VisualScene.StaticDanger : danger));
+            var material = visual ? hazard.Response == HazardResponse.Knockback
+                ? VisualScene.BumperBeam : VisualScene.LethalObstacle : danger;
+            _hazards.Add(hazard.Id, Add(GameMeshes.Box, material));
             // Декоративная ось не добавляет коллайдер, позу самой балки задаёт snapshot
             var axle = Add(visual ? VisualScene.SoftBox : GameMeshes.Box, maze ? accent : track);
             axle.Transform.Position = hazard.Pivot - Vector3.UnitY * 0.25f;

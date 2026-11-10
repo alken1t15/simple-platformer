@@ -13,7 +13,7 @@ public static class IslandCircuit
         {
             Flat("start", 0, 0, 0, 4, 4), Flat("island-one", 7, 0, 7, 4.5f, 4.5f),
             Flat("arena", 7, height, 14, 6, 5), Flat("takeoff", 14, height, 21, 4, 4),
-            Flat("landing", 19, height, 21, 4, 4), Flat("finish-platform", 23, height, 21, 4, 4),
+            Flat("landing", 20, height, 21, 4, 4), Flat("finish-platform", 24, height, 21, 4, 4),
         };
         Arc(surfaces, "arc-one", new(0, 7), 7, -MathF.PI / 2, 0, 0);
         Arc(surfaces, "arc-two", new(14, 14), 7, MathF.PI, MathF.PI / 2, height);
@@ -28,13 +28,13 @@ public static class IslandCircuit
             Coin("ramp-coin", 7, height / 2 + 0.8f, 10), Coin("arena-coin", 9.4f, height + 0.8f, 14),
             Coin("curve-two-a", 14 - 7 * MathF.Sqrt(3) / 2, height + 0.8f, 17.5f),
             Coin("curve-two-b", 10.5f, height + 0.8f, 14 + 7 * MathF.Sqrt(3) / 2),
-            Coin("jump-coin", 14, height + 0.8f, 21), Coin("landing-coin", 19, height + 0.8f, 21),
-            Coin("finish-coin", 23, height + 0.8f, 21),
+            Coin("jump-coin", 14, height + 0.8f, 21), Coin("landing-coin", 20, height + 0.8f, 21),
+            Coin("finish-coin", 24, height + 0.8f, 21),
         ];
         var hazard = new HazardDefinition("island-beam", new(7, height + 0.55f, 14), Vector3.UnitY,
-            Vector3.Zero, new(1.4f, 0.15f, 0.15f), Quaternion.Identity, -0.8f, 0.6f);
+            Vector3.Zero, new(2.2f, 0.22f, 0.22f), Quaternion.Identity, -0.8f, 0.6f, HazardResponse.Knockback);
         return new("island-circuit", new(-1, 0.501f, 0), -5.4f,
-            new(new(23, height + 0.75f, 21), new(1.5f, 0.75f, 0.1f), Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 2)),
+            new(new(24, height + 0.75f, 21), new(1.5f, 0.75f, 0.1f), Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 2)),
             surfaces, coins, [hazard]);
     }
 

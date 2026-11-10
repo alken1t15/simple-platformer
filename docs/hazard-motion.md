@@ -20,11 +20,15 @@ bool hit = HazardCollision.IntersectsPath(hazard, ballStepResult.Path, tickStart
 HazardPose pose = HazardMotion.Evaluate(hazard, simulationSeconds);
 ```
 
-При hit сеанс устанавливает Failed до обработки монет и финиша и создаёт одно Failed.
+При hit с `HazardResponse.Fail` (значение по умолчанию) сеанс устанавливает Failed
+до обработки монет и финиша и создаёт одно Failed. С 10.11.2026 балки Turning Maze
+и Island Circuit используют `Knockback`: отбрасывание с сохранением попытки,
+без события Failed. Данные, отмена пути текущего tick и проверки —
+[доработка уровней](level-refinement.md).
 До начала сеанса проверяется, что бюджет покрывает максимальное движение шара и балки;
 при ошибке фактической проверки весь tick остаётся неопубликованным, включая события/LastPath.
 Snapshot содержит позы всех опасностей в ordinal-порядке ID. Presenter использует их
 без собственного счётчика времени. Restart возвращает SimulationSeconds=0 и исходную фазу.
 Проверки через GameSession и LevelFlow описаны в [сеансе](game-session.md).
-Арена второй локации и ручное прохождение остаются на интеграцию.
+Арены подключены; новые параметры уровней требуют отдельной ручной проверки.
 Preview не является проверкой настоящего игрового сеанса.

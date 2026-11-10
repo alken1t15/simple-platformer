@@ -22,9 +22,9 @@ public static class TrainingTrack
             Flat("upper-platform", 7f, height, 0f, 4f, 4f),
             Flat("bridge", 7f, height, 5f, 1.4f, 6f),
             Flat("jump-takeoff", 7f, height, 10f, 4f, 4f),
-            Flat("jump-landing", 7f, height, 15f, 4f, 4f),
-            Flat("boost-straight", 1f, height, 15f, 8f, 2.5f),
-            Flat("finish-platform", -5f, height, 15f, 4f, 4f),
+            Flat("jump-landing", 7f, height, 16f, 4f, 4f),
+            Flat("boost-straight", 1f, height, 16f, 8f, 2.5f),
+            Flat("finish-platform", -5f, height, 16f, 4f, 4f),
         ];
         CoinDefinition[] coins =
         [
@@ -35,11 +35,11 @@ public static class TrainingTrack
             new("coin-bridge-1", new Vector3(7f, height + 0.8f, 4f), 0.2f),
             new("coin-bridge-2", new Vector3(7f, height + 0.8f, 6f), 0.2f),
             new("coin-jump-1", new Vector3(7f, height + 0.8f, 11f), 0.2f),
-            new("coin-jump-2", new Vector3(7f, height + 0.8f, 14f), 0.2f),
-            new("coin-boost-1", new Vector3(3f, height + 0.8f, 15f), 0.2f),
-            new("coin-boost-2", new Vector3(0f, height + 0.8f, 15f), 0.2f),
+            new("coin-jump-2", new Vector3(7f, height + 0.8f, 15f), 0.2f),
+            new("coin-boost-1", new Vector3(3f, height + 0.8f, 16f), 0.2f),
+            new("coin-boost-2", new Vector3(0f, height + 0.8f, 16f), 0.2f),
         ];
-        var finish = new OrientedBox(new Vector3(-5f, height + 0.75f, 15f),
+        var finish = new OrientedBox(new Vector3(-5f, height + 0.75f, 16f),
             new Vector3(1.5f, 0.75f, 0.1f), Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI / 2f));
         return new LevelDefinition("level1", new Vector3(-1f, 0.501f, 0f), -5.4f,
             finish, surfaces, coins, Array.Empty<HazardDefinition>());

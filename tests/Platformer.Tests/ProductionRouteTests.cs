@@ -98,8 +98,8 @@ public sealed class ProductionRouteTests
         for (int i = 0; i < 200 && host.Flow.Snapshot!.Ball.Center.Z < 11.65f; i++) driver.Move(Vector2.UnitY);
         Assert.IsGreaterThanOrEqualTo(11.65f, host.Flow.Snapshot!.Ball.Center.Z);
         driver.Move(Vector2.UnitY, true);
-        driver.Go(7, 15);
-        driver.Go(-5, 15);
+        driver.Go(7, 16);
+        driver.Go(-5, 16);
         Assert.AreEqual(AppScreen.LevelResult, host.Flow.Screen);
         Assert.AreEqual(10, host.Flow.Snapshot!.CoinCount);
         driver.Press(AppButtons.Enter); // Next из настоящего MenuController
@@ -116,8 +116,8 @@ public sealed class ProductionRouteTests
         for (int i = 0; i < 200 && host.Flow.Snapshot!.Ball.Center.X < 30.65f; i++) driver.Move(Vector2.UnitX);
         Assert.IsGreaterThanOrEqualTo(30.65f, host.Flow.Snapshot!.Ball.Center.X);
         driver.Move(Vector2.UnitX, true);
-        driver.Go(34, 8);
-        driver.Go(38, 8);
+        driver.Go(35, 8);
+        driver.Go(39, 8);
         Assert.AreEqual(AppScreen.LevelResult, host.Flow.Screen);
         Assert.AreEqual(15, host.Flow.Snapshot!.CoinCount);
         driver.Press(AppButtons.Enter);
@@ -136,10 +136,13 @@ public sealed class ProductionRouteTests
             float angle = -MathF.PI / 2 + i * MathF.PI / 24;
             driver.Go(7 * MathF.Cos(angle), 7 + 7 * MathF.Sin(angle));
         }
-        driver.Go(7, 12);
-        driver.Go(9.4f, 12);
-        driver.Go(9.4f, 16.2f);
-        driver.Go(7, 16.2f);
+        // Увеличенная балка требует обхода по краю арены. Два прыжка
+        // соединяют рампу/дугу с этим краем, не проходя сквозь саму балку.
+        driver.Go(7, 11.1f);
+        driver.Move(Vector2.UnitY, jump: true);
+        driver.Go(9.75f, 11.8f);
+        driver.Go(9.75f, 16.2f);
+        driver.Move(-Vector2.UnitX, jump: true);
         for (int i = 3; i <= 12; i++)
         {
             float angle = MathF.PI - i * MathF.PI / 24;
@@ -148,8 +151,8 @@ public sealed class ProductionRouteTests
         driver.Go(14.8f, 21);
         for (int i = 0; i < 200 && host.Flow.Snapshot!.Ball.Center.X < 15.65f; i++) driver.Move(Vector2.UnitX);
         driver.Move(Vector2.UnitX, jump: true);
-        driver.Go(19, 21);
-        driver.Go(23, 21);
+        driver.Go(20, 21);
+        driver.Go(24, 21);
         Assert.AreEqual(AppScreen.LevelResult, host.Flow.Screen);
         Assert.AreEqual(11, host.Flow.Snapshot!.CoinCount);
         Assert.AreEqual(12, host.Flow.Progress.BaseStars);

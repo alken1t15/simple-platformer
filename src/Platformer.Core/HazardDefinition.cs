@@ -2,6 +2,8 @@ using System.Numerics;
 
 namespace Platformer.Core;
 
+public enum HazardResponse { Fail, Knockback }
+
 /// <summary>Данные вращающейся балки, без вычисления движения или столкновений.</summary>
 public sealed class HazardDefinition
 {
@@ -13,9 +15,11 @@ public sealed class HazardDefinition
     public Quaternion InitialOrientation { get; }
     public float AngularSpeed { get; }
     public float InitialAngle { get; }
+    public HazardResponse Response { get; }
 
     public HazardDefinition(string id, Vector3 pivot, Vector3 axis, Vector3 centerOffset,
-        Vector3 halfExtents, Quaternion initialOrientation, float angularSpeed, float initialAngle)
+        Vector3 halfExtents, Quaternion initialOrientation, float angularSpeed, float initialAngle,
+        HazardResponse response = HazardResponse.Fail)
     {
         Id = LevelValidation.Id(id, nameof(id));
         LevelValidation.Position(pivot, nameof(pivot));
@@ -23,6 +27,7 @@ public sealed class HazardDefinition
         LevelValidation.Extents(halfExtents, nameof(halfExtents));
         LevelValidation.Finite(angularSpeed, nameof(angularSpeed));
         LevelValidation.Finite(initialAngle, nameof(initialAngle));
+        if (!Enum.IsDefined(response)) throw new ArgumentOutOfRangeException(nameof(response));
         Pivot = pivot;
         Axis = LevelValidation.Direction(axis, nameof(axis));
         CenterOffset = centerOffset;
@@ -30,5 +35,6 @@ public sealed class HazardDefinition
         InitialOrientation = LevelValidation.Rotation(initialOrientation, nameof(initialOrientation));
         AngularSpeed = angularSpeed;
         InitialAngle = initialAngle;
+        Response = response;
     }
 }

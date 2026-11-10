@@ -42,7 +42,7 @@ public sealed class TurningMazeTests
     }
 
     [TestMethod]
-    public void JumpHasOneUnitGapAndRampMeetsBothPlatforms()
+    public void JumpHasTwoUnitGapAndRampMeetsBothPlatforms()
     {
         var level = TurningMaze.Create();
         var arena = level.Surfaces.Single(surface => surface.Id == "arena").Bounds;
@@ -53,7 +53,7 @@ public sealed class TurningMazeTests
         var end = ramp.ToWorld(new Vector3(ramp.HalfExtents.X, ramp.HalfExtents.Y, 0));
         LevelDefinitionTests.Near(start, arena.ClosestPoint(start));
         LevelDefinitionTests.Near(end, takeoff.ClosestPoint(end));
-        Assert.AreEqual(1f, landing.Center.X - landing.HalfExtents.X - takeoff.Center.X - takeoff.HalfExtents.X);
+        Assert.AreEqual(2f, landing.Center.X - landing.HalfExtents.X - takeoff.Center.X - takeoff.HalfExtents.X);
         Assert.AreEqual(takeoff.Center.Y, landing.Center.Y);
     }
 }

@@ -42,9 +42,6 @@ internal sealed partial class VisualScene
         return Vector3.Lerp(new(207, 167, 151), new(255, 246, 218), MathF.Sqrt(t));
     }));
     public static MaterialData Gold { get; } = Textured(CoinTexture());
-    public static MaterialData Danger { get; } = Solid(150, 70, 210);
-    public static MaterialData StaticDanger { get; } = Textured(Texture(128, 64, (x, y) =>
-        ((x + y) / 12 & 1) == 0 ? new(255, 79, 70) : new(64, 38, 58)));
     public static MaterialData Finish { get; } = Solid(25, 201, 173);
     private static readonly MaterialData Banner = Textured(Texture(64, 32, (x, y) =>
         ((x / 8 + y / 8) & 1) == 0 ? new(255, 250, 222) : new(36, 76, 96)));

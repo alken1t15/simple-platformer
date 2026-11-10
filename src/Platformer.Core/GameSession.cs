@@ -1,3 +1,5 @@
+using System.Numerics;
+
 namespace Platformer.Core;
 
 /// <summary>CPU-сеанс: один атомарный tick, одноразовые события и полный reset.</summary>
@@ -56,6 +58,11 @@ public sealed class GameSession
         var removed = platformStates.Where(state => state.Collapsed).Select(state => state.Id).ToHashSet(StringComparer.Ordinal);
         bool canJump = before.Ball.Grounded && (removed.Count == 0 || simulator.HasSupport(before.Ball, removed));
         var result = simulate is null ? simulator.Step(before.Ball, command, removed) : simulate(before.Ball, command);
+        // Смертельная опасность сохраняет приоритет, даже если в том же tick
+        // присутствует другая балка с отскоком.
+        bool hazardHit = hazards.Any(hazard => hazard.Response == HazardResponse.Fail &&
+            HazardCollision.IntersectsPath(hazard, result.Path, before.SimulationSeconds, settings));
+        if (!hazardHit) result = ApplyKnockback(before, result);
         for (int i = 0; i < platformStates.Length; i++)
         {
             var state = platformStates[i];
@@ -74,8 +81,6 @@ public sealed class GameSession
             pending.Add((GameEventKind.Jumped, null));
         var collected = new HashSet<string>(before.CollectedCoinIds, StringComparer.Ordinal);
         var phase = SessionPhase.Running;
-        bool hazardHit = hazards.Any(hazard =>
-            HazardCollision.IntersectsPath(hazard, result.Path, before.SimulationSeconds, settings));
         if ((double)result.Ball.Center.Y + result.Ball.Radius < level.KillY || hazardHit)
         {
             phase = SessionPhase.Failed;
@@ -116,6 +121,45 @@ public sealed class GameSession
         var drained = Array.AsReadOnly(events);
         events = [];
         return drained;
+    }
+
+    private BallStepResult ApplyKnockback(SessionSnapshot before, BallStepResult result)
+    {
+        foreach (var hazard in hazards)
+        {
+            if (hazard.Response != HazardResponse.Knockback
+                || !HazardCollision.IntersectsPath(hazard, result.Path, before.SimulationSeconds, settings)) continue;
+            var box = HazardMotion.Evaluate(hazard, before.SimulationSeconds).Bounds;
+            Vector3 away = before.Ball.Center - box.ClosestPoint(before.Ball.Center);
+            away.Y = 0;
+            if (away.LengthSquared() < 1e-8f)
+            {
+                away = before.Ball.Center - box.Center;
+                away.Y = 0;
+            }
+            if (away.LengthSquared() < 1e-8f)
+            {
+                away = Vector3.Transform(Vector3.UnitZ, box.Orientation);
+                away.Y = 0;
+                if (away.LengthSquared() < 1e-8f) away = Vector3.UnitX;
+            }
+            away = Vector3.Normalize(away);
+            Vector3 beamVelocity = Vector3.Cross(hazard.Axis * hazard.AngularSpeed, before.Ball.Center - hazard.Pivot);
+            // Уходящий шар свободно покидает контакт: повторный tick не обнуляет
+            // движение и не накапливает импульсы, пока объекты ещё касаются.
+            if (Vector3.Dot(result.Ball.Velocity - beamVelocity, away) > 0.01f) continue;
+            float speed = MathF.Min(7.5f, settings.MoveSpeed * settings.BoostMultiplier);
+            Vector3 velocity = away * speed;
+            velocity.Y = MathF.Max(result.Ball.Velocity.Y, MathF.Min(3.5f, settings.JumpSpeed));
+            // Отменяем только перемещение одного fixed tick. Исходный центр уже
+            // разрешён статической физикой; не выталкиваем шар через соседний борт.
+            // Отменённый путь не может собрать монету или пересечь финиш.
+            return new BallStepResult(result.Ball with
+            {
+                Center = before.Ball.Center, Velocity = velocity, Grounded = false, GroundNormal = Vector3.Zero,
+            }, [new(before.Ball.Center, before.Ball.Center, 0, 1)]);
+        }
+        return result;
     }
 
     public void Restart()

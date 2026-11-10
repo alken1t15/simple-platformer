@@ -6,8 +6,10 @@ public sealed class SurfaceDefinition
     public OrientedBox Bounds { get; }
     /// <summary>0 — постоянная опора; иначе время от первого касания до разрушения.</summary>
     public float CollapseDelaySeconds { get; }
+    /// <summary>Сплошной борт: те же OBB для физики и отдельное оформление в App.</summary>
+    public bool IsBarrier { get; }
 
-    public SurfaceDefinition(string id, OrientedBox bounds, float collapseDelaySeconds = 0f)
+    public SurfaceDefinition(string id, OrientedBox bounds, float collapseDelaySeconds = 0f, bool isBarrier = false)
     {
         Id = LevelValidation.Id(id, nameof(id));
         ArgumentNullException.ThrowIfNull(bounds);
@@ -16,5 +18,6 @@ public sealed class SurfaceDefinition
             || (collapseDelaySeconds > 0f && collapseDelaySeconds < 0.2f))
             throw new ArgumentOutOfRangeException(nameof(collapseDelaySeconds));
         CollapseDelaySeconds = collapseDelaySeconds;
+        IsBarrier = isBarrier;
     }
 }

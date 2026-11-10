@@ -14,9 +14,10 @@ GameSession использует BallSimulator.CreateInitialState/Step и гот
 Running переходит в Failed/LevelComplete. Команда проверяется даже в terminal phase;
 валидный Step после завершения — no-op. Время равно Tick * FixedStepSeconds.
 
-Порядок tick: физика и полный Path → принятые BoostStarted/Jumped → проверка опасностей
+Порядок tick: физика и полный Path → проверка смертельных опасностей → при их
+отсутствии реакция Knockback и окончательный Path → принятые BoostStarted/Jumped
 и KillY → несобранные монеты в ordinal-порядке ID → Finish.
-Если Center.Y + Radius < KillY или есть контакт с опасностью, создаётся одно Failed,
+Если Center.Y + Radius < KillY или есть контакт с `HazardResponse.Fail`, создаётся одно Failed,
 монеты/финиш tick пропускаются, прежние собранные монеты сохраняются. Несколько контактов
 не создают дополнительные Failed. Монеты не являются условием финиша.
 Snapshot с позами опасностей, LastPath, sequence и очередь заменяются только после
@@ -46,7 +47,9 @@ BallStepResult.Path с tickStartSeconds = временем предыдущег�
 Вращение учитывается и на неподвижных участках Path. В Snapshot.Hazards включены все позы
 из `HazardMotion.Evaluate` на новом SimulationSeconds, а в исходном snapshot и после
 Restart — на времени 0. Поэтому время физики и изображения балки согласовано.
-Начальное пересечение с hazard приводит к Failed при первом Step.
+Начальное пересечение с hazard с реакцией `Fail` приводит к Failed при первом Step.
+Реакция `Knockback` на уровнях 2/4 сохраняет Running, отменяя перемещение текущего
+tick и задавая отскок; [геометрия/скорости и проверки](level-refinement.md).
 
 Конструктор отклоняет несовместимый бюджет через ArgumentException с ID опасности:
 ceil((максимальный путь шара + путь наиболее удалённой точки балки за tick) / (BallRadius/4))

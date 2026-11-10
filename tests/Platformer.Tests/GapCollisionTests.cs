@@ -10,7 +10,7 @@ public sealed class GapCollisionTests
     [TestMethod]
     public void TwoGapEdgesSupportRestingBallAndAllowJump()
     {
-        var track = TrainingTrack.Create();
+        var track = NarrowGapFixture();
         var settings = SimulationSettings.Default;
         float top = 3f * MathF.Tan(MathF.PI / 9f);
         float paddedRadius = settings.BallRadius + settings.SkinWidth;
@@ -37,9 +37,9 @@ public sealed class GapCollisionTests
     [DataRow(7.2f, 0f)]
     [DataRow(7f, 0.7f)]
     [DataRow(7f, -0.7f)]
-    public void HoldingForwardIntoTrainingGapDoesNotExhaustContactBudget(float x, float yaw)
+    public void HoldingForwardIntoNarrowGapDoesNotExhaustContactBudget(float x, float yaw)
     {
-        var track = TrainingTrack.Create();
+        var track = NarrowGapFixture();
         float top = 3f * MathF.Tan(MathF.PI / 9f);
         Quaternion rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw);
         OrientedBox Rotate(OrientedBox box) => new(Vector3.Transform(box.Center, rotation), box.HalfExtents,
@@ -71,6 +71,19 @@ public sealed class GapCollisionTests
             state = step.Ball;
         }
         Assert.IsGreaterThan(1f, Vector3.Dot(state.Center - initial, right), "Упор не должен блокировать движение вдоль краёв.");
+    }
+
+    // Сохраняем регрессию прежнего контакта сразу с двумя краями: в поставляемом
+    // Training Track теперь широкий прыжок, но узкая щель остаётся валидной геометрией.
+    private static LevelDefinition NarrowGapFixture()
+    {
+        float top = 3f * MathF.Tan(MathF.PI / 9f);
+        // Собственные два OBB: дальнейшая балансировка production-каталога
+        // не меняет воспроизводящую геометрию щели шириной ровно 1.
+        return new("narrow-gap-regression", new(7, top + 0.501f, 10), -5.4f,
+            new(new(7, top + 0.75f, 16), new(0.1f), Quaternion.Identity),
+            [new("jump-takeoff", new(new(7, top - 0.2f, 10), new(2, 0.2f, 2), Quaternion.Identity)),
+             new("jump-landing", new(new(7, top - 0.2f, 15), new(2, 0.2f, 2), Quaternion.Identity))], [], []);
     }
 
     private static void AssertStep(BallState before, BallStepResult step, LevelDefinition level)

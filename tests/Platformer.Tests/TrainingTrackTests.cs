@@ -66,7 +66,7 @@ public sealed class TrainingTrackTests
         Assert.AreEqual(6f, bridge.HalfExtents.Z * 2f);
         Assert.AreEqual(upper.Center.Z + upper.HalfExtents.Z, bridge.Center.Z - bridge.HalfExtents.Z);
         Assert.AreEqual(bridge.Center.Z + bridge.HalfExtents.Z, takeoff.Center.Z - takeoff.HalfExtents.Z);
-        Assert.AreEqual(1f, landing.Center.Z - landing.HalfExtents.Z - (takeoff.Center.Z + takeoff.HalfExtents.Z));
+        Assert.AreEqual(2f, landing.Center.Z - landing.HalfExtents.Z - (takeoff.Center.Z + takeoff.HalfExtents.Z));
         Assert.AreEqual(takeoff.Center.Y, landing.Center.Y);
         Assert.AreEqual(8f, boost.HalfExtents.X * 2f);
         Assert.AreEqual(2.5f, boost.HalfExtents.Z * 2f);

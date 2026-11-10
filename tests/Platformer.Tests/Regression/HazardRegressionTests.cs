@@ -129,9 +129,10 @@ public sealed class HazardRegressionTests
     }
 
     [TestMethod]
-    public void TurningMazeArenaBeamReachesBallRestingInArenaWithinGeometricWindow()
+    public void ArenaBeamConfiguredAsFatalReachesBallWithinGeometricWindow()
     {
-        // Реальные данные level2. Шар покоится на расстоянии d = 1.5 от оси вращения по −Z,
+        // Геометрия level2 с прежней смертельной реакцией как отдельная регрессия.
+        // В поставляемом уровне теперь Knockback. Шар покоится в d = 1.5 по −Z,
         // т.е. под углом π/2 к начальной оси балки. При повороте на θ расстояние от центра
         // шара до продольной оси балки — d·cosθ, а высота центра лежит внутри вертикального
         // размаха балки, поэтому первый контакт — с боковой гранью: d·cosθ − half.Z = r.
@@ -147,7 +148,9 @@ public sealed class HazardRegressionTests
         Assert.IsLessThanOrEqualTo(beam.HalfExtents.Y, MathF.Abs(spawn.Y - beam.Pivot.Y), "центр шара в высоте балки");
         Assert.IsGreaterThan(distance, beam.HalfExtents.X, "торец балки не участвует в первом контакте");
 
-        var level = new LevelDefinition(maze.Id, spawn, maze.KillY, maze.Finish, maze.Surfaces, [], maze.Hazards);
+        var fatal = new HazardDefinition(beam.Id, beam.Pivot, beam.Axis, beam.CenterOffset,
+            beam.HalfExtents, beam.InitialOrientation, beam.AngularSpeed, beam.InitialAngle);
+        var level = new LevelDefinition(maze.Id, spawn, maze.KillY, maze.Finish, maze.Surfaces, [], [fatal]);
         var session = new GameSession(level, Defaults);
         int limit = (int)(2d * Math.PI / (beam.AngularSpeed * Defaults.FixedStepSeconds));
         while (session.Snapshot.Phase == SessionPhase.Running && session.Snapshot.Tick < limit)

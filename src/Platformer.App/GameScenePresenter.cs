@@ -53,26 +53,17 @@ public sealed class GameScenePresenter
             var surface = level.Surfaces[surfaceIndex];
             int firstPart = Scene.Objects.Count;
             bool fragile = surface.CollapseDelaySeconds > 0;
-            var item = Add(visual ? VisualScene.RoadBody : GameMeshes.Box, fragile ? FragileBody : track);
+            var item = Add(surface.IsBarrier ? GameMeshes.Box : visual ? VisualScene.RoadBody : GameMeshes.Box,
+                surface.IsBarrier ? accent : fragile ? FragileBody : track);
             SetBounds(item, surface.Bounds);
             _surfaces.Add(surface.Id, item);
-            _visual?.SurfaceDetail(surfaceIndex, surface.Bounds, fragile);
+            if (!surface.IsBarrier) _visual?.SurfaceDetail(surfaceIndex, surface.Bounds, fragile);
             if (fragile)
             {
                 _unshadowedSurfaceIndices.Add(surfaceIndex);
                 var parts = Scene.Objects.Skip(firstPart).ToArray();
                 _fragile.Add(surface.Id, (surfaceIndex, parts, parts.Select(part => part.Material).ToArray()));
             }
-        }
-        if (maze)
-        {
-            // Низкие декоративные борта оставляют открытыми развилку и повороты.
-            Rail(new Vector3(5, 0.25f, -1.32f), new Vector3(6, 0.5f, 0.14f));
-            Rail(new Vector3(5, 0.25f, 1.32f), new Vector3(6, 0.5f, 0.14f));
-            Rail(new Vector3(8.68f, 0.25f, -4.5f), new Vector3(0.14f, 0.5f, 5));
-            Rail(new Vector3(11.32f, 0.25f, -4.5f), new Vector3(0.14f, 0.5f, 5));
-            Rail(new Vector3(8.68f, 0.25f, 5), new Vector3(0.14f, 0.5f, 6));
-            Rail(new Vector3(13.5f, 0.25f, 9.32f), new Vector3(5, 0.5f, 0.14f));
         }
         foreach (var coin in level.Coins)
         {
@@ -116,12 +107,6 @@ public sealed class GameScenePresenter
             frame.Add(item);
         }
 
-        void Rail(Vector3 position, Vector3 size)
-        {
-            var item = Add(visual ? VisualScene.SoftBox : GameMeshes.Box, accent);
-            item.Transform.Position = position;
-            item.Transform.Scale = size;
-        }
     }
 
     public void Apply(SessionSnapshot snapshot, SkinDefinition skin) => Apply(snapshot, skin, null);

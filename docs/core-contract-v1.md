@@ -21,9 +21,9 @@ BallStepResult и MotionSegment — [описание физики](ball-physics
 | Тип | Публичная форма / смысл |
 |---|---|
 | `OrientedBox` | `OrientedBox(Vector3 center, Vector3 halfExtents, Quaternion orientation)`; getters `Center`, `HalfExtents`, `Orientation`; `Vector3 ToLocal(Vector3 point)`, `Vector3 ToWorld(Vector3 point)`, `Vector3 ClosestPoint(Vector3 point)` |
-| `SurfaceDefinition` | `SurfaceDefinition(string id, OrientedBox bounds)`; getters `Id`, `Bounds` |
+| `SurfaceDefinition` | `SurfaceDefinition(string id, OrientedBox bounds, float collapseDelaySeconds = 0f, bool isBarrier = false)`; getters `Id`, `Bounds`, `CollapseDelaySeconds`, `IsBarrier` |
 | `CoinDefinition` | `CoinDefinition(string id, Vector3 center, float radius)`; getters `Id`, `Center`, `Radius` |
-| `HazardDefinition` | `HazardDefinition(string id, Vector3 pivot, Vector3 axis, Vector3 centerOffset, Vector3 halfExtents, Quaternion initialOrientation, float angularSpeed, float initialAngle)`; однотипная вращающаяся опасная балка |
+| `HazardDefinition` | `HazardDefinition(string id, Vector3 pivot, Vector3 axis, Vector3 centerOffset, Vector3 halfExtents, Quaternion initialOrientation, float angularSpeed, float initialAngle, HazardResponse response = HazardResponse.Fail)`; реакция `Fail` или `Knockback`, [описание](level-refinement.md) |
 | `LevelDefinition` | `LevelDefinition(string id, Vector3 spawn, float killY, OrientedBox finish, IReadOnlyList<SurfaceDefinition> surfaces, IReadOnlyList<CoinDefinition> coins, IReadOnlyList<HazardDefinition> hazards)`; getters соответствуют параметрам, коллекции immutable |
 | `LevelCatalog` | `LevelCatalog(IReadOnlyList<LevelDefinition> levels)`; `Levels`, `LevelDefinition Get(string id)`, `string? GetNextId(string id)`; порядок списка задаёт прохождение, минимум две записи для поставляемой игры |
 | `GameCommand` | readonly value `(Vector2 MoveWorldXZ, bool JumpPressed, bool BoostPressed)`; `Vector2.X` — world X, `Vector2.Y` — world Z; длина ≤1 |

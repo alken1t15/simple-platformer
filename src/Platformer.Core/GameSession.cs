@@ -144,7 +144,7 @@ public sealed class GameSession
                 if (away.LengthSquared() < 1e-8f) away = Vector3.UnitX;
             }
             away = Vector3.Normalize(away);
-            Vector3 beamVelocity = Vector3.Cross(hazard.Axis * hazard.AngularSpeed, before.Ball.Center - hazard.Pivot);
+            Vector3 beamVelocity = HazardMotion.VelocityAt(hazard, before.SimulationSeconds, before.Ball.Center);
             // Уходящий шар свободно покидает контакт: повторный tick не обнуляет
             // движение и не накапливает импульсы, пока объекты ещё касаются.
             if (Vector3.Dot(result.Ball.Velocity - beamVelocity, away) > 0.01f) continue;
@@ -184,8 +184,7 @@ public sealed class GameSession
             * settings.FixedStepSeconds;
         foreach (var hazard in hazards)
         {
-            double reach = (double)hazard.CenterOffset.Length() + hazard.HalfExtents.Length();
-            double beamTravel = Math.Abs((double)hazard.AngularSpeed) * settings.FixedStepSeconds * reach;
+            double beamTravel = HazardMotion.MaximumPointSpeed(hazard) * settings.FixedStepSeconds;
             if (Math.Ceiling((ballTravel + beamTravel) / (settings.BallRadius / 4d)) > settings.MaxCollisionSubsteps)
                 throw new ArgumentException($"Бюджет подшагов не покрывает движение шара и опасности '{hazard.Id}'", nameof(level));
         }

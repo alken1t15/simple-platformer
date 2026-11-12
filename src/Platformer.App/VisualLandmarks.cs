@@ -47,6 +47,11 @@ internal sealed partial class VisualScene
 
     private bool ClearOfRoads(Vector3 center, float rx, float rz)
     {
+        foreach (var zone in _movingPropZones)
+        {
+            Vector2 gap = Vector2.Max(Vector2.Abs(new Vector2(center.X, center.Z) - zone.Center) - zone.Half, Vector2.Zero);
+            if ((gap / new Vector2(rx, rz)).LengthSquared() < 1) return false;
+        }
         foreach (var patch in _roads.Patches)
         {
             var b = patch.Bounds;

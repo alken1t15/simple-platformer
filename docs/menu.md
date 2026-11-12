@@ -10,10 +10,11 @@ PR #55 — ограничения окна и смену размера.
 Ранее ClientSize принят через engine PR #54 / игровой
 [PR #39](https://github.com/alken1t15/simple-platformer/pull/39).
 
-UI/HUD работает с настоящими LevelFlow, GameSession и Presenter. Каталог поставки
-содержит Training Track и Turning Maze; WAV/AudioCoordinator подключены.
-Слышимый звук и полная приёмка контента ещё требуют #21/QA. Авторские CPU-тесты/снимки с двумя контролируемыми уровнями
-не подменяют настоящую Turning Maze. [Объём](project-scope.md), [контракт](app-engine-contract-v1.md#app).
+UI/HUD работает с настоящими LevelFlow, GameSession и Presenter. Каталог содержит
+тринадцать уровней; WAV/AudioCoordinator подключены. Карточки Levels расположены в две
+колонки по семь рядов, Back остаётся видимым. Нумерация соответствует порядку каталога,
+максимум рейтинга в меню — 39. [Первые пять испытаний](five-challenge-levels.md), [сложные уровни с новыми элементами](expert-levels.md),
+[объём](project-scope.md), [контракт](app-engine-contract-v1.md#app).
 
 ## Поведение UI
 

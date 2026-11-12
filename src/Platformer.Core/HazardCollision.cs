@@ -35,8 +35,7 @@ public static class HazardCollision
 
         // Максимальная скорость любой точки OBB ограничена угловой скоростью и
         // расстоянием от оси до самой удалённой вершины, включая centerOffset.
-        double reach = (double)hazard.CenterOffset.Length() + hazard.HalfExtents.Length();
-        double angularTravel = Math.Abs((double)hazard.AngularSpeed) * settings.FixedStepSeconds * reach;
+        double angularTravel = HazardMotion.MaximumPointSpeed(hazard) * settings.FixedStepSeconds;
         double requiredSteps = 0d;
         foreach (var segment in path)
         {

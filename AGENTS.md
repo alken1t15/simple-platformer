@@ -72,10 +72,24 @@ GameplayHost интерполирует шар между physics ticks и на�
 требует подтверждения с Cancel по умолчанию; последний вид уровня остаётся только фоном.
 В Playing удержание Space повторяет прыжок после приземления, в меню Space остаётся фронтом.
 Доработка 10.11.2026: разрывы уровней 1/2/4 — 2 единицы; борта Turning Maze —
-Core Surfaces с IsBarrier и общими bounds рендера/физики. Только балки уровней 2/4
-имеют HazardResponse.Knockback; стандартный Fail для уровней 3/5 сохранён.
+Core Surfaces с IsBarrier и общими bounds рендера/физики. Балки Turning Maze,
+Island Circuit, Windmill Pass и Temple Gauntlet имеют HazardResponse.Knockback;
+смертельные препятствия Jump Circuit, Lava Causeway и Sky Storm используют Fail.
 Контакт отбрасывает шар, отменяя перемещение одного tick; отменённый Path не собирает
 монеты/финиш. Данные/тесты и ограничения — docs/level-refinement.md.
+Расширение 12.11.2026: GameLevels содержит 13 локаций, пять новых стоят после Island
+Circuit, затем Pendulum Gorge / Piston Foundry / Clockwork Summit, последним Sky Storm.
+Все первые двенадцать доступны; BaseStars для открытия финала
+считает только исходные первые четыре (GameLevels.IsBaseLevel), порог12 сохранён.
+Всего 162 монеты / 39 звёзд, MaximumStars вычисляется из каталога; пороги скинов 6/9/15
+и старые ID/сохранения не меняются. Levels показывает 13 карточек в двух колонках.
+HazardMotionKind.Rotation сохраняет прежнее движение; Pendulum — качание угла,
+Shuttle — поперечный ход по синусу. Amplitude в радианах/единицах; AngularSpeed — частота
+фазы новых режимов. CCD/ValidateHazardBudget используют MaximumPointSpeed; Knockback —
+VelocityAt с фактической скоростью и направлением. Канат следует позе из snapshot,
+камень имеет OBB, стойки — Core IsBarrier вне дуги качания. Пауза/Restart сохраняют
+прежний контракт времени. Устройство и проверки — docs/five-challenge-levels.md,
+docs/expert-levels.md. Новые режимы реализованы в игре, gitlink движка не меняется.
 Обычный Linux-запуск после сборки — bash scripts/Play.sh, отдельно от терминала;
 --visual включает оформление со скриншотов. scripts/install_desktop.py создаёт личный
 Linux-ярлык в меню приложений (опционально --desktop); общие PNG/ICO — assets/branding.

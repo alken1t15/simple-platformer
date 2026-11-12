@@ -104,12 +104,15 @@ internal static class MenuLayout
             bool settings = screen == AppScreen.Settings;
             int cards = skinGrid ? GameSkins.All.Count : levels ? page.Options.Count - 1 : 0;
             bool card = i < cards;
-            bool paired = skinGrid && card;
+            bool levelGrid = levels && cards > 5;
+            float levelRow = MathF.Min(68f, 340f / Math.Max(1, (cards + 1) / 2));
+            bool paired = (skinGrid || levelGrid) && card;
             float x = paired ? 376f + (card ? i : i - cards) % 2 * 264f : 376f;
             float y = skinGrid ? (card ? 215f + i / 2 * 57f : 510f)
+                : levelGrid ? (card ? 210f + i / 2 * levelRow : 574f)
                 : levels ? (card ? 210f + i * 54f : 218f + cards * 54f)
                 : page.IsControlsPage ? 574f : settings ? 224f + 50f * i : 238f + row * i;
-            float buttonHeight = skinGrid ? (card ? 50f : 40f) : levels ? (card ? 46f : 40f)
+            float buttonHeight = skinGrid ? (card ? 50f : 40f) : levelGrid ? (card ? levelRow - 10f : 40f) : levels ? (card ? 46f : 40f)
                 : settings ? 44f : row - 12;
             var bounds = Rect(x, y, paired ? 252f : 528f, buttonHeight);
             bool selected = selectedIndex == i;
@@ -134,9 +137,11 @@ internal static class MenuLayout
             else if (option.Kind == MenuControlKind.Level)
             {
                 CardText(option.Label, option.Detail ?? "", x + 14, y, buttonHeight,
-                    3, 26, 19, 14, ink, option.Locked ? Muted : Accent);
+                    3, levelGrid ? 25 : 26, levelGrid ? 17 : 19, levelGrid ? 12 : 14,
+                    ink, option.Locked ? Muted : Accent);
                 for (int star = 0; star < 3; star++)
-                    images.Add(new(Rect(x + 430 + star * 28, y + 8, 25, 25),
+                    images.Add(new(Rect(x + (levelGrid ? 184 : 430) + star * (levelGrid ? 19 : 28), y + 8,
+                        levelGrid ? 17 : 25, levelGrid ? 17 : 25),
                         star < (option.Rating ?? 0) ? MenuArtwork.FilledStar : MenuArtwork.EmptyStar));
             }
             else if (option.Kind == MenuControlKind.Volume)

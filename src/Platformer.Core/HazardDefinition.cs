@@ -3,6 +3,7 @@ using System.Numerics;
 namespace Platformer.Core;
 
 public enum HazardResponse { Fail, Knockback }
+public enum HazardMotionKind { Rotation, Pendulum, Shuttle }
 
 /// <summary>Данные вращающейся балки, без вычисления движения или столкновений.</summary>
 public sealed class HazardDefinition
@@ -16,10 +17,14 @@ public sealed class HazardDefinition
     public float AngularSpeed { get; }
     public float InitialAngle { get; }
     public HazardResponse Response { get; }
+    public HazardMotionKind MotionKind { get; }
+    /// <summary>Для Pendulum — радианы, для Shuttle — расстояние от середины хода.</summary>
+    public float Amplitude { get; }
 
     public HazardDefinition(string id, Vector3 pivot, Vector3 axis, Vector3 centerOffset,
         Vector3 halfExtents, Quaternion initialOrientation, float angularSpeed, float initialAngle,
-        HazardResponse response = HazardResponse.Fail)
+        HazardResponse response = HazardResponse.Fail, HazardMotionKind motionKind = HazardMotionKind.Rotation,
+        float amplitude = 1f)
     {
         Id = LevelValidation.Id(id, nameof(id));
         LevelValidation.Position(pivot, nameof(pivot));
@@ -28,6 +33,10 @@ public sealed class HazardDefinition
         LevelValidation.Finite(angularSpeed, nameof(angularSpeed));
         LevelValidation.Finite(initialAngle, nameof(initialAngle));
         if (!Enum.IsDefined(response)) throw new ArgumentOutOfRangeException(nameof(response));
+        if (!Enum.IsDefined(motionKind)) throw new ArgumentOutOfRangeException(nameof(motionKind));
+        if (!float.IsFinite(amplitude) || amplitude <= 0 || amplitude > 100
+            || (motionKind == HazardMotionKind.Pendulum && amplitude > MathF.PI))
+            throw new ArgumentOutOfRangeException(nameof(amplitude));
         Pivot = pivot;
         Axis = LevelValidation.Direction(axis, nameof(axis));
         CenterOffset = centerOffset;
@@ -36,5 +45,7 @@ public sealed class HazardDefinition
         AngularSpeed = angularSpeed;
         InitialAngle = initialAngle;
         Response = response;
+        MotionKind = motionKind;
+        Amplitude = amplitude;
     }
 }

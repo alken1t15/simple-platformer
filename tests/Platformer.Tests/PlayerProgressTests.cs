@@ -62,7 +62,7 @@ public sealed class PlayerProgressTests
             Assert.IsTrue(store.Save(progress), store.Diagnostic);
             var loaded = new ProgressStore(path).Load(catalog);
             CollectionAssert.AreEquivalent(progress.BestCoins.ToArray(), loaded.BestCoins.ToArray());
-            Assert.AreEqual(15, loaded.TotalStars);
+            Assert.AreEqual(catalog.Levels.Count * 3, loaded.TotalStars);
             Assert.HasCount(1, Directory.GetFiles(directory)); // Временный файл не остаётся.
             foreach (string invalid in new[] { "{broken", "{\"Version\":2,\"BestCoins\":{}}",
                 "{\"Version\":1,\"BestCoins\":{\"level1\":-1}}" })

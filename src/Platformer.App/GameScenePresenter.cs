@@ -6,7 +6,7 @@ using Platformer.Core;
 namespace Platformer.App;
 
 /// <summary>Адаптирует данные Core на потоке окна; не выполняет физику, ввод или HUD.</summary>
-public sealed class GameScenePresenter
+public sealed partial class GameScenePresenter
 {
     private readonly LevelDefinition _level;
     private readonly Dictionary<string, SceneObject> _surfaces = new(StringComparer.Ordinal);
@@ -43,7 +43,7 @@ public sealed class GameScenePresenter
         _level = level;
         bool maze = level.Id == "level2";
         var accent = visual ? VisualScene.GuardRail : new MaterialData { BaseColor = new ColorRgba(0.55f, 0.25f, 0.75f) };
-        _visual = visual ? new VisualScene(Scene, level.Surfaces) : null;
+        _visual = visual ? new VisualScene(Scene, level.Surfaces, level.Hazards) : null;
         var track = visual ? VisualScene.Track : new MaterialData { BaseColor = maze ? new ColorRgba(0.25f, 0.25f, 0.3f) : new ColorRgba(0.72f, 0.75f, 0.8f) };
         var gold = visual ? VisualScene.Gold : new MaterialData { BaseColor = new ColorRgba(1f, 0.72f, 0.08f) };
         var danger = new MaterialData { BaseColor = new ColorRgba(0.9f, 0.08f, 0.06f) };
@@ -74,6 +74,7 @@ public sealed class GameScenePresenter
         }
         foreach (var hazard in level.Hazards)
         {
+            if (CreateExpertHazard(hazard, visual, danger)) continue;
             var material = visual ? hazard.Response == HazardResponse.Knockback
                 ? VisualScene.BumperBeam : VisualScene.LethalObstacle : danger;
             _hazards.Add(hazard.Id, Add(GameMeshes.Box, material));
@@ -187,7 +188,12 @@ public sealed class GameScenePresenter
                     : _visual is not null ? (flash ? VisualScene.CrumbleWarningA : VisualScene.CrumbleWarningB)
                     : flash ? WarningA : WarningB;
         }
-        foreach (var pose in snapshot.Hazards) SetBounds(_hazards[pose.Id], pose.Bounds);
+        foreach (var pose in snapshot.Hazards)
+        {
+            SetBounds(_hazards[pose.Id], pose.Bounds);
+            if (_pendulumRopes.TryGetValue(pose.Id, out var rope))
+                SetSegment(rope.Rope, rope.Pivot, pose.Bounds.Center, 0.065f);
+        }
         if (reset || snapshot.Tick > _tick)
         {
             _previousPosition = reset ? snapshot.Ball.Center : _lastBall.Center;

@@ -9,7 +9,7 @@ namespace Platformer.Tests;
 public sealed class ProductionRouteTests
 {
     // Направление задаётся только WASD + mouse yaw; нет телепортации/подмены физики.
-    private sealed class Driver
+    internal sealed class Driver
     {
         public GameplayHost Host { get; }
         public Driver(GameplayHost host) => Host = host;
@@ -82,7 +82,7 @@ public sealed class ProductionRouteTests
     [TestMethod]
     [DataRow(false)]
     [DataRow(true)]
-    public void ProductionCatalogPassesAllFiveLocationsThroughInputRunnerSessionPresenterAndAudio(bool visual)
+    public void ProductionCatalogPassesAllThirteenLocationsThroughInputRunnerSessionPresenterAndAudio(bool visual)
     {
         var playback = new AudioCoordinatorTests.Playback();
         using var audio = new AudioCoordinator(playback);
@@ -157,19 +157,27 @@ public sealed class ProductionRouteTests
         Assert.AreEqual(11, host.Flow.Snapshot!.CoinCount);
         Assert.AreEqual(12, host.Flow.Progress.BaseStars);
         driver.Press(AppButtons.Enter);
+        foreach (string challenge in ChallengeRoutes.Ids.Concat(ChallengeRoutes.ExpertIds))
+        {
+            Assert.AreEqual(challenge, host.Flow.Snapshot!.LevelId);
+            ChallengeRoutes.Run(driver, challenge);
+            Assert.AreEqual(AppScreen.LevelResult, host.Flow.Screen, challenge);
+            Assert.AreEqual(12, host.Flow.Snapshot!.CoinCount, challenge);
+            driver.Press(AppButtons.Enter);
+        }
         Assert.AreEqual(GameLevels.FinalLevelId, host.Flow.Snapshot!.LevelId);
         driver.SkyStorm();
         Assert.AreEqual(AppScreen.LevelResult, host.Flow.Screen);
         Assert.AreEqual(20, host.Flow.Snapshot!.CoinCount);
         driver.Press(AppButtons.Enter);
         Assert.AreEqual(AppScreen.GameComplete, host.Flow.Screen);
-        Assert.AreEqual(66, host.Flow.TotalCoinCount);
-        Assert.AreEqual(15, host.Flow.Progress.TotalStars);
+        Assert.AreEqual(162, host.Flow.TotalCoinCount);
+        Assert.AreEqual(39, host.Flow.Progress.TotalStars);
         Assert.IsTrue(host.Flow.Progress.IsSkinUnlocked("champion"));
         Assert.AreEqual("football", host.Flow.UserSettings.SkinId);
         Assert.AreEqual(0.4f, host.Flow.UserSettings.MasterVolume);
-        Assert.AreEqual(66, playback.Effects.Count(item => item.Kind == GameEventKind.CoinCollected));
-        Assert.AreEqual(5, playback.Effects.Count(item => item.Kind == GameEventKind.LevelCompleted));
+        Assert.AreEqual(162, playback.Effects.Count(item => item.Kind == GameEventKind.CoinCollected));
+        Assert.AreEqual(13, playback.Effects.Count(item => item.Kind == GameEventKind.LevelCompleted));
         Assert.IsTrue(playback.Music.All(voice => voice.Disposed));
     }
 

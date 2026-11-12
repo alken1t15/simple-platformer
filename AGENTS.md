@@ -96,6 +96,15 @@ Levels показывает графические звёзды и цветну�
 рейтинга и Best coins. LevelDifficulties — оценка маршрута, не физическая настройка.
 MenuTextKind.Difficulty сохраняет семантический цвет в TropicalMenuTheme.
 SkinSelect использует две колонки с адаптивной высотой карточек/preview, Back виден при 800×450.
+Оценки сложности откалиброваны: большинство обычных маршрутов Normal, Crumble/Temple/
+Pendulum/Piston Hard, Clockwork/Sky Very hard. Постоянного Sky Storm12/12 в Levels нет:
+при закрытом финале показываются условие3звезды на каждом из первых4 и число освоенных
+уровней; при открытом — обычная инструкция выбора. Правило открытия не изменено.
+GameplayDialogLayout рисует компактные Paused/Failed/LevelResult по MenuPage.Status.
+Failed показывает только лучший успешный финиш, не начисляя звёзды за поражение;
+LevelResult отдельно показывает THIS FINISH и PERSONAL BEST графическими звёздами.
+ASCII-рейтинг и счёт монет на результатах убраны, HUD в Playing прежний.
+Подтверждение Main menu не должно получать Status; Cancel по умолчанию сохраняет попытку.
 Обычный Linux-запуск после сборки — bash scripts/Play.sh, отдельно от терминала;
 --visual включает оформление со скриншотов. scripts/install_desktop.py создаёт личный
 Linux-ярлык в меню приложений (опционально --desktop); общие PNG/ICO — assets/branding.

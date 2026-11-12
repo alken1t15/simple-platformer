@@ -43,15 +43,15 @@ public sealed class LevelDifficultyMenuTests
                 var text = MenuOverlayAdapter.Build(view, visual).Texts.ToArray().Single(t => t.Position == label.Position && t.Text == label.Text);
                 Assert.AreEqual(label.Color, text.Color);
             }
-            Assert.IsTrue(view.Texts.Any(t => t.Text.Contains("/12 stars on levels 1-4", StringComparison.Ordinal)));
+            Assert.IsTrue(view.Texts.Any(t => t.Text == "Levels mastered: 1/4"));
             Assert.IsFalse(view.Controls.Single(c => c.Id == "level:sky-storm").Enabled);
             foreach (var expected in new[]
             {
                 ("level1", "Easy", new ColorRgba(0.40f, 0.92f, 0.57f)),
                 ("level2", "Normal", new ColorRgba(0.98f, 0.86f, 0.38f)),
-                ("coral-ascent", "Hard", new ColorRgba(1f, 0.67f, 0.32f)),
-                ("lava-causeway", "Very hard", new ColorRgba(1f, 0.47f, 0.28f)),
-                ("clockwork-summit", "Expert", new ColorRgba(1f, 0.34f, 0.43f)),
+                ("coral-ascent", "Normal", new ColorRgba(0.98f, 0.86f, 0.38f)),
+                ("crumble-canyon", "Hard", new ColorRgba(1f, 0.67f, 0.32f)),
+                ("clockwork-summit", "Very hard", new ColorRgba(1f, 0.47f, 0.28f)),
             })
             {
                 var card = view.Controls.Single(c => c.Id == "level:" + expected.Item1);

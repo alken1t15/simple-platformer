@@ -8,7 +8,9 @@ internal enum MenuAction { Play, Levels, Settings, Skins, Exit, ChooseLevel, Bac
     ChooseSkin, Continue, Restart, MainMenu, Next, Resolution, ApplyResolution, DisplayMode, CancelMainMenu, ConfirmMainMenu, Music, Controls }
 internal sealed record MenuOption(string Id, string Label, MenuAction Action,
     MenuControlKind Kind = MenuControlKind.Button, string? Value = null, ColorRgba? Swatch = null, bool Enabled = true, string? Detail = null, bool Locked = false, int? Rating = null, LevelDifficulty? Difficulty = null);
-internal sealed record MenuPage(string Title, IReadOnlyList<string> Details, IReadOnlyList<MenuOption> Options, bool IsControlsPage = false);
+internal sealed record GameplayDialogSummary(string LevelName, int BestStars, int? FinishStars = null);
+internal sealed record MenuPage(string Title, IReadOnlyList<string> Details, IReadOnlyList<MenuOption> Options,
+    bool IsControlsPage = false, GameplayDialogSummary? Status = null);
 
 /// <summary>Один расчёт геометрии для отрисовки и hit-test; не обращается к окну.</summary>
 internal static class MenuLayout
@@ -32,6 +34,8 @@ internal static class MenuLayout
         var texts = new List<MenuText>();
         var images = new List<MenuImage>();
         if (width == 0f || height == 0f) return new(screen, new(width, height), controls, panels, texts);
+        if (page.Status is not null)
+            return GameplayDialogLayout.Build(screen, page, selectedIndex, pointer, pressedId, width, height);
         float scale = MathF.Min(width / 1280f, height / 720f);
         float left = (width - 1280f * scale) / 2f, top = (height - 720f * scale) / 2f;
         MenuRect Rect(float x, float y, float w, float h) => new(left + x * scale, top + y * scale, w * scale, h * scale);

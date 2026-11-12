@@ -10,10 +10,9 @@ internal static class LevelDifficulties
     internal static LevelDifficulty For(string id) => id switch
     {
         "level1" => LevelDifficulty.Easy,
-        "level2" or "jump-circuit" => LevelDifficulty.Normal,
-        "island-circuit" or "coral-ascent" => LevelDifficulty.Hard,
-        "windmill-pass" or "lava-causeway" or "crumble-canyon" or "temple-gauntlet" => LevelDifficulty.VeryHard,
-        "pendulum-gorge" or "piston-foundry" or "clockwork-summit" or "sky-storm" => LevelDifficulty.Expert,
+        "level2" or "jump-circuit" or "island-circuit" or "coral-ascent" or "windmill-pass" or "lava-causeway" => LevelDifficulty.Normal,
+        "crumble-canyon" or "temple-gauntlet" or "pendulum-gorge" or "piston-foundry" => LevelDifficulty.Hard,
+        "clockwork-summit" or "sky-storm" => LevelDifficulty.VeryHard,
         _ => LevelDifficulty.Normal,
     };
 

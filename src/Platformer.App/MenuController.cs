@@ -264,7 +264,7 @@ public sealed class MenuController
             [Button("play", "Play", MenuAction.Play), Button("levels", "Levels", MenuAction.Levels),
              Button("settings", "Settings", MenuAction.Settings), Button("skins", "Skins", MenuAction.Skins),
              Button("exit", "Exit", MenuAction.Exit)]),
-            AppScreen.LevelSelect => new("Choose a level", [$"Sky Storm: {Math.Min(12, flow.Progress.BaseStars)}/12 stars on levels 1-4"],
+            AppScreen.LevelSelect => new("Choose a level", LevelSelectionDetails(),
                 catalog.Levels.Select((level, index) => new MenuOption($"level:{level.Id}",
                     $"{index + 1}. {HudModel.LevelNameFor(level.Id)}",
                     MenuAction.ChooseLevel, MenuControlKind.Level, level.Id,
@@ -290,26 +290,35 @@ public sealed class MenuController
                         ? $"Locked: {skin.RequiredStars} stars" : skin.Id == settings.SkinId ? "Current" : "Unlocked",
                     Locked: !flow.Progress.IsSkinUnlocked(skin.Id)))
                 .Concat([Back()]).ToArray()),
-            AppScreen.Paused => new("Paused", ["Take a breath. Continue when ready."],
+            AppScreen.Paused => new("Take a breather", ["Your adventure is on hold. Ready when you are."],
             [Button("continue", "Continue", MenuAction.Continue), Button("restart", "Restart", MenuAction.Restart),
-             Button("settings", "Settings", MenuAction.Settings), Main()]),
-            AppScreen.Failed => new("Try again", ["You fell or touched an obstacle.", "R: retry this level"],
-            [Retry(), Button("levels", "Level select", MenuAction.Levels), Main()]),
-            AppScreen.LevelResult => new("Level complete!", [CurrentCoins(), $"Rating: {Stars(PlayerProgress.Rating(flow.Snapshot!.CoinCount, catalog.Get(flow.Snapshot.LevelId).Coins.Count))}   Best: {Stars(flow.Progress.StarsFor(flow.Snapshot.LevelId))}"],
-            [Button("next", "Next", MenuAction.Next), Retry(), Main()]),
+             Button("settings", "Settings", MenuAction.Settings), Main()], Status: DialogSummary()),
+            AppScreen.Failed => new("One more try?", [flow.Progress.StarsFor(flow.Snapshot!.LevelId) > 0
+                ? "Your best finish is safe. Give it another go." : "Finish this level to earn your first stars."],
+            [Retry(), Button("levels", "Level select", MenuAction.Levels), Main()], Status: DialogSummary()),
+            AppScreen.LevelResult => new("Level complete!", ["Nice finish! Ready for the next challenge?"],
+            [Button("next", "Next", MenuAction.Next), Retry(), Main()], Status: DialogSummary(completed: true)),
             AppScreen.GameComplete => new(!catalog.Levels.Any(level => level.Id == GameLevels.FinalLevelId) || flow.Progress.StarsFor(GameLevels.FinalLevelId) > 0
-                ? "Adventure complete!" : "Journey complete!", [$"Total coins: {flow.TotalCoinCount}", $"Adventure stars: {flow.Progress.TotalStars}/{flow.Progress.MaximumStars}",
+                ? "Adventure complete!" : "Journey complete!", [$"Adventure stars: {flow.Progress.TotalStars}/{flow.Progress.MaximumStars}",
                     flow.Progress.BaseStars < 12 ? "Earn 12 stars on the first four levels." : $"Sky Storm unlocked. Aim for {flow.Progress.MaximumStars}/{flow.Progress.MaximumStars} stars!"],
             [Button("levels", "Level select", MenuAction.Levels), Main()]),
             _ => new("", [], []),
         };
     }
 
-    private static string Stars(int count) => "[" + new string('*', count) + new string('-', 3 - count) + "]";
-
-    private string CurrentCoins()
+    private GameplayDialogSummary DialogSummary(bool completed = false)
     {
         var snapshot = flow.Snapshot!;
-        return $"Coins {snapshot.CoinCount}/{catalog.Get(snapshot.LevelId).Coins.Count}";
+        return new(HudModel.LevelNameFor(snapshot.LevelId), flow.Progress.StarsFor(snapshot.LevelId),
+            completed ? PlayerProgress.Rating(snapshot.CoinCount, catalog.Get(snapshot.LevelId).Coins.Count) : null);
+    }
+
+    private string[] LevelSelectionDetails()
+    {
+        if (!catalog.Levels.Any(level => level.Id == GameLevels.FinalLevelId)
+            || flow.Progress.IsLevelUnlocked(GameLevels.FinalLevelId))
+            return ["Pick a route. Stars show your best finish."];
+        int mastered = catalog.Levels.Count(level => GameLevels.IsBaseLevel(level.Id) && flow.Progress.StarsFor(level.Id) == 3);
+        return ["Sky Storm unlocks with 3 stars on levels 1-4.", $"Levels mastered: {mastered}/4"];
     }
 }

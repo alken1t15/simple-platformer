@@ -39,7 +39,8 @@ public sealed class PresentationIntegrationTests
         var texts = driver.Host.View.Texts.Select(text => text.Text).ToArray();
         Assert.IsFalse(texts.Any(text => text.StartsWith("Boost", StringComparison.Ordinal)),
             "Игровой HUD не рисуется поверх экрана результата");
-        Assert.AreEqual(1, texts.Count(text => text == "Coins 1/2"), "Итог уровня берётся из того же snapshot");
+        Assert.AreEqual(1, driver.Snapshot.CoinCount, "Итог уровня берётся из того же snapshot");
+        Assert.AreEqual(1, texts.Count(text => text == "THIS FINISH"));
         driver.Press(AppButtons.Enter);
         Assert.AreEqual("Coins 0/0", driver.HudText("Coins"));
         Assert.IsTrue(driver.Host.View.Texts.Any(text => text.Text == "Turning Maze"), "Имя level2 из макета");

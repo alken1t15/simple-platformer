@@ -7,7 +7,7 @@ namespace Platformer.App;
 internal enum MenuAction { Play, Levels, Settings, Skins, Exit, ChooseLevel, Back, Volume, Mute,
     ChooseSkin, Continue, Restart, MainMenu, Next, Resolution, ApplyResolution, DisplayMode, CancelMainMenu, ConfirmMainMenu, Music, Controls }
 internal sealed record MenuOption(string Id, string Label, MenuAction Action,
-    MenuControlKind Kind = MenuControlKind.Button, string? Value = null, ColorRgba? Swatch = null, bool Enabled = true, string? Detail = null, bool Locked = false, int? Rating = null);
+    MenuControlKind Kind = MenuControlKind.Button, string? Value = null, ColorRgba? Swatch = null, bool Enabled = true, string? Detail = null, bool Locked = false, int? Rating = null, LevelDifficulty? Difficulty = null);
 internal sealed record MenuPage(string Title, IReadOnlyList<string> Details, IReadOnlyList<MenuOption> Options, bool IsControlsPage = false);
 
 /// <summary>Один расчёт геометрии для отрисовки и hit-test; не обращается к окну.</summary>
@@ -35,15 +35,16 @@ internal static class MenuLayout
         float scale = MathF.Min(width / 1280f, height / 720f);
         float left = (width - 1280f * scale) / 2f, top = (height - 720f * scale) / 2f;
         MenuRect Rect(float x, float y, float w, float h) => new(left + x * scale, top + y * scale, w * scale, h * scale);
-        void Text(string text, float x, float y, float size, ColorRgba? color = null) =>
-            texts.Add(new(new(left + x * scale, top + y * scale), text, size * scale, color ?? White));
+        void Text(string text, float x, float y, float size, ColorRgba? color = null, MenuTextKind kind = MenuTextKind.Default) =>
+            texts.Add(new(new(left + x * scale, top + y * scale), text, size * scale, color ?? White, kind));
         void Label(string text, float x, float y, float height, float size, ColorRgba? color = null)
         {
             var ink = OverlayTextMetrics.MeasureInkBounds(text, size);
             Text(text, x, y + (height - ink.Height) / 2 - ink.Y, size, color);
         }
         void CardText(string title, string detail, float x, float y, float height,
-            float titleTop, float detailTop, float titleSize, float detailSize, ColorRgba ink, ColorRgba detailInk)
+            float titleTop, float detailTop, float titleSize, float detailSize, ColorRgba ink, ColorRgba detailInk,
+            MenuTextKind detailKind = MenuTextKind.Default)
         {
             var first = OverlayTextMetrics.MeasureInkBounds(title, titleSize);
             var second = OverlayTextMetrics.MeasureInkBounds(detail, detailSize);
@@ -51,7 +52,7 @@ internal static class MenuLayout
             float bottomInk = MathF.Max(titleTop + first.Y + first.Height, detailTop + second.Y + second.Height);
             float offset = (height - (bottomInk - topInk)) / 2 - topInk;
             Text(title, x, y + titleTop + offset, titleSize, ink);
-            Text(detail, x, y + detailTop + offset, detailSize, detailInk);
+            Text(detail, x, y + detailTop + offset, detailSize, detailInk, detailKind);
         }
 
         if (visual && screen == AppScreen.MainMenu)
@@ -106,13 +107,14 @@ internal static class MenuLayout
             bool card = i < cards;
             bool levelGrid = levels && cards > 5;
             float levelRow = MathF.Min(68f, 340f / Math.Max(1, (cards + 1) / 2));
+            float skinRow = MathF.Min(57f, 340f / Math.Max(1, (cards + 1) / 2));
             bool paired = (skinGrid || levelGrid) && card;
             float x = paired ? 376f + (card ? i : i - cards) % 2 * 264f : 376f;
-            float y = skinGrid ? (card ? 215f + i / 2 * 57f : 510f)
+            float y = skinGrid ? (card ? 210f + i / 2 * skinRow : 574f)
                 : levelGrid ? (card ? 210f + i / 2 * levelRow : 574f)
                 : levels ? (card ? 210f + i * 54f : 218f + cards * 54f)
                 : page.IsControlsPage ? 574f : settings ? 224f + 50f * i : 238f + row * i;
-            float buttonHeight = skinGrid ? (card ? 50f : 40f) : levelGrid ? (card ? levelRow - 10f : 40f) : levels ? (card ? 46f : 40f)
+            float buttonHeight = skinGrid ? (card ? skinRow - 7f : 40f) : levelGrid ? (card ? levelRow - 10f : 40f) : levels ? (card ? 46f : 40f)
                 : settings ? 44f : row - 12;
             var bounds = Rect(x, y, paired ? 252f : 528f, buttonHeight);
             bool selected = selectedIndex == i;
@@ -124,21 +126,22 @@ internal static class MenuLayout
             if (selected) panels.Add(new(Rect(x, y, 4f, buttonHeight), Accent, MenuPanelKind.Focus));
             MenuRect? valueBounds = option.Kind == MenuControlKind.Volume
                 ? Rect(396f, y + buttonHeight - 9f, 488f, 3f) : null;
-            MenuRect? previewBounds = option.Kind == MenuControlKind.Skin ? Rect(x + 6, y + 3, 44, 44) : null;
+            float previewSize = MathF.Min(44, buttonHeight - 6);
+            MenuRect? previewBounds = option.Kind == MenuControlKind.Skin ? Rect(x + 6, y + 3, previewSize, previewSize) : null;
             controls.Add(new(option.Id, option.Label, option.Kind, bounds, selected, hovered, pressed,
                 valueBounds, previewBounds, option.Enabled, option.Locked));
             ColorRgba ink = option.Enabled && !option.Locked ? White : Muted;
             if (previewBounds is not null)
             {
                 CardText(GameSkins.Get(option.Value!).DisplayName, option.Detail ?? "", x + 60, y, buttonHeight,
-                    6, 29, 17, 13, ink, option.Locked ? Muted : Accent);
-                if (option.Swatch is { } swatch) panels.Add(new(Rect(x + 60, y + 46, 24, 2), swatch));
+                    3, 24, 17, 12, ink, option.Locked ? Muted : Accent);
+                if (option.Swatch is { } swatch) panels.Add(new(Rect(x + 60, y + buttonHeight - 4, 24, 2), swatch));
             }
             else if (option.Kind == MenuControlKind.Level)
             {
                 CardText(option.Label, option.Detail ?? "", x + 14, y, buttonHeight,
                     3, levelGrid ? 25 : 26, levelGrid ? 17 : 19, levelGrid ? 12 : 14,
-                    ink, option.Locked ? Muted : Accent);
+                    ink, LevelDifficulties.Color(option.Difficulty ?? LevelDifficulty.Normal), MenuTextKind.Difficulty);
                 for (int star = 0; star < 3; star++)
                     images.Add(new(Rect(x + (levelGrid ? 184 : 430) + star * (levelGrid ? 19 : 28), y + 8,
                         levelGrid ? 17 : 25, levelGrid ? 17 : 25),

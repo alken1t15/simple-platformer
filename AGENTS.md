@@ -90,6 +90,12 @@ VelocityAt с фактической скоростью и направлени�
 камень имеет OBB, стойки — Core IsBarrier вне дуги качания. Пауза/Restart сохраняют
 прежний контракт времени. Устройство и проверки — docs/five-challenge-levels.md,
 docs/expert-levels.md. Новые режимы реализованы в игре, gitlink движка не меняется.
+GameSkins содержит 14 скинов: прежние 9 ID и пороги наград 6/9/15 сохранены;
+watermelon/porcelain/magma/disco/voyager доступны сразу, без изменения физики/сохранений.
+Levels показывает графические звёзды и цветную подпись Difficulty, без ASCII-дубля
+рейтинга и Best coins. LevelDifficulties — оценка маршрута, не физическая настройка.
+MenuTextKind.Difficulty сохраняет семантический цвет в TropicalMenuTheme.
+SkinSelect использует две колонки с адаптивной высотой карточек/preview, Back виден при 800×450.
 Обычный Linux-запуск после сборки — bash scripts/Play.sh, отдельно от терминала;
 --visual включает оформление со скриншотов. scripts/install_desktop.py создаёт личный
 Linux-ярлык в меню приложений (опционально --desktop); общие PNG/ICO — assets/branding.

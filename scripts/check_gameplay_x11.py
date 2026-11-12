@@ -477,8 +477,9 @@ def main():
         click_control("back", "MainMenu")
         click_control("skins", "SkinSelect")
         assert {control["id"] for control in latest()["controls"] if control["id"].startswith("skin:")} == {
-            "skin:classic-blue", "skin:orange", "skin:emerald", "skin:violet", "skin:basketball", "skin:football", "skin:neon", "skin:aurora", "skin:champion"}
-        for skin_id in ("emerald", "violet", "basketball", "football"):
+            "skin:classic-blue", "skin:orange", "skin:emerald", "skin:violet", "skin:basketball", "skin:football", "skin:neon", "skin:aurora", "skin:champion",
+            "skin:watermelon", "skin:porcelain", "skin:magma", "skin:disco", "skin:voyager"}
+        for skin_id in ("emerald", "violet", "basketball", "football", "watermelon", "porcelain", "magma", "disco", "voyager"):
             click_control("skin:" + skin_id, "SkinSelect")
             until(lambda f: f["skin"] == skin_id, "apply " + skin_id)
         chosen = latest()["skin"]

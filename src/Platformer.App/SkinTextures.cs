@@ -4,7 +4,7 @@ using Engine3D.Core;
 namespace Platformer.App;
 
 /// <summary>Собственные сферические узоры; только immutable CPU-текстуры.</summary>
-internal static class SkinTextures
+internal static partial class SkinTextures
 {
     public static TextureData RewardBall(int style) => Create((normal, u, v) =>
     {

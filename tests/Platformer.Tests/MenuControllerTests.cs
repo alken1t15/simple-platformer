@@ -216,7 +216,7 @@ public sealed class MenuControllerTests
         Assert.AreEqual(AppScreen.GameComplete, f.Flow.Screen);
         Assert.AreEqual(1, f.Flow.TotalCoinCount);
         Assert.HasCount(1, f.Flow.CompletedLevels);
-        Assert.IsTrue(f.View().Texts.Any(text => text.Text == "Total coins: 1"));
+        Assert.IsTrue(f.View().Texts.Any(text => text.Text.StartsWith("Adventure stars:", StringComparison.Ordinal)));
         f.Click("levels");
         f.Click("back");
         Assert.AreEqual(AppScreen.GameComplete, f.Flow.Screen);
@@ -254,7 +254,8 @@ public sealed class MenuControllerTests
         var f = new Fixture();
         f.Click("play");
         f.Finish();
-        Assert.IsTrue(f.View().Texts.Any(text => text.Text == "Coins 1/1"));
+        Assert.AreEqual(1, f.Flow.Snapshot!.CoinCount);
+        Assert.IsTrue(f.View().Texts.Any(text => text.Text == "THIS FINISH"));
         f.Click("retry", enter: true);
         Assert.AreEqual(0, f.Flow.TotalCoinCount);
         f.Finish();

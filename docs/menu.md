@@ -167,11 +167,35 @@ Core, LevelFlow, звук и текущий сеанс при выборе ра�
   Недостающая локация не заменяется копией level1.
   Результат представлен тремя графическими звёздами без дублирующей ASCII-строки и Best coins.
   Нижняя подпись Difficulty имеет собственный цвет в обоих оформлениях; тема сохраняет
-  его через MenuTextKind.Difficulty. Условие открытия Sky Storm показано в заголовке.
-  Easy — Training Track; Normal — Turning Maze / Jump Circuit; Hard — Island Circuit /
-  Coral Ascent; Very hard — Windmill Pass / Lava Causeway / Crumble Canyon / Temple Gauntlet;
-  Expert — Pendulum Gorge / Piston Foundry / Clockwork Summit / Sky Storm.
+  его через MenuTextKind.Difficulty. Пока Sky Storm закрыт, заголовок объясняет условие
+  «3 звезды на каждом из первых четырёх» и показывает число освоенных уровней из четырёх.
+  После открытия остаётся обычная инструкция выбора, без постоянного счётчика 12/12.
+  Easy — Training Track; Normal — Turning Maze / Jump Circuit / Island Circuit /
+  Coral Ascent / Windmill Pass / Lava Causeway; Hard — Crumble Canyon / Temple Gauntlet /
+  Pendulum Gorge / Piston Foundry; Very hard — Clockwork Summit / Sky Storm.
   Это авторская оценка, а не переключатель сложности; неизвестные тестовые ID используют Normal.
+
+### Игровые диалоги
+
+Paused, Failed и LevelResult используют отдельную компактную раскладку
+`GameplayDialogLayout`. `MenuController` передаёт только имя уровня и данные рейтинга
+через `MenuPage.Status`; источник рекорда — неизменённый `PlayerProgress`.
+Процедурные значки паузы, повторения и финиша создаются один раз в `DialogArtwork`.
+Главное меню и настройки сохраняют свою прежнюю раскладку.
+
+- Пауза: небольшая панель с именем уровня, основной Continue, парой Restart/Settings
+  и Main menu. Пауза/Continue и возврат из Settings сохраняют ту же попытку.
+- Поражение: три графические звезды лучшего **успешного финиша**. Неудачная попытка
+  не получает звёзды и не снижает рекорд. Если финишей ещё не было, показаны пустые
+  звёзды и предложение завершить уровень. Retry — основная кнопка, Levels/Main menu — вторичные.
+- Победа: два блока `THIS FINISH` и `PERSONAL BEST`, каждый с тремя графическими звёздами.
+  Ни ASCII `[***]`, ни строки Coins/Rating/Best со счётом не показываются. Более слабое
+  повторное прохождение не затирает лучший результат. Next — основная кнопка.
+- GameComplete сохраняет общий рейтинг приключения; лишний суммарный счёт монет убран.
+
+Панели имеют единые bounds для отрисовки и hit-test; проверены 800×450–1920×1080,
+вертикальное выравнивание подписей, переходы и сохранение рекордов. Подтверждение выхода
+из попытки — прежняя отдельная страница без Status: Cancel остаётся выбранным по умолчанию.
 
 ## Переходы
 

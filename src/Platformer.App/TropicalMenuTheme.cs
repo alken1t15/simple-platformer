@@ -44,6 +44,7 @@ internal static class TropicalMenuTheme
 
     public static ColorRgba TextColor(MenuText text)
     {
+        if (text.Kind == MenuTextKind.Difficulty) return text.Color;
         if (text.Color.B > 0.8f && text.Color.R < 0.3f) return Teal;
         return text.Color.R > 0.85f ? Ink : SecondaryInk;
     }

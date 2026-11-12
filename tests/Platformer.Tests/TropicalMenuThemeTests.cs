@@ -30,7 +30,10 @@ public sealed class TropicalMenuThemeTests
                     Assert.AreEqual(standard.Texts[i].Text, themed.Texts[i].Text);
                     Assert.AreEqual(standard.Texts[i].Position, themed.Texts[i].Position);
                     Assert.AreEqual(standard.Texts[i].PixelHeight, themed.Texts[i].PixelHeight);
-                    Assert.IsGreaterThan(0.7f, themed.Texts[i].Color.G, "Тёмная карточка требует светлой надписи");
+                    if (view.Texts[i].Kind == MenuTextKind.Difficulty)
+                        Assert.AreEqual(view.Texts[i].Color, themed.Texts[i].Color, "Цвет сложности сохраняется в теме");
+                    else
+                        Assert.IsGreaterThan(0.7f, themed.Texts[i].Color.G, "Тёмная карточка требует светлой надписи");
                 }
                 for (int i = 0; i < view.Panels.Count; i++)
                 {

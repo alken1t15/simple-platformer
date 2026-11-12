@@ -31,7 +31,7 @@ Core не зависит от окна. Поведение — [меню](menu.m
 | Core/Session + App/LevelFlow | Реализованы CPU-сеанс, монеты/финиш/KillY/hazards/reset/events, каталог/переходы/пауза/GameComplete; оконный host --play подключён | Владимир |
 | App/Input + Clock | Реализованы CPU-маршрутизация/runner, native adapter и host --play с общим AppScreen из LevelFlow; меню/HUD #19 подключены через MenuController и MenuOverlayAdapter | Николай |
 | App/Camera | Реализованы орбита, pitch clamp, yaw-relative движение и отступ от OBB; поза передаётся в публичную Camera оконного host | Николай |
-| App/Presenter | Реализованы процедурные меши, девять скинов, Apply snapshot/Path и контрактный 3D-preview; snapshot настоящего сеанса отображается в --play; каталог включает тринадцать production-локаций, маршрут проверен автоматически | Роман |
+| App/Presenter | Реализованы процедурные меши, четырнадцать скинов, Apply snapshot/Path и контрактный 3D-preview; snapshot настоящего сеанса отображается в --play; каталог включает тринадцать production-локаций, маршрут проверен автоматически | Роман |
 | App/Menu | Подключены MainMenu/LevelSelect/Settings/Skins/Paused/Failed/Results и единственный HUD/overlay; данные level2/звук отдельно | Николай |
 | App/AudioCoordinator | Идемпотентные команды воспроизведения из событий, настройки громкости и lifecycle | Роман |
 | Tests/QA | Независимые CPU-регрессии, интеграционные, ручные Linux и чистый запуск | Константин / Артём |

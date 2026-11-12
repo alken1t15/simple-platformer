@@ -268,8 +268,9 @@ public sealed class MenuController
                 catalog.Levels.Select((level, index) => new MenuOption($"level:{level.Id}",
                     $"{index + 1}. {HudModel.LevelNameFor(level.Id)}",
                     MenuAction.ChooseLevel, MenuControlKind.Level, level.Id,
-                    Enabled: flow.Progress.IsLevelUnlocked(level.Id), Detail: LevelDetail(level),
-                    Locked: !flow.Progress.IsLevelUnlocked(level.Id), Rating: flow.Progress.StarsFor(level.Id)))
+                    Enabled: flow.Progress.IsLevelUnlocked(level.Id), Detail: LevelDifficulties.Label(LevelDifficulties.For(level.Id)),
+                    Locked: !flow.Progress.IsLevelUnlocked(level.Id), Rating: flow.Progress.StarsFor(level.Id),
+                    Difficulty: LevelDifficulties.For(level.Id)))
                 .Concat([Back()]).ToArray()),
             AppScreen.Settings => new("Settings", [$"Current window: {Window.Actual}",
                 $"Current mode: {(Window.ActualFullscreen ? "Fullscreen" : "Windowed")}"],
@@ -305,14 +306,6 @@ public sealed class MenuController
     }
 
     private static string Stars(int count) => "[" + new string('*', count) + new string('-', 3 - count) + "]";
-
-    private string LevelDetail(LevelDefinition level)
-    {
-        if (!flow.Progress.IsLevelUnlocked(level.Id)) return $"Locked: {Math.Min(12, flow.Progress.BaseStars)}/12 base stars";
-        return flow.Progress.BestCoins.TryGetValue(level.Id, out int coins)
-            ? $"{Stars(flow.Progress.StarsFor(level.Id))}  Best coins {coins}/{level.Coins.Count}"
-            : "[---]  Not completed";
-    }
 
     private string CurrentCoins()
     {

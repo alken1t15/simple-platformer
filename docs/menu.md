@@ -156,7 +156,7 @@ Core, LevelFlow, звук и текущий сеанс при выборе ра�
   Original остаётся по умолчанию; выбор не требует Apply и сохраняется между запусками в settings-v1.json.
   В Settings из паузы новый трек начинает звучать только после Continue; mute и громкость
   действуют на оба трека одинаково. [Источник и lifecycle](game-audio.md).
-- SkinSelect показывает девять текстурных изображений шарика из материалов `GameSkins`; активация карточки
+- SkinSelect показывает четырнадцать текстурных изображений шарика из материалов `GameSkins`; активация карточки
   мышью/Enter/Space сразу применяет открытый скин. Закрытые карточки показывают требование рейтинга. Дополнительной кнопки Select нет, Back сохраняет выбор.
   Start/Restart/Next используют выбранный скин через существующий Presenter.
 - HUD читает имя уровня, CoinCount/число монет уровня и boost timers из принятого snapshot.
@@ -165,6 +165,13 @@ Core, LevelFlow, звук и текущий сеанс при выборе ра�
 - LevelSelect строит карточки по переданному каталогу. Имена `level1`/`level2` — Training Track /
   Turning Maze; тесты с двумя уровнями не означают, что игровые данные level2 уже поставлены.
   Недостающая локация не заменяется копией level1.
+  Результат представлен тремя графическими звёздами без дублирующей ASCII-строки и Best coins.
+  Нижняя подпись Difficulty имеет собственный цвет в обоих оформлениях; тема сохраняет
+  его через MenuTextKind.Difficulty. Условие открытия Sky Storm показано в заголовке.
+  Easy — Training Track; Normal — Turning Maze / Jump Circuit; Hard — Island Circuit /
+  Coral Ascent; Very hard — Windmill Pass / Lava Causeway / Crumble Canyon / Temple Gauntlet;
+  Expert — Pendulum Gorge / Piston Foundry / Clockwork Summit / Sky Storm.
+  Это авторская оценка, а не переключатель сложности; неизвестные тестовые ID используют Normal.
 
 ## Переходы
 

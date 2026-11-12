@@ -64,6 +64,11 @@ public static class GameSkins
             new("neon", "Neon circuit", new MaterialData { Texture = SkinTextures.RewardBall(0) }, new(0.2f, 1f, 0.9f), 6),
             new("aurora", "Aurora", new MaterialData { Texture = SkinTextures.RewardBall(1) }, new(0.7f, 0.4f, 1f), 9),
             new("champion", "Golden champion", new MaterialData { Texture = SkinTextures.RewardBall(2) }, new(1f, 0.8f, 0.15f), 15),
+            new("watermelon", "Watermelon", new MaterialData { Texture = SkinTextures.Watermelon() }, new(0.95f, 0.35f, 0.39f)),
+            new("porcelain", "Porcelain wave", new MaterialData { Texture = SkinTextures.Porcelain() }, new(0.34f, 0.57f, 0.86f)),
+            new("magma", "Magma core", new MaterialData { Texture = SkinTextures.Magma() }, new(1f, 0.43f, 0.15f)),
+            new("disco", "Disco mosaic", new MaterialData { Texture = SkinTextures.Disco() }, new(0.86f, 0.57f, 0.84f)),
+            new("voyager", "Star voyager", new MaterialData { Texture = SkinTextures.Voyager() }, new(0.39f, 0.87f, 0.86f)),
         ]);
     }
 }

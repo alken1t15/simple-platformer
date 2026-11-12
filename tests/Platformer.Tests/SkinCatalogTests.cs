@@ -12,9 +12,10 @@ public sealed class SkinCatalogTests
     [TestMethod]
     [DataRow(false)]
     [DataRow(true)]
-    public void AllNineSkinsCanBePreviewedSelectedAndRetainedThroughRestart(bool visual)
+    public void AllFourteenSkinsCanBePreviewedSelectedAndRetainedThroughRestart(bool visual)
     {
-        CollectionAssert.AreEqual(new[] { "classic-blue", "orange", "emerald", "violet", "basketball", "football", "neon", "aurora", "champion" },
+        CollectionAssert.AreEqual(new[] { "classic-blue", "orange", "emerald", "violet", "basketball", "football", "neon", "aurora", "champion",
+            "watermelon", "porcelain", "magma", "disco", "voyager" },
             GameSkins.All.Select(s => s.Id).ToArray());
         var settings = new UserSettings();
         var catalog = GameLevels.CreateCatalog();
@@ -30,10 +31,17 @@ public sealed class SkinCatalogTests
                 var overlay = MenuOverlayAdapter.Build(host.View, visual);
                 var previewBounds = host.View.Controls.Where(c => c.PreviewBounds is not null)
                     .Select(c => c.PreviewBounds!.Value).ToArray();
-                Assert.HasCount(9, overlay.Images.ToArray().Where(image => previewBounds.Any(b =>
+                Assert.HasCount(14, overlay.Images.ToArray().Where(image => previewBounds.Any(b =>
                     image.Bounds == new UiRect(b.X, b.Y, b.Width, b.Height))).ToArray());
                 var control = host.View.Controls.Single(c => c.Id == "skin:" + skin.Id);
                 Assert.IsNotNull(control.PreviewBounds);
+                foreach (var card in host.View.Controls)
+                {
+                    Assert.IsGreaterThanOrEqualTo(0f, card.Bounds.Y);
+                    Assert.IsLessThanOrEqualTo(size.Y, card.Bounds.Y + card.Bounds.Height);
+                    var center = new Vector2(card.Bounds.X + card.Bounds.Width / 2, card.Bounds.Y + card.Bounds.Height / 2);
+                    Assert.AreEqual(1, host.View.Controls.Count(other => other.Bounds.Contains(center)));
+                }
             }
             Click("skin:" + skin.Id);
             Assert.AreEqual(skin.Id, settings.SkinId);

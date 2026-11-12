@@ -260,13 +260,13 @@ public sealed class MenuController
                  Button("confirm-main-menu", "Leave to main menu", MenuAction.ConfirmMainMenu)]);
         return flow.Screen switch
         {
-            AppScreen.MainMenu => new("Ball Adventure", [$"Adventure stars: {flow.Progress.TotalStars}/15"],
+            AppScreen.MainMenu => new("Ball Adventure", [$"Adventure stars: {flow.Progress.TotalStars}/{flow.Progress.MaximumStars}"],
             [Button("play", "Play", MenuAction.Play), Button("levels", "Levels", MenuAction.Levels),
              Button("settings", "Settings", MenuAction.Settings), Button("skins", "Skins", MenuAction.Skins),
              Button("exit", "Exit", MenuAction.Exit)]),
-            AppScreen.LevelSelect => new("Choose a level", [$"Final unlock: {Math.Min(12, flow.Progress.BaseStars)}/12 base stars"],
-                catalog.Levels.Select(level => new MenuOption($"level:{level.Id}",
-                    HudModel.LevelNameFor(level.Id),
+            AppScreen.LevelSelect => new("Choose a level", [$"Sky Storm: {Math.Min(12, flow.Progress.BaseStars)}/12 stars on levels 1-4"],
+                catalog.Levels.Select((level, index) => new MenuOption($"level:{level.Id}",
+                    $"{index + 1}. {HudModel.LevelNameFor(level.Id)}",
                     MenuAction.ChooseLevel, MenuControlKind.Level, level.Id,
                     Enabled: flow.Progress.IsLevelUnlocked(level.Id), Detail: LevelDetail(level),
                     Locked: !flow.Progress.IsLevelUnlocked(level.Id), Rating: flow.Progress.StarsFor(level.Id)))
@@ -297,8 +297,8 @@ public sealed class MenuController
             AppScreen.LevelResult => new("Level complete!", [CurrentCoins(), $"Rating: {Stars(PlayerProgress.Rating(flow.Snapshot!.CoinCount, catalog.Get(flow.Snapshot.LevelId).Coins.Count))}   Best: {Stars(flow.Progress.StarsFor(flow.Snapshot.LevelId))}"],
             [Button("next", "Next", MenuAction.Next), Retry(), Main()]),
             AppScreen.GameComplete => new(!catalog.Levels.Any(level => level.Id == GameLevels.FinalLevelId) || flow.Progress.StarsFor(GameLevels.FinalLevelId) > 0
-                ? "Adventure complete!" : "Journey complete!", [$"Total coins: {flow.TotalCoinCount}", $"Adventure stars: {flow.Progress.TotalStars}/15",
-                    flow.Progress.BaseStars < 12 ? "Earn 3 stars on each base level to unlock Sky Storm." : "Sky Storm is unlocked. Aim for 15/15 stars!"],
+                ? "Adventure complete!" : "Journey complete!", [$"Total coins: {flow.TotalCoinCount}", $"Adventure stars: {flow.Progress.TotalStars}/{flow.Progress.MaximumStars}",
+                    flow.Progress.BaseStars < 12 ? "Earn 12 stars on the first four levels." : $"Sky Storm unlocked. Aim for {flow.Progress.MaximumStars}/{flow.Progress.MaximumStars} stars!"],
             [Button("levels", "Level select", MenuAction.Levels), Main()]),
             _ => new("", [], []),
         };

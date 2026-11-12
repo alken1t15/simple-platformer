@@ -10,7 +10,8 @@ public sealed class PlayerProgress
     private readonly LevelCatalog catalog;
     public IReadOnlyDictionary<string, int> BestCoins { get; }
     public int TotalStars => catalog.Levels.Sum(level => StarsFor(level.Id));
-    public int BaseStars => catalog.Levels.Where(level => level.Id != GameLevels.FinalLevelId).Sum(level => StarsFor(level.Id));
+    public int MaximumStars => catalog.Levels.Count * 3;
+    public int BaseStars => catalog.Levels.Where(level => GameLevels.IsBaseLevel(level.Id)).Sum(level => StarsFor(level.Id));
 
     public PlayerProgress(LevelCatalog catalog)
     {

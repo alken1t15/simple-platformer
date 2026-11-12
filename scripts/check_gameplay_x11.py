@@ -351,7 +351,13 @@ def main():
 
         capture("main-menu")
         levels = click_control("levels", "LevelSelect")
-        assert {control["id"] for control in levels["controls"] if control["id"].startswith("level:")} == {"level:level1", "level:level2", "level:jump-circuit", "level:island-circuit", "level:sky-storm"}
+        expected_levels = ("level1", "level2", "jump-circuit", "island-circuit", "coral-ascent",
+                           "windmill-pass", "lava-causeway", "crumble-canyon", "temple-gauntlet",
+                           "pendulum-gorge", "piston-foundry", "clockwork-summit", "sky-storm")
+        assert [control["id"] for control in levels["controls"] if control["id"].startswith("level:")] == ["level:" + level for level in expected_levels]
+        for control in levels["controls"]:
+            assert 0 <= control["x"] and control["x"] + control["width"] <= levels["clientWidth"]
+            assert 0 <= control["y"] and control["y"] + control["height"] <= levels["clientHeight"]
         final_card = next(control for control in levels["controls"] if control["id"] == "level:sky-storm")
         assert not final_card["enabled"] and final_card["locked"]
         blocked = click_control("level:sky-storm", "LevelSelect")
@@ -372,7 +378,7 @@ def main():
         capture("leave-confirmation")
         returned = click_control("confirm-main-menu", "MainMenu")
         assert returned["sceneCoins"] == confirmation["sceneCoins"], "Main Menu reset the visible coin backdrop"
-        for level_id in ("jump-circuit", "island-circuit"):
+        for level_id in expected_levels[2:-1]:
             click_control("levels", "LevelSelect")
             frame = click_control("level:" + level_id, "Playing")
             assert frame["level"] == level_id and frame["coins"] == 0

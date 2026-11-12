@@ -8,6 +8,13 @@ internal sealed partial class VisualScene
     public static MaterialData GuardRail { get; } = Textured(WoodAndRope(bumper: false));
     public static MaterialData BumperBeam { get; } = Textured(WoodAndRope(bumper: true));
     public static MaterialData LethalObstacle { get; } = Textured(VolcanicStone());
+    public static MaterialData PendulumStone { get; } = Textured(Texture(128, 128, (x, y) =>
+    {
+        float grain = PropNoise(x / 3, y / 3, 47);
+        float vein = MathF.Abs(MathF.Sin(x * 0.073f + MathF.Sin(y * 0.085f) * 1.8f));
+        return vein < 0.07f ? new Vector3(66, 160, 151)
+            : new Vector3(96, 117, 133) * (0.72f + grain * 0.42f);
+    }));
 
     private static TextureData WoodAndRope(bool bumper) => Texture(256, 128, (x, y) =>
     {

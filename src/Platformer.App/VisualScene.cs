@@ -11,6 +11,7 @@ internal sealed partial class VisualScene
     private readonly Scene _scene;
     private readonly VisualContactShadow _contactShadow;
     private readonly VisualRoadLayout _roads;
+    private readonly (Vector2 Center, Vector2 Half)[] _movingPropZones;
     private readonly Vector2 _routeMin;
     private readonly Vector2 _routeMax;
     private static readonly ConcurrentDictionary<(MaterialData Source, int Amount), MaterialData> DistantMaterials = new();
@@ -86,9 +87,19 @@ internal sealed partial class VisualScene
     // Тяжёлые CPU-ассеты создаются при первом включении режима.
     static VisualScene() { }
 
-    public VisualScene(Scene scene, IReadOnlyList<SurfaceDefinition> surfaces)
+    public VisualScene(Scene scene, IReadOnlyList<SurfaceDefinition> surfaces, IReadOnlyList<HazardDefinition> hazards)
     {
         _scene = scene;
+        // Не размещать пальмы/домики в полном объёме хода новых механизмов,
+        // даже когда этот объём выходит за края узкой дороги.
+        _movingPropZones = hazards.Where(h => h.MotionKind != HazardMotionKind.Rotation).Select(h =>
+        {
+            Vector3 center = h.MotionKind == HazardMotionKind.Shuttle ? h.Pivot + h.CenterOffset : h.Pivot;
+            Vector3 extent = h.MotionKind == HazardMotionKind.Shuttle
+                ? Vector3.Abs(h.Axis) * h.Amplitude + new Vector3(h.HalfExtents.Length() + 0.5f)
+                : new Vector3(h.CenterOffset.Length() + h.HalfExtents.Length() + 0.5f);
+            return (new Vector2(center.X, center.Z), new Vector2(extent.X, extent.Z));
+        }).ToArray();
         Vector2 minimum = new(float.PositiveInfinity), maximum = new(float.NegativeInfinity);
         foreach (var surface in surfaces)
         foreach (int x in new[] { -1, 1 })

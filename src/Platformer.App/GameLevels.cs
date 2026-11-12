@@ -6,5 +6,9 @@ namespace Platformer.App;
 public static class GameLevels
 {
     public const string FinalLevelId = "sky-storm";
-    public static LevelCatalog CreateCatalog() => new([TrainingTrack.Create(), TurningMaze.Create(), JumpCircuit.Create(), IslandCircuit.Create(), SkyStorm.Create()]);
+    public static bool IsBaseLevel(string id) => id is "level1" or "level2" or "jump-circuit" or "island-circuit";
+    public static LevelCatalog CreateCatalog() => new([
+        TrainingTrack.Create(), TurningMaze.Create(), JumpCircuit.Create(), IslandCircuit.Create(),
+        CoralAscent.Create(), WindmillPass.Create(), LavaCauseway.Create(), CrumbleCanyon.Create(), TempleGauntlet.Create(),
+        PendulumGorge.Create(), PistonFoundry.Create(), ClockworkSummit.Create(), SkyStorm.Create()]);
 }

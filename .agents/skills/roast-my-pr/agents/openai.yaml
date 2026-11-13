@@ -1,0 +1,5 @@
+interface:
+  display_name: "Roast My PR"
+  short_description: "Три независимых ревьюера для своих изменений"
+policy:
+  allow_implicit_invocation: false

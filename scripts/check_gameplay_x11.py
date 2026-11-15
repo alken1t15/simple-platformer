@@ -388,6 +388,20 @@ def main():
             click_control("main-menu", "Paused")
             click_control("confirm-main-menu", "MainMenu")
         click_control("levels", "LevelSelect")
+        click_control("chapter", "LevelSelect")
+        winter_ids = ("winter-snowbound", "winter-icicle", "winter-lake", "winter-aurora", "winter-crystal", "winter-gifts", "winter-midnight")
+        assert [c["id"] for c in latest()["controls"] if c["id"].startswith("level:")] == ["level:" + name for name in winter_ids]
+        capture("winter-levels")
+        for level_id in winter_ids:
+            frame = click_control("level:" + level_id, "Playing")
+            assert frame["level"] == level_id and frame["coins"] == 0
+            capture(level_id)
+            press("Escape")
+            until(lambda f: f["screen"] == "Paused", level_id + " winter pause")
+            click_control("main-menu", "Paused")
+            click_control("confirm-main-menu", "MainMenu")
+            click_control("levels", "LevelSelect")
+        click_control("chapter", "LevelSelect")
         # Принудительная X11-команда обходит WM. Это проверка clamping, а не drag пользователя.
         x.XResizeWindow(display, native, 80, 48)
         x.XFlush(display)

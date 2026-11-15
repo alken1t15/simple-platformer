@@ -60,8 +60,18 @@ public sealed class GameSession
         var result = simulate is null ? simulator.Step(before.Ball, command, removed) : simulate(before.Ball, command);
         // Смертельная опасность сохраняет приоритет, даже если в том же tick
         // присутствует другая балка с отскоком.
-        bool hazardHit = hazards.Any(hazard => hazard.Response == HazardResponse.Fail &&
+        bool hazardHit = hazards.Any(hazard => hazard.Response == HazardResponse.Fail && (!IsVerticalPress(hazard) || Crushes(hazard, before)) &&
             HazardCollision.IntersectsPath(hazard, result.Path, before.SimulationSeconds, settings));
+        if (!hazardHit)
+            foreach (var press in hazards.Where(IsVerticalPress))
+                if (HazardCollision.IntersectsPath(press, result.Path, before.SimulationSeconds, settings))
+                {
+                    var stopped = new Vector3(before.Ball.Center.X, result.Ball.Center.Y, before.Ball.Center.Z);
+                    result = new BallStepResult(result.Ball with { Center = stopped,
+                        Velocity = new Vector3(0, result.Ball.Velocity.Y, 0) },
+                        [new(before.Ball.Center, stopped, 0, 1)]);
+                    break;
+                }
         if (!hazardHit) result = ApplyKnockback(before, result);
         for (int i = 0; i < platformStates.Length; i++)
         {
@@ -80,6 +90,7 @@ public sealed class GameSession
         if (command.JumpPressed && canJump)
             pending.Add((GameEventKind.Jumped, null));
         var collected = new HashSet<string>(before.CollectedCoinIds, StringComparer.Ordinal);
+        var collectedPowerups = new HashSet<string>(before.CollectedPowerupIds, StringComparer.Ordinal);
         var phase = SessionPhase.Running;
         if ((double)result.Ball.Center.Y + result.Ball.Radius < level.KillY || hazardHit)
         {
@@ -88,6 +99,16 @@ public sealed class GameSession
         }
         else
         {
+            foreach (var powerup in level.Powerups)
+                if (!collectedPowerups.Contains(powerup.Id) && TriggerQueries.Coin(result.Path,
+                    new CoinDefinition(powerup.Id, powerup.Center, 0.4f), result.Ball.Radius))
+                {
+                    collectedPowerups.Add(powerup.Id);
+                    var powered = powerup.Kind == PowerupKind.Jump
+                        ? result.Ball with { JumpPowerSeconds = powerup.DurationSeconds }
+                        : result.Ball with { SpeedPowerSeconds = powerup.DurationSeconds };
+                    result = new BallStepResult(powered, result.Path.ToList());
+                }
             foreach (var coin in coins)
                 if (!collected.Contains(coin.Id) && TriggerQueries.Coin(result.Path, coin, result.Ball.Radius))
                 {
@@ -102,7 +123,7 @@ public sealed class GameSession
         }
         long nextSequence = AdvanceCounter(sequence, pending.Count);
         var next = new SessionSnapshot(before.SessionId, level.Id, tick, seconds, phase,
-            result.Ball, collected.ToArray(), HazardPoses(seconds), platformStates);
+            result.Ball, collected.ToArray(), HazardPoses(seconds), platformStates, collectedPowerups.ToArray());
         long queueLength = AdvanceCounter(events.Length, pending.Count);
         if (queueLength > int.MaxValue) throw new InvalidOperationException("Переполнение очереди событий");
         var queue = new GameEvent[(int)queueLength];
@@ -121,6 +142,17 @@ public sealed class GameSession
         var drained = Array.AsReadOnly(events);
         events = [];
         return drained;
+    }
+
+    private static bool IsVerticalPress(HazardDefinition hazard) => hazard.MotionKind == HazardMotionKind.Shuttle
+        && MathF.Abs(hazard.Axis.Y) > 0.999f && hazard.Response == HazardResponse.Fail;
+
+    private bool Crushes(HazardDefinition hazard, SessionSnapshot before)
+    {
+        var box = HazardMotion.Evaluate(hazard, before.SimulationSeconds).Bounds;
+        float bottom = box.Center.Y - box.HalfExtents.Y;
+        return HazardMotion.VelocityAt(hazard, before.SimulationSeconds, before.Ball.Center).Y < 0
+            && before.Ball.Center.Y + settings.BallRadius <= bottom + settings.SkinWidth + settings.PositionEpsilon;
     }
 
     private BallStepResult ApplyKnockback(SessionSnapshot before, BallStepResult result)
@@ -179,9 +211,12 @@ public sealed class GameSession
 
     private void ValidateHazardBudget()
     {
-        double horizontal = (double)settings.MoveSpeed * settings.BoostMultiplier;
-        double ballTravel = Math.Sqrt(horizontal * horizontal + (double)settings.MaxFallSpeed * settings.MaxFallSpeed)
+        double horizontal = (double)settings.MoveSpeed * settings.BoostMultiplier * (level.Powerups.Any(p=>p.Kind==PowerupKind.Speed) ? 1.5 : 1);
+        double vertical = Math.Max(settings.MaxFallSpeed,settings.JumpSpeed*(level.Powerups.Any(p=>p.Kind==PowerupKind.Jump)?1.5:1));
+        double ballTravel = Math.Sqrt(horizontal * horizontal + vertical * vertical)
             * settings.FixedStepSeconds;
+        if (Math.Ceiling(ballTravel / (settings.BallRadius / 4d)) > settings.MaxCollisionSubsteps)
+            throw new ArgumentException("Бюджет подшагов не покрывает бонусы уровня",nameof(level));
         foreach (var hazard in hazards)
         {
             double beamTravel = HazardMotion.MaximumPointSpeed(hazard) * settings.FixedStepSeconds;

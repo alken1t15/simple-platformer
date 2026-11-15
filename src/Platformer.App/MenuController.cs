@@ -19,6 +19,7 @@ public sealed class MenuController
     private int selectedIndex;
     private bool confirmingMainMenu;
     private bool showingControls;
+    private GameChapter selectedChapter;
     private int controlsReturnSelection;
     private int returnSelection;
     private bool resetInputRequested;
@@ -40,6 +41,7 @@ public sealed class MenuController
         this.visual = visual;
         this.applyMasterVolume = applyMasterVolume ?? (_ => { });
         observedScreen = flow.Screen;
+        selectedChapter = flow.Snapshot is { } snapshot ? GameChapters.For(snapshot.LevelId) : GameChapters.For(catalog.Levels[0].Id);
         ApplyVolume();
     }
 
@@ -159,7 +161,14 @@ public sealed class MenuController
             case MenuAction.Restart: flow.Restart(); return true;
             case MenuAction.Next: flow.Next(); return true;
             case MenuAction.Continue: flow.Continue(); break;
-            case MenuAction.Levels: flow.OpenLevelSelect(); break;
+            case MenuAction.Levels:
+                selectedChapter = flow.Snapshot is { } current ? GameChapters.For(current.LevelId) : selectedChapter;
+                flow.OpenLevelSelect(); break;
+            case MenuAction.Chapter:
+                selectedChapter = selectedChapter == GameChapter.Tropical ? GameChapter.Winter : GameChapter.Tropical;
+                selectedIndex = 0;
+                pointer = null; pressedId = null; resetInputRequested = true;
+                break;
             case MenuAction.Settings: flow.OpenSettings(); break;
             case MenuAction.Skins: flow.OpenSkins(); break;
             case MenuAction.Controls: ShowControls(true); break;
@@ -234,6 +243,9 @@ public sealed class MenuController
     {
         if (flow.Screen == observedScreen) return;
         observedScreen = flow.Screen;
+        if (flow.Snapshot is { } snapshot) selectedChapter = GameChapters.For(snapshot.LevelId);
+        else if (flow.Screen == AppScreen.GameComplete && flow.CompletedLevels.Count > 0)
+            selectedChapter = GameChapters.For(flow.CompletedLevels[^1].LevelId);
         selectedIndex = 0;
         confirmingMainMenu = false;
         showingControls = false;
@@ -255,23 +267,23 @@ public sealed class MenuController
                 "Esc - pause / back", "Up / Down, Tab / Shift+Tab - menu",
                 "Left / Right - change setting", "Enter / Space / Mouse click - select"], [Back()], IsControlsPage: true);
         if (confirmingMainMenu)
-            return new("Leave this run?", ["Best results stay. This run will end."],
+            return new("Leave this run?", ["Your current attempt will end.", "Your best results are saved."],
                 [Button("cancel-main-menu", "Cancel", MenuAction.CancelMainMenu),
-                 Button("confirm-main-menu", "Leave to main menu", MenuAction.ConfirmMainMenu)]);
+                 Button("confirm-main-menu", "Leave to main menu", MenuAction.ConfirmMainMenu)], IsLeaveConfirmation: true);
         return flow.Screen switch
         {
             AppScreen.MainMenu => new("Ball Adventure", [$"Adventure stars: {flow.Progress.TotalStars}/{flow.Progress.MaximumStars}"],
             [Button("play", "Play", MenuAction.Play), Button("levels", "Levels", MenuAction.Levels),
              Button("settings", "Settings", MenuAction.Settings), Button("skins", "Skins", MenuAction.Skins),
              Button("exit", "Exit", MenuAction.Exit)]),
-            AppScreen.LevelSelect => new("Choose a level", LevelSelectionDetails(),
-                catalog.Levels.Select((level, index) => new MenuOption($"level:{level.Id}",
+            AppScreen.LevelSelect => new(GameChapters.Name(selectedChapter), LevelSelectionDetails(),
+                catalog.Levels.Where(level => GameChapters.For(level.Id) == selectedChapter).Select((level, index) => new MenuOption($"level:{level.Id}",
                     $"{index + 1}. {HudModel.LevelNameFor(level.Id)}",
                     MenuAction.ChooseLevel, MenuControlKind.Level, level.Id,
                     Enabled: flow.Progress.IsLevelUnlocked(level.Id), Detail: LevelDifficulties.Label(LevelDifficulties.For(level.Id)),
                     Locked: !flow.Progress.IsLevelUnlocked(level.Id), Rating: flow.Progress.StarsFor(level.Id),
                     Difficulty: LevelDifficulties.For(level.Id)))
-                .Concat([Back()]).ToArray()),
+                .Concat(ChapterFooter(Back())).ToArray()),
             AppScreen.Settings => new("Settings", [$"Current window: {Window.Actual}",
                 $"Current mode: {(Window.ActualFullscreen ? "Fullscreen" : "Windowed")}"],
             [new("volume", $"Master volume: {MathF.Round(EffectiveVolume * 100f):0}%", MenuAction.Volume, MenuControlKind.Volume),
@@ -298,9 +310,10 @@ public sealed class MenuController
             [Retry(), Button("levels", "Level select", MenuAction.Levels), Main()], Status: DialogSummary()),
             AppScreen.LevelResult => new("Level complete!", ["Nice finish! Ready for the next challenge?"],
             [Button("next", "Next", MenuAction.Next), Retry(), Main()], Status: DialogSummary(completed: true)),
-            AppScreen.GameComplete => new(!catalog.Levels.Any(level => level.Id == GameLevels.FinalLevelId) || flow.Progress.StarsFor(GameLevels.FinalLevelId) > 0
+            AppScreen.GameComplete => new(selectedChapter == GameChapter.Winter ? "Winter chapter complete!" : !catalog.Levels.Any(level => level.Id == GameLevels.FinalLevelId) || flow.Progress.StarsFor(GameLevels.FinalLevelId) > 0
                 ? "Adventure complete!" : "Journey complete!", [$"Adventure stars: {flow.Progress.TotalStars}/{flow.Progress.MaximumStars}",
-                    flow.Progress.BaseStars < 12 ? "Earn 12 stars on the first four levels." : $"Sky Storm unlocked. Aim for {flow.Progress.MaximumStars}/{flow.Progress.MaximumStars} stars!"],
+                    selectedChapter == GameChapter.Winter ? "Winter Lights complete. Revisit your favourite routes!"
+                    : flow.Progress.BaseStars < 12 ? "Earn 12 stars on the first four levels." : "Tropical Skies complete. Discover the winter chapter!"],
             [Button("levels", "Level select", MenuAction.Levels), Main()]),
             _ => new("", [], []),
         };
@@ -315,10 +328,18 @@ public sealed class MenuController
 
     private string[] LevelSelectionDetails()
     {
+        if (selectedChapter == GameChapter.Winter) return ["Purple: high jump. Mint: speed. Ice keeps momentum."];
         if (!catalog.Levels.Any(level => level.Id == GameLevels.FinalLevelId)
             || flow.Progress.IsLevelUnlocked(GameLevels.FinalLevelId))
             return ["Pick a route. Stars show your best finish."];
         int mastered = catalog.Levels.Count(level => GameLevels.IsBaseLevel(level.Id) && flow.Progress.StarsFor(level.Id) == 3);
         return ["Sky Storm unlocks with 3 stars on levels 1-4.", $"Levels mastered: {mastered}/4"];
+    }
+
+    private IEnumerable<MenuOption> ChapterFooter(MenuOption back)
+    {
+        if (catalog.Levels.Select(l => GameChapters.For(l.Id)).Distinct().Count() > 1)
+            yield return new("chapter", selectedChapter == GameChapter.Tropical ? "Winter chapter >" : "< Tropical chapter", MenuAction.Chapter);
+        yield return back;
     }
 }

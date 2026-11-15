@@ -30,18 +30,8 @@ public sealed partial class GameScenePresenter
         }
         else
         {
-            _hazards.Add(hazard.Id, Add(GameMeshes.Box, visual ? VisualScene.BumperBeam : fallback));
-            // Направляющая ниже дорожки; опоры находятся за пределами хода толкателя.
-            var rail = Add(GameMeshes.Box, ExpertMetal);
-            SetSegment(rail, hazard.Pivot - Vector3.UnitY * 0.9f - hazard.Axis * (hazard.Amplitude + 1.3f),
-                hazard.Pivot - Vector3.UnitY * 0.9f + hazard.Axis * (hazard.Amplitude + 1.3f), 0.16f);
-            foreach (int side in new[] { -1, 1 })
-            {
-                var end = Add(visual ? VisualScene.SoftBox : GameMeshes.Box, ExpertMetal);
-                end.Transform.Position = hazard.Pivot - Vector3.UnitY * 0.22f
-                    + hazard.Axis * ((hazard.Amplitude + 1.4f) * side);
-                end.Transform.Scale = new(0.9f, 1.2f, 0.6f);
-            }
+            var art = visual ? MachineArt.Box(hazard.HalfExtents * 2, MachineFinish.Bumper) : default;
+            _hazards.Add(hazard.Id, Add(visual ? art.Mesh : GameMeshes.Box, visual ? art.Material : fallback));
         }
         SetBounds(_hazards[hazard.Id], HazardMotion.Evaluate(hazard, 0).Bounds);
         if (_pendulumRopes.TryGetValue(hazard.Id, out var initial))

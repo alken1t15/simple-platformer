@@ -10,6 +10,10 @@ internal static class LevelDifficulties
     internal static LevelDifficulty For(string id) => id switch
     {
         "level1" => LevelDifficulty.Easy,
+        "winter-snowbound" => LevelDifficulty.Normal,
+        "winter-icicle" or "winter-lake" => LevelDifficulty.Hard,
+        "winter-crystal" or "winter-gifts" => LevelDifficulty.Hard,
+        "winter-midnight" or "winter-aurora" => LevelDifficulty.VeryHard,
         "level2" or "jump-circuit" or "island-circuit" or "coral-ascent" or "windmill-pass" or "lava-causeway" => LevelDifficulty.Normal,
         "crumble-canyon" or "temple-gauntlet" or "pendulum-gorge" or "piston-foundry" => LevelDifficulty.Hard,
         "clockwork-summit" or "sky-storm" => LevelDifficulty.VeryHard,

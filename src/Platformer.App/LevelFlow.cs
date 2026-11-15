@@ -76,6 +76,7 @@ public sealed class LevelFlow
         Require(AppScreen.LevelResult);
         var current = session!.Snapshot;
         string? nextId = catalog.GetNextId(current.LevelId);
+        if (nextId is not null && GameChapters.For(nextId) != GameChapters.For(current.LevelId)) nextId = null;
         if (nextId is not null && !Progress.IsLevelUnlocked(nextId)) nextId = null;
         var next = nextId is null ? default : Prepare(catalog.Get(nextId));
         var result = new LevelResult(current.LevelId, current.CoinCount, catalog.Get(current.LevelId).Coins.Count);

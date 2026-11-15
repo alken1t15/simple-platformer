@@ -8,8 +8,9 @@ public sealed class SurfaceDefinition
     public float CollapseDelaySeconds { get; }
     /// <summary>Сплошной борт: те же OBB для физики и отдельное оформление в App.</summary>
     public bool IsBarrier { get; }
+    public float Traction { get; }
 
-    public SurfaceDefinition(string id, OrientedBox bounds, float collapseDelaySeconds = 0f, bool isBarrier = false)
+    public SurfaceDefinition(string id, OrientedBox bounds, float collapseDelaySeconds = 0f, bool isBarrier = false, float traction = 1f)
     {
         Id = LevelValidation.Id(id, nameof(id));
         ArgumentNullException.ThrowIfNull(bounds);
@@ -19,5 +20,7 @@ public sealed class SurfaceDefinition
             throw new ArgumentOutOfRangeException(nameof(collapseDelaySeconds));
         CollapseDelaySeconds = collapseDelaySeconds;
         IsBarrier = isBarrier;
+        if (!float.IsFinite(traction) || traction is < 0.05f or > 1f) throw new ArgumentOutOfRangeException(nameof(traction));
+        Traction = traction;
     }
 }

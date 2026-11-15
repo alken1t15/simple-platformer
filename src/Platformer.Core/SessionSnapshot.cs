@@ -19,10 +19,11 @@ public sealed class SessionSnapshot
     public IReadOnlyList<HazardPose> Hazards { get; }
     public IReadOnlyList<CrumblingPlatformState> Platforms { get; }
     public int CoinCount => CollectedCoinIds.Count;
+    public IReadOnlyList<string> CollectedPowerupIds { get; }
 
     public SessionSnapshot(Guid sessionId, string levelId, long tick, double simulationSeconds,
         SessionPhase phase, BallState ball, IReadOnlyList<string> collectedCoinIds,
-        IReadOnlyList<HazardPose> hazards, IReadOnlyList<CrumblingPlatformState>? platforms = null)
+        IReadOnlyList<HazardPose> hazards, IReadOnlyList<CrumblingPlatformState>? platforms = null, IReadOnlyList<string>? collectedPowerupIds = null)
     {
         if (sessionId == Guid.Empty) throw new ArgumentException("Требуется ID сеанса", nameof(sessionId));
         LevelId = LevelValidation.Id(levelId, nameof(levelId));
@@ -30,6 +31,9 @@ public sealed class SessionSnapshot
         if (!double.IsFinite(simulationSeconds) || simulationSeconds < 0d)
             throw new ArgumentOutOfRangeException(nameof(simulationSeconds));
         if (!Enum.IsDefined(phase)) throw new ArgumentOutOfRangeException(nameof(phase));
+        if (!float.IsFinite(ball.JumpPowerSeconds) || ball.JumpPowerSeconds is < 0 or > 30
+            || !float.IsFinite(ball.SpeedPowerSeconds) || ball.SpeedPowerSeconds is < 0 or > 30)
+            throw new ArgumentOutOfRangeException(nameof(ball));
         LevelValidation.Position(ball.Center, nameof(ball));
         LevelValidation.Finite(ball.Velocity, nameof(ball));
         LevelValidation.Finite(ball.GroundNormal, nameof(ball));
@@ -64,6 +68,10 @@ public sealed class SessionSnapshot
                 throw new ArgumentException("Некорректное состояние платформы", nameof(platforms));
         }
         Platforms = Array.AsReadOnly(platformCopy);
+        var powerups = collectedPowerupIds?.ToArray() ?? [];
+        if (powerups.Distinct(StringComparer.Ordinal).Count() != powerups.Length) throw new ArgumentException("Повторный бонус", nameof(collectedPowerupIds));
+        foreach (var id in powerups) LevelValidation.Id(id, nameof(collectedPowerupIds));
+        CollectedPowerupIds = Array.AsReadOnly(powerups);
         SessionId = sessionId;
         Tick = tick;
         SimulationSeconds = simulationSeconds;

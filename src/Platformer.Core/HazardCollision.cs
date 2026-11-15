@@ -45,6 +45,32 @@ public static class HazardCollision
         }
         if (requiredSteps > settings.MaxCollisionSubsteps)
             throw new InvalidOperationException($"Исчерпан бюджет проверки опасности {hazard.Id}");
+        // Shuttle не вращает OBB: проверяем относительный sweep с ограниченной
+        // погрешностью синусоиды. Касательное движение не требует рекурсивного поиска.
+        if (hazard.MotionKind == HazardMotionKind.Shuttle)
+        {
+            foreach (var segment in path)
+            {
+                double span = segment.EndFraction - segment.StartFraction;
+                int count = Math.Max(1, (int)Math.Ceiling((Vector3.Distance(segment.Start, segment.End)
+                    + angularTravel * span) / (settings.BallRadius / 4d)));
+                for (int i = 0; i < count; i++)
+                {
+                    float a = (float)i / count, b = (float)(i + 1) / count;
+                    double start = tickStartSeconds + (segment.StartFraction + span * a) * settings.FixedStepSeconds;
+                    double duration = span * settings.FixedStepSeconds / count;
+                    var box = HazardMotion.Evaluate(hazard, start).Bounds;
+                    var end = HazardMotion.Evaluate(hazard, start + duration).Bounds;
+                    Vector3 ballStart = Vector3.Lerp(segment.Start, segment.End, a);
+                    Vector3 relativeDelta = Vector3.Lerp(segment.Start, segment.End, b) - ballStart - (end.Center - box.Center);
+                    float error = (float)(hazard.Amplitude * (double)hazard.AngularSpeed * hazard.AngularSpeed * duration * duration / 8);
+                    float radius = settings.BallRadius + error + settings.PositionEpsilon;
+                    if (SphereGeometry.Contact(box, ballStart, radius).Separation <= 0
+                        || SphereGeometry.Sweep(box, ballStart, relativeDelta, radius, out _, out _)) return true;
+                }
+            }
+            return false;
+        }
         int used = 0;
         foreach (var segment in path)
         {
@@ -72,6 +98,9 @@ public static class HazardCollision
             // Если даже верхняя граница относительного перемещения меньше зазора,
             // во всём интервале контакта быть не могло.
             if (separation > ballTravel + beamTravel + settings.PositionEpsilon) return false;
+            // Остаточное движение меньше допуска позиции: дальнейшее дробление
+            // касательного интервала не добавляет физически различимой информации.
+            if (ballTravel + beamTravel <= settings.PositionEpsilon) return true;
             if (to - from < 1e-12d)
                 throw new InvalidOperationException($"Не удалось разрешить касание опасности {hazard.Id}");
             return Check(segment, from, middle) || Check(segment, middle, to);

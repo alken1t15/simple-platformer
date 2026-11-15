@@ -97,7 +97,8 @@ public sealed class GameplayDialogTests
         Click(menu, "main-menu");
         view = menu.BuildView(800, 450);
         Assert.HasCount(2, view.Controls);
-        Assert.IsEmpty(view.Images);
+        Assert.HasCount(1, view.Images); // Только значок подтверждения, без рейтинга.
+        Assert.IsFalse(view.Images.Any(image => image.Texture.Width == 32));
         Assert.AreEqual("cancel-main-menu", view.Controls.Single(c => c.Selected).Id);
         Click(menu, "cancel-main-menu");
         Assert.AreSame(before, flow.Snapshot);

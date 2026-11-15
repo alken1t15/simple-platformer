@@ -9,6 +9,8 @@ public enum BoostStatus { Ready, Active, Cooldown }
 public sealed record HudModel(string LevelName, int CoinCount, int TotalCoins,
     BoostStatus Boost, float RemainingSeconds, bool ShowHelp, string? Hint = null)
 {
+    public float JumpPowerSeconds { get; init; }
+    public float SpeedPowerSeconds { get; init; }
     public string BoostText => Boost switch
     {
         BoostStatus.Active => $"Boost active: {Seconds}s",
@@ -43,11 +45,14 @@ public sealed record HudModel(string LevelName, int CoinCount, int TotalCoins,
                 "clockwork-summit" => "Time the stone and pusher, then chain the final jumps.",
                 "sky-storm" => "Climb the loop. Cracked tiles crumble after touch: keep moving!",
                 _ => null,
-            });
+            }) { JumpPowerSeconds = ball.JumpPowerSeconds, SpeedPowerSeconds = ball.SpeedPowerSeconds };
     }
 
     internal static string LevelNameFor(string id) => id switch
     {
+        "winter-crystal" => "Crystal Run",
+        "winter-gifts" => "Gift Ascent",
+        "winter-midnight" => "Midnight Trial",
         "level1" => "Training Track",
         "level2" => "Turning Maze",
         "jump-circuit" => "Jump Circuit",
@@ -61,6 +66,10 @@ public sealed record HudModel(string LevelName, int CoinCount, int TotalCoins,
         "piston-foundry" => "Piston Foundry",
         "clockwork-summit" => "Clockwork Summit",
         "sky-storm" => "Sky Storm",
+        "winter-snowbound" => "Snowbound Pass",
+        "winter-icicle" => "Icicle Canyon",
+        "winter-lake" => "Frozen Lake",
+        "winter-aurora" => "Aurora Summit",
         _ => new string(id.Select(character => character is >= ' ' and <= '~' ? character : '?').ToArray()),
     };
 }

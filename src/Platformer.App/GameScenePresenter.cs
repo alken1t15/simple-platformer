@@ -12,6 +12,8 @@ public sealed partial class GameScenePresenter
     private readonly Dictionary<string, SceneObject> _surfaces = new(StringComparer.Ordinal);
     private readonly Dictionary<string, SceneObject> _coins = new(StringComparer.Ordinal);
     private readonly Dictionary<string, SceneObject> _hazards = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, SceneObject> _powerups = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _hiddenPowerups = [];
     private readonly HashSet<string> _hiddenCoins = new(StringComparer.Ordinal);
     private readonly VisualScene? _visual;
     private readonly Dictionary<string, (int Index, SceneObject[] Parts, MaterialData[] Materials)> _fragile = new(StringComparer.Ordinal);
@@ -42,9 +44,10 @@ public sealed partial class GameScenePresenter
         ArgumentNullException.ThrowIfNull(level);
         _level = level;
         bool maze = level.Id == "level2";
+        bool winter = GameChapters.For(level.Id) == GameChapter.Winter;
         var accent = visual ? VisualScene.GuardRail : new MaterialData { BaseColor = new ColorRgba(0.55f, 0.25f, 0.75f) };
-        _visual = visual ? new VisualScene(Scene, level.Surfaces, level.Hazards) : null;
-        var track = visual ? VisualScene.Track : new MaterialData { BaseColor = maze ? new ColorRgba(0.25f, 0.25f, 0.3f) : new ColorRgba(0.72f, 0.75f, 0.8f) };
+        _visual = visual ? new VisualScene(Scene, level.Surfaces, level.Hazards, winter) : null;
+        var track = visual ? winter ? VisualScene.WinterIce : VisualScene.Track : new MaterialData { BaseColor = maze ? new ColorRgba(0.25f, 0.25f, 0.3f) : new ColorRgba(0.72f, 0.75f, 0.8f) };
         var gold = visual ? VisualScene.Gold : new MaterialData { BaseColor = new ColorRgba(1f, 0.72f, 0.08f) };
         var danger = new MaterialData { BaseColor = new ColorRgba(0.9f, 0.08f, 0.06f) };
         var green = visual ? VisualScene.Finish : new MaterialData { BaseColor = new ColorRgba(0.08f, 0.85f, 0.25f) };
@@ -53,11 +56,12 @@ public sealed partial class GameScenePresenter
             var surface = level.Surfaces[surfaceIndex];
             int firstPart = Scene.Objects.Count;
             bool fragile = surface.CollapseDelaySeconds > 0;
-            var item = Add(surface.IsBarrier ? GameMeshes.Box : visual ? VisualScene.RoadBody : GameMeshes.Box,
-                surface.IsBarrier ? accent : fragile ? FragileBody : track);
+            var support = visual && surface.IsBarrier ? MachineArt.Box(surface.Bounds.HalfExtents * 2, MachineFinish.Steel) : default;
+            var item = Add(surface.IsBarrier ? visual ? support.Mesh : GameMeshes.Box : visual ? VisualScene.RoadBody : GameMeshes.Box,
+                surface.IsBarrier ? visual ? support.Material : accent : winter ? track : fragile ? FragileBody : track);
             SetBounds(item, surface.Bounds);
             _surfaces.Add(surface.Id, item);
-            if (!surface.IsBarrier) _visual?.SurfaceDetail(surfaceIndex, surface.Bounds, fragile);
+            if (!surface.IsBarrier) _visual?.SurfaceDetail(surfaceIndex, surface.Bounds, fragile, surface.Traction < 1);
             if (fragile)
             {
                 _unshadowedSurfaceIndices.Add(surfaceIndex);
@@ -74,14 +78,21 @@ public sealed partial class GameScenePresenter
         }
         foreach (var hazard in level.Hazards)
         {
+            if (winter && CreateWinterHazard(hazard, visual)) continue;
             if (CreateExpertHazard(hazard, visual, danger)) continue;
             var material = visual ? hazard.Response == HazardResponse.Knockback
                 ? VisualScene.BumperBeam : VisualScene.LethalObstacle : danger;
-            _hazards.Add(hazard.Id, Add(GameMeshes.Box, material));
-            // Декоративная ось не добавляет коллайдер, позу самой балки задаёт snapshot
-            var axle = Add(visual ? VisualScene.SoftBox : GameMeshes.Box, maze ? accent : track);
-            axle.Transform.Position = hazard.Pivot - Vector3.UnitY * 0.25f;
-            axle.Transform.Scale = new Vector3(0.12f, 0.5f, 0.12f);
+            bool spikes = visual && hazard.Response == HazardResponse.Fail && hazard.AngularSpeed == 0;
+            var art = visual ? MachineArt.Box(hazard.HalfExtents * 2, hazard.Response == HazardResponse.Knockback ? MachineFinish.Bumper : MachineFinish.Danger) : default;
+            _hazards.Add(hazard.Id, Add(spikes ? MachineArt.Spikes(hazard.HalfExtents * 2) : visual ? art.Mesh : GameMeshes.Box,
+                spikes ? VisualScene.SpikeSteel : visual ? art.Material : material));
+        }
+        foreach (var powerup in level.Powerups)
+        {
+            var item = Add(GameMeshes.Coin, new MaterialData { BaseColor = powerup.Kind == PowerupKind.Jump ? new(0.8f,0.35f,1) : new(0.15f,1,0.75f) });
+            item.Transform.Position = powerup.Center;
+            item.Transform.Scale = new(0.45f);
+            _powerups.Add(powerup.Id,item);
         }
         float thickness = MathF.Min(0.08f, MathF.Min(level.Finish.HalfExtents.X,
             MathF.Min(level.Finish.HalfExtents.Y, level.Finish.HalfExtents.Z)));
@@ -131,7 +142,8 @@ public sealed partial class GameScenePresenter
         if (!reset && (MathF.Abs(snapshot.Ball.Radius - _lastBall.Radius) > 1e-6f
             || (snapshot.Tick == _tick && snapshot.Ball != _lastBall)))
             throw new ArgumentException("Радиус сеанса и состояние уже показанного tick неизменяемы", nameof(snapshot));
-        if (snapshot.CollectedCoinIds.Any(id => !_coins.ContainsKey(id))
+        if (snapshot.CollectedPowerupIds.Any(id => !_powerups.ContainsKey(id))
+            || snapshot.CollectedCoinIds.Any(id => !_coins.ContainsKey(id))
             || snapshot.Hazards.Count != _hazards.Count || snapshot.Hazards.Any(pose => !_hazards.ContainsKey(pose.Id)))
             throw new ArgumentException("Неизвестные или отсутствующие ID объектов", nameof(snapshot));
 
@@ -191,8 +203,24 @@ public sealed partial class GameScenePresenter
         foreach (var pose in snapshot.Hazards)
         {
             SetBounds(_hazards[pose.Id], pose.Bounds);
+            var definition = _level.Hazards.First(h => h.Id == pose.Id);
+            if (GameChapters.For(_level.Id) == GameChapter.Winter && definition.MotionKind == HazardMotionKind.Shuttle && MathF.Abs(definition.Axis.Y) < 0.1f)
+                _hazards[pose.Id].Transform.Rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitX, (pose.Bounds.Center.Z - definition.Pivot.Z) / definition.HalfExtents.Y);
+            if (_pressRods.TryGetValue(pose.Id, out var press))
+            {
+                float bottom = pose.Bounds.Center.Y + pose.Bounds.HalfExtents.Y;
+                press.Rod.Transform.Position = new(pose.Bounds.Center.X, (bottom + press.Top) / 2, pose.Bounds.Center.Z);
+                press.Rod.Transform.Scale = new(0.28f, MathF.Max(0.02f, press.Top - bottom), 0.28f);
+            }
             if (_pendulumRopes.TryGetValue(pose.Id, out var rope))
                 SetSegment(rope.Rope, rope.Pivot, pose.Bounds.Center, 0.065f);
+        }
+        foreach (var pair in _powerups)
+        {
+            bool powerCollected = snapshot.CollectedPowerupIds.Contains(pair.Key);
+            if (powerCollected && _hiddenPowerups.Add(pair.Key)) Scene.Remove(pair.Value);
+            else if (!powerCollected && _hiddenPowerups.Remove(pair.Key)) Scene.Add(pair.Value);
+            pair.Value.Transform.Rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY,(float)(snapshot.SimulationSeconds % Math.Tau));
         }
         if (reset || snapshot.Tick > _tick)
         {

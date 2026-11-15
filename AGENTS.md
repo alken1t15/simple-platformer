@@ -105,6 +105,17 @@ Failed показывает только лучший успешный фини�
 LevelResult отдельно показывает THIS FINISH и PERSONAL BEST графическими звёздами.
 ASCII-рейтинг и счёт монет на результатах убраны, HUD в Playing прежний.
 Подтверждение Main menu не должно получать Status; Cancel по умолчанию сохраняет попытку.
+Расширение 15.11.2026: каталог20, GameChapters группирует прежние13 вTropical Skies
+и7 Winter Lights (snowbound/icicle/lake/aurora/crystal/gifts/midnight с префиксомwinter-). Всего246монет/60звёзд.
+Levels переключает главы кнопкойchapter безновогоAppScreen; нумерация локальная.
+Next завершает маршрут на границе глав; Play по-прежнему TrainingTrack. Winter открытсразу,
+его звёзды не участвуют в BaseStars замкаSky. Save/settingsformats и старыеID неизменны.
+WinterLevels использует общие Shuttle: поперечный снежныйвалунKnockback, вертикальный
+ледянойпрессFail; льдины используют CollapseDelay. WinterScene/материалы App дают
+снег/лёд/хвойныедеревья/сияние. Первые4winterкартысообычнойфизикой; новыеCrystal/Gifts/Midnight имеют Traction0.12наголубомльду.
+GameplayHost копирует Lighting видимогоPresenter, включаявозвратвтропики.
+Перенесён компактный IsLeaveConfirmation/LeaveConfirmationLayout560×260 из предыдущей
+локальнойзадачи; Canceldefault,безStatus. Новаяглава — docs/winter-chapter.md.
 Обычный Linux-запуск после сборки — bash scripts/Play.sh, отдельно от терминала;
 --visual включает оформление со скриншотов. scripts/install_desktop.py создаёт личный
 Linux-ярлык в меню приложений (опционально --desktop); общие PNG/ICO — assets/branding.
@@ -150,3 +161,11 @@ PowerShell 7: `pwsh -NoProfile -File scripts/Verify.ps1` выполняет эт
 При наличии локального Team Lead workflow используй его Plan/Review, не публикуя личные файлы и секреты.
 Ошибки, пустые и обрезанные ответы AI не являются завершённым ревью. Findings проверять по коду.
 В конце укажи проверки, ограничения, ветку/коммит/PR и состояние публикации; обнови локальные state/session-log.
+
+Вертикальные Shuttle+Fail прессы: боковой контакт отменяет перемещение tick и горизонтальную скорость без поражения; descending underside над шаром сохраняет Fail. Поперечные Knockback-поршни первой главы прежние. WinterFinishDetail размещает снежный остров через TryDecorationSite с запасом3 вне трассы; не возвращать прежний offset3.6/-2.5, пересекавший финиш.
+
+WinterChallengeLevels добавляет3длинныхмаршрута с PowerupDefinition Jump/Speed12sec×1.5. BallState таймеры и SessionSnapshot.CollectedPowerupIds — только сеанс, не профиль; Restartсбрасывает/pauseзамораживает. GameSessionсобираетспринятымPath; BallSimulator сохраняеттаймеры, Tractionуменьшаеттолькогрунтовоеуправление. HUD PowerFill/PowerupцветасохраняетTropicalMenuTheme. Пресс отменяеттолькоXZ, сохраняяфизическийYбеззависания; bottom0.05наддорогой. СнежныйвалуншарообразныйвнутрипрежнегоOBB, вращаетсяsimtime; гирляндыидекоративныешарынаелях/домикахвнетрассы. Подробности docs/winter-chapter.md.
+
+Доработка16.11: free-floating гирлянды наостровахудалены; фасадныеGarland имеют2anchors, bulb/corematerialsмигаютпоSimulationSeconds (стилизованнаяяркость, безpointlight/bloom). Pausefreezes/Restartresets tested. Pressоснованиеfloor−.34..−.02, guidebottomfloor−.22, нетвисящихстолбов. IceTraction<1исключаетсяизVisualContactShadow. НовыекартыCrystal/Gifts/Midnight имеютфинальныегапы7ед/разгонShift+HighJump; Giftступени2ед. Бонусыимонетыдистанция>0.8,бонусыдругкдругу>0.9 tested. Сохранения/ID/coinscountsнеизменны. Realinputуспешныймаршрут458наборпроверокпробуетдо30начальныхфазвремени, не телепортируетшар; negativeproofnormalShiftfails7gap/poweredlands.
+
+16.11 solid supports: GameLevels явно вызывает Core TrapStructures.Attach ровноодинраз/карта, добавляя structure:<hazardId>:part IsBarrierSurfaces. Pressbase/head/guides, ExpertShuttle rails/endstops и RotationaxleрисуютсятемжеSurfaceObjects/SetBounds, старыеdecorдубликатыубраны. PendulumGantryужеCore. Стойки/основаниятеперьблокируютшар, неубивают. Physics/renderboundsсвереныиsideapproachчерезBallSimulatorпроверенвTrapStructureTests. DirectauthorLevelDefinition безAttachнеполучаетопорыавтоматически.

@@ -34,6 +34,7 @@ internal static class TropicalMenuTheme
             MenuPanelKind.Backdrop => mainMenu ? new ColorRgba(1, 1, 1) : new ColorRgba(0.015f, 0.055f, 0.08f, 0.30f),
             MenuPanelKind.Track => new ColorRgba(0.12f, 0.27f, 0.31f),
             MenuPanelKind.Fill => Teal,
+            MenuPanelKind.PowerFill => panel.Color,
             MenuPanelKind.Focus => Teal,
             MenuPanelKind.Flat => panel.Color,
             _ => new ColorRgba(1, 1, 1),
@@ -44,7 +45,7 @@ internal static class TropicalMenuTheme
 
     public static ColorRgba TextColor(MenuText text)
     {
-        if (text.Kind == MenuTextKind.Difficulty) return text.Color;
+        if (text.Kind is MenuTextKind.Difficulty or MenuTextKind.Powerup) return text.Color;
         if (text.Color.B > 0.8f && text.Color.R < 0.3f) return Teal;
         return text.Color.R > 0.85f ? Ink : SecondaryInk;
     }

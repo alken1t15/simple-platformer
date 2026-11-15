@@ -12,10 +12,10 @@ public sealed class ChallengeLevelTests
     public void FiveChallengesAreInsertedBeforeTheOriginalFinalAndPreserveOldUnlock()
     {
         var catalog = GameLevels.CreateCatalog();
-        Assert.HasCount(13, catalog.Levels);
+        Assert.HasCount(20, catalog.Levels);
         CollectionAssert.AreEqual(ChallengeRoutes.Ids, catalog.Levels.Skip(4).Take(5).Select(l => l.Id).ToArray());
-        Assert.AreEqual(GameLevels.FinalLevelId, catalog.Levels[^1].Id);
-        Assert.AreEqual(162, catalog.Levels.Sum(l => l.Coins.Count));
+        Assert.AreEqual(GameLevels.FinalLevelId, catalog.Levels[12].Id);
+        Assert.AreEqual(246, catalog.Levels.Sum(l => l.Coins.Count));
         var progress = new PlayerProgress(catalog);
         foreach (string id in ChallengeRoutes.Ids)
         {
@@ -24,7 +24,7 @@ public sealed class ChallengeLevelTests
         }
         Assert.AreEqual(15, progress.TotalStars);
         Assert.AreEqual(0, progress.BaseStars);
-        Assert.AreEqual(39, progress.MaximumStars);
+        Assert.AreEqual(60, progress.MaximumStars);
         Assert.IsFalse(progress.IsLevelUnlocked(GameLevels.FinalLevelId));
         foreach (var level in catalog.Levels.Take(4)) progress.RecordCompletion(level.Id, level.Coins.Count);
         Assert.IsTrue(progress.IsLevelUnlocked(GameLevels.FinalLevelId));
@@ -108,8 +108,14 @@ public sealed class ChallengeLevelTests
             var flow = new LevelFlow(catalog, SimulationSettings.Default, new UserSettings(), progress: progress);
             var menu = new MenuController(flow, catalog, visual: true);
             flow.OpenLevelSelect();
+            if (GameChapters.For(level.Id) == GameChapter.Winter)
+            {
+                var chapter = menu.BuildView(width, height).Controls.Single(c => c.Id == "chapter").Bounds;
+                menu.Handle(new(default, false, false, new(0, 0, false, false, true,
+                    new(chapter.X + chapter.Width / 2, chapter.Y + chapter.Height / 2))), width, height);
+            }
             var view = menu.BuildView(width, height);
-            Assert.HasCount(14, view.Controls);
+            Assert.HasCount(GameChapters.For(level.Id) == GameChapter.Winter ? 9 : 15, view.Controls);
             foreach (var control in view.Controls)
             {
                 Assert.IsGreaterThanOrEqualTo(0f, control.Bounds.X);

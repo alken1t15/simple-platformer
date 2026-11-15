@@ -11,6 +11,8 @@ internal sealed partial class VisualScene
     private readonly Scene _scene;
     private readonly VisualContactShadow _contactShadow;
     private readonly VisualRoadLayout _roads;
+    private readonly bool _winter;
+    private readonly HashSet<int> _iceSurfaces = [];
     private readonly (Vector2 Center, Vector2 Half)[] _movingPropZones;
     private readonly Vector2 _routeMin;
     private readonly Vector2 _routeMax;
@@ -87,9 +89,10 @@ internal sealed partial class VisualScene
     // Тяжёлые CPU-ассеты создаются при первом включении режима.
     static VisualScene() { }
 
-    public VisualScene(Scene scene, IReadOnlyList<SurfaceDefinition> surfaces, IReadOnlyList<HazardDefinition> hazards)
+    public VisualScene(Scene scene, IReadOnlyList<SurfaceDefinition> surfaces, IReadOnlyList<HazardDefinition> hazards, bool winter = false)
     {
         _scene = scene;
+        _winter = winter;
         // Не размещать пальмы/домики в полном объёме хода новых механизмов,
         // даже когда этот объём выходит за края узкой дороги.
         _movingPropZones = hazards.Where(h => h.MotionKind != HazardMotionKind.Rotation).Select(h =>
@@ -113,9 +116,10 @@ internal sealed partial class VisualScene
         _routeMin = surfaces.Count == 0 ? new(-2) : minimum;
         _routeMax = surfaces.Count == 0 ? new(2) : maximum;
         _roads = VisualRoadLayout.Get(surfaces);
-        _contactShadow = new(scene, _roads, ContactFrames.Value);
+        _contactShadow = new(scene, _roads, winter ? WinterContactFrames.Value : ContactFrames.Value);
         ConfigureLighting(scene);
         Vector2 middle = (_routeMin + _routeMax) / 2;
+        if (winter) { CreateWinterLandscape(middle); return; }
         Add(Sky, SkyMaterial, new(middle.X, 4, middle.Y), new(105));
         Add(Cloud, Solid(255, 243, 164), new(-33, 31, -48), new(4.3f));
 
@@ -169,8 +173,10 @@ internal sealed partial class VisualScene
 
     public void UpdateContactShadow(BallState ball, double seconds, IReadOnlySet<int>? hidden = null)
     {
-        _contactShadow.Apply(ball, hidden);
+        var excluded = hidden is null ? new HashSet<int>(_iceSurfaces) : hidden.Concat(_iceSurfaces).ToHashSet();
+        _contactShadow.Apply(ball, excluded);
         AnimateLandmarks(seconds);
+        if (_winter) AnimateSnow(seconds);
     }
 
     private static readonly MaterialData FragileTiles = CrackedTiles(new(255, 220, 132), new(240, 160, 82));
@@ -184,12 +190,14 @@ internal sealed partial class VisualScene
         return crack ? new(116, 69, 44) : x < 64 ? a : b;
     }));
 
-    public void SurfaceDetail(int index, OrientedBox bounds, bool fragile = false)
+    public void SurfaceDetail(int index, OrientedBox bounds, bool fragile = false, bool slippery = false)
     {
-        if (_roads.Patches[index].Top is { } top) Add(top, fragile ? FragileTiles : RoadTiles, Vector3.Zero, Vector3.One);
+        if (slippery) _iceSurfaces.Add(index);
+        if (_roads.Patches[index].Top is { } top)
+            Add(top, _winter ? slippery ? WinterIce : fragile ? WinterCrackedIce : WinterSnow : fragile ? FragileTiles : RoadTiles, Vector3.Zero, Vector3.One);
         if (!fragile && bounds.HalfExtents.X >= 1.9f && bounds.HalfExtents.Z >= 1.9f)
         {
-            var stone = Add(Island, Rock, bounds.ToWorld(new(0, -bounds.HalfExtents.Y, 0)),
+            var stone = Add(Island, _winter ? WinterRock : Rock, bounds.ToWorld(new(0, -bounds.HalfExtents.Y, 0)),
                 new(bounds.HalfExtents.X * 0.92f, 1.8f, bounds.HalfExtents.Z * 0.92f));
             stone.Transform.Rotation = bounds.Orientation;
         }
@@ -197,6 +205,7 @@ internal sealed partial class VisualScene
 
     public void FinishDetail(OrientedBox bounds)
     {
+        if (_winter) WinterFinishDetail(bounds);
         var flag = Add(GameMeshes.Box, Banner, bounds.ToWorld(new(0, bounds.HalfExtents.Y + 0.24f, 0)),
             new(bounds.HalfExtents.X * 2 + 0.32f, 0.42f, 0.12f));
         flag.Transform.Rotation = bounds.Orientation;

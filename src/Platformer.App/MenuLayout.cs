@@ -5,12 +5,12 @@ using Engine3D.OpenGL;
 namespace Platformer.App;
 
 internal enum MenuAction { Play, Levels, Settings, Skins, Exit, ChooseLevel, Back, Volume, Mute,
-    ChooseSkin, Continue, Restart, MainMenu, Next, Resolution, ApplyResolution, DisplayMode, CancelMainMenu, ConfirmMainMenu, Music, Controls }
+    ChooseSkin, Continue, Restart, MainMenu, Next, Resolution, ApplyResolution, DisplayMode, CancelMainMenu, ConfirmMainMenu, Music, Controls, Chapter }
 internal sealed record MenuOption(string Id, string Label, MenuAction Action,
     MenuControlKind Kind = MenuControlKind.Button, string? Value = null, ColorRgba? Swatch = null, bool Enabled = true, string? Detail = null, bool Locked = false, int? Rating = null, LevelDifficulty? Difficulty = null);
 internal sealed record GameplayDialogSummary(string LevelName, int BestStars, int? FinishStars = null);
 internal sealed record MenuPage(string Title, IReadOnlyList<string> Details, IReadOnlyList<MenuOption> Options,
-    bool IsControlsPage = false, GameplayDialogSummary? Status = null);
+    bool IsControlsPage = false, GameplayDialogSummary? Status = null, bool IsLeaveConfirmation = false);
 
 /// <summary>Один расчёт геометрии для отрисовки и hit-test; не обращается к окну.</summary>
 internal static class MenuLayout
@@ -34,6 +34,8 @@ internal static class MenuLayout
         var texts = new List<MenuText>();
         var images = new List<MenuImage>();
         if (width == 0f || height == 0f) return new(screen, new(width, height), controls, panels, texts);
+        if (page.IsLeaveConfirmation)
+            return LeaveConfirmationLayout.Build(screen, page, selectedIndex, pointer, pressedId, width, height);
         if (page.Status is not null)
             return GameplayDialogLayout.Build(screen, page, selectedIndex, pointer, pressedId, width, height);
         float scale = MathF.Min(width / 1280f, height / 720f);
@@ -90,6 +92,16 @@ internal static class MenuLayout
             Text(hud.LevelName, 44f, 38f, 22f);
             Text($"Coins {hud.CoinCount}/{hud.TotalCoins}", 44f, 72f, 18f);
             Text(hud.BoostText, 44f, 100f, 16f, Accent);
+            int powerRow = 0;
+            foreach (var power in new[] { ("HIGH JUMP",hud.JumpPowerSeconds,new ColorRgba(0.8f,0.4f,1)), ("SPEED",hud.SpeedPowerSeconds,new ColorRgba(0.2f,1,0.75f)) })
+            {
+                if (power.Item2 <= 0) continue;
+                float y = 150 + powerRow++ * 54;
+                panels.Add(new(Rect(28,y,250,48),new(0.03f,0.1f,0.14f,0.93f),MenuPanelKind.Sheet));
+                Text($"{power.Item1}  {MathF.Ceiling(power.Item2)}s",44,y+8,16,power.Item3,MenuTextKind.Powerup);
+                panels.Add(new(Rect(44,y+34,214,5),new(0.1f,0.2f,0.25f),MenuPanelKind.Track));
+                panels.Add(new(Rect(44,y+34,214*Math.Clamp(power.Item2/12,0,1),5),power.Item3,MenuPanelKind.PowerFill));
+            }
             return new(screen, new(width, height), controls, panels, texts);
         }
 
@@ -107,7 +119,7 @@ internal static class MenuLayout
             bool skinGrid = screen == AppScreen.SkinSelect;
             bool levels = screen == AppScreen.LevelSelect;
             bool settings = screen == AppScreen.Settings;
-            int cards = skinGrid ? GameSkins.All.Count : levels ? page.Options.Count - 1 : 0;
+            int cards = skinGrid ? GameSkins.All.Count : levels ? page.Options.Count(o => o.Kind == MenuControlKind.Level) : 0;
             bool card = i < cards;
             bool levelGrid = levels && cards > 5;
             float levelRow = MathF.Min(68f, 340f / Math.Max(1, (cards + 1) / 2));
@@ -120,7 +132,9 @@ internal static class MenuLayout
                 : page.IsControlsPage ? 574f : settings ? 224f + 50f * i : 238f + row * i;
             float buttonHeight = skinGrid ? (card ? skinRow - 7f : 40f) : levelGrid ? (card ? levelRow - 10f : 40f) : levels ? (card ? 46f : 40f)
                 : settings ? 44f : row - 12;
-            var bounds = Rect(x, y, paired ? 252f : 528f, buttonHeight);
+            bool chapterFooter = levels && page.Options.Any(o => o.Action == MenuAction.Chapter) && !card;
+            if (chapterFooter) { x = 376 + (i - cards) * 264; y = 574; buttonHeight = 40; }
+            var bounds = Rect(x, y, chapterFooter || paired ? 252f : 528f, buttonHeight);
             bool selected = selectedIndex == i;
             bool hovered = pointer is { } position && bounds.Contains(position);
             bool pressed = option.Enabled && option.Id == pressedId;
@@ -153,7 +167,7 @@ internal static class MenuLayout
             }
             else if (option.Kind == MenuControlKind.Volume)
                 Label(option.Label, x + 20, y, buttonHeight, 20f, ink);
-            else Label(option.Label, x + 20, y, buttonHeight, settings ? 20f : 22f, ink);
+            else Label(option.Label, x + 20, y, buttonHeight, chapterFooter ? 18f : settings ? 20f : 22f, ink);
             if (valueBounds is { } track)
             {
                 panels.Add(new(track, new(0.2f, 0.25f, 0.33f), MenuPanelKind.Track));

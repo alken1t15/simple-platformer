@@ -118,6 +118,9 @@ public sealed class GameplayHost
         if (Flow.Presenter is { } presenter) _menuBackdrop = presenter;
         var visible = Flow.Presenter ?? _menuBackdrop ?? _preview;
         Scene source = visible.Scene;
+        Scene.Lighting.AmbientColor = source.Lighting.AmbientColor;
+        Scene.Lighting.DirectionalColor = source.Lighting.DirectionalColor;
+        Scene.Lighting.Direction = source.Lighting.Direction;
         var skin = GameSkins.Get(Flow.UserSettings.SkinId);
         visible.BallObject.Material = _visual ? VisualScene.BallMaterial(skin) : skin.Material;
         if (Scene.Objects.SequenceEqual(source.Objects)) return;

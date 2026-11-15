@@ -73,18 +73,27 @@ public sealed class BallSimulator
         float cooldown = before.BoostCooldownSeconds;
         if (command.BoostPressed && boost == 0f && cooldown == 0f)
             boost = settings.BoostDurationSeconds;
-        float speed = settings.MoveSpeed * (boost > 0f ? settings.BoostMultiplier : 1f);
+        float speed = settings.MoveSpeed * (boost > 0f ? settings.BoostMultiplier : 1f) * (before.SpeedPowerSeconds > 0 ? 1.5f : 1);
 
         Vector3 velocity = before.Velocity;
         Vector3 ground = ProbeGround(before.Center, velocity, removed);
         bool grounded = ground != Vector3.Zero;
         if (grounded && command.JumpPressed)
         {
-            velocity.Y = settings.JumpSpeed;
+            velocity.Y = settings.JumpSpeed * (before.JumpPowerSeconds > 0 ? 1.5f : 1);
             grounded = false;
         }
         Vector3 desired = new(move.X * speed, 0f, move.Y * speed);
         float acceleration = move == Vector2.Zero ? settings.BrakingAcceleration : settings.MoveAcceleration;
+        if (grounded)
+        {
+            float traction = 1;
+            foreach (var surface in surfaces)
+                if (!surface.IsBarrier && (removed is null || !removed.Contains(surface.Id))
+                    && SphereGeometry.Contact(surface.Bounds, before.Center, settings.BallRadius + settings.SkinWidth * 2).Separation <= 0)
+                    traction = MathF.Min(traction, surface.Traction);
+            acceleration *= traction;
+        }
         if (grounded)
         {
             velocity -= ground * Vector3.Dot(velocity, ground);
@@ -132,7 +141,11 @@ public sealed class BallSimulator
         CheckPenetration(center, false, removed);
         ground = ProbeGround(center, velocity, removed);
         AdvanceTimers(ref boost, ref cooldown);
-        var ball = new BallState(center, velocity, settings.BallRadius, ground != Vector3.Zero, ground, boost, cooldown);
+        var ball = new BallState(center, velocity, settings.BallRadius, ground != Vector3.Zero, ground, boost, cooldown)
+        {
+            JumpPowerSeconds = MathF.Max(0, before.JumpPowerSeconds - dt),
+            SpeedPowerSeconds = MathF.Max(0, before.SpeedPowerSeconds - dt),
+        };
         return new BallStepResult(ball, path);
     }
 
@@ -313,6 +326,9 @@ public sealed class BallSimulator
 
     private void Validate(BallState state)
     {
+        if (!float.IsFinite(state.JumpPowerSeconds) || state.JumpPowerSeconds is < 0 or > 30
+            || !float.IsFinite(state.SpeedPowerSeconds) || state.SpeedPowerSeconds is < 0 or > 30)
+            throw new ArgumentOutOfRangeException(nameof(state));
         LevelValidation.Position(state.Center, nameof(state.Center));
         LevelValidation.Finite(state.Velocity, nameof(state.Velocity));
         LevelValidation.Finite(state.Radius, nameof(state.Radius));

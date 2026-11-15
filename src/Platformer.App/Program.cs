@@ -8,7 +8,7 @@ try
     if (args is ["--help"])
     {
         Console.WriteLine("""
-            Ball Adventure: thirteen levels, fourteen ball skins, menus, HUD and game audio.
+            Ball Adventure: two chapters, twenty levels, fourteen ball skins, menus, HUD and game audio.
             Usage: Platformer.App [--play | --legacy | --presenter [--skin ID] [--overview] [--still]] [--visual] [--smoke]
             Skins: classic-blue, orange, emerald, violet, basketball, football, neon, aurora, champion.
             Default / --play: open Main Menu. Arrows/Tab: choose; Enter/Space or mouse click: select.

@@ -12,7 +12,7 @@ internal sealed partial class VisualScene
     private readonly VisualContactShadow _contactShadow;
     private readonly VisualRoadLayout _roads;
     private readonly bool _winter;
-    private readonly HashSet<int> _iceSurfaces = [];
+    private readonly HashSet<int> _unshadowedSurfaces = [];
     private readonly (Vector2 Center, Vector2 Half)[] _movingPropZones;
     private readonly Vector2 _routeMin;
     private readonly Vector2 _routeMax;
@@ -115,6 +115,7 @@ internal sealed partial class VisualScene
         }
         _routeMin = surfaces.Count == 0 ? new(-2) : minimum;
         _routeMax = surfaces.Count == 0 ? new(2) : maximum;
+        for (int i=0;i<surfaces.Count;i++) if (surfaces[i].IsBarrier) _unshadowedSurfaces.Add(i);
         _roads = VisualRoadLayout.Get(surfaces);
         _contactShadow = new(scene, _roads, winter ? WinterContactFrames.Value : ContactFrames.Value);
         ConfigureLighting(scene);
@@ -173,7 +174,7 @@ internal sealed partial class VisualScene
 
     public void UpdateContactShadow(BallState ball, double seconds, IReadOnlySet<int>? hidden = null)
     {
-        var excluded = hidden is null ? new HashSet<int>(_iceSurfaces) : hidden.Concat(_iceSurfaces).ToHashSet();
+        var excluded = hidden is null ? new HashSet<int>(_unshadowedSurfaces) : hidden.Concat(_unshadowedSurfaces).ToHashSet();
         _contactShadow.Apply(ball, excluded);
         AnimateLandmarks(seconds);
         if (_winter) AnimateSnow(seconds);
@@ -192,7 +193,7 @@ internal sealed partial class VisualScene
 
     public void SurfaceDetail(int index, OrientedBox bounds, bool fragile = false, bool slippery = false)
     {
-        if (slippery) _iceSurfaces.Add(index);
+        if (slippery) _unshadowedSurfaces.Add(index);
         if (_roads.Patches[index].Top is { } top)
             Add(top, _winter ? slippery ? WinterIce : fragile ? WinterCrackedIce : WinterSnow : fragile ? FragileTiles : RoadTiles, Vector3.Zero, Vector3.One);
         if (!fragile && bounds.HalfExtents.X >= 1.9f && bounds.HalfExtents.Z >= 1.9f)
@@ -348,13 +349,18 @@ internal sealed partial class VisualScene
 
     private void CloudAt(Vector3 center, float size)
     {
-        Add(Cloud, CloudMaterial, center, new(size, size * 0.42f, size * 0.58f));
-        Add(Cloud, CloudMaterial, center + new Vector3(-size * 0.65f, -size * 0.07f, 0),
-            new(size * 0.65f, size * 0.32f, size * 0.48f));
-        Add(Cloud, CloudMaterial, center + new Vector3(size * 0.7f, -size * 0.1f, 0),
-            new(size * 0.6f, size * 0.3f, size * 0.45f));
-        Add(Cloud, CloudMaterial, center + new Vector3(-size * 0.12f, size * 0.3f, 0),
-            new(size * 0.65f, size * 0.5f, size * 0.5f));
+        // Несколько объёмных долей по обеим горизонтальным осям: силуэт облака
+        // остаётся неровным и при взгляде с торца, вместо одинокого белого диска.
+        foreach (var (offset, scale) in new (Vector3, Vector3)[]
+        {
+            (new(-0.7f,-0.09f,0), new(0.67f,0.28f,0.61f)),
+            (new(0,-0.08f,0), new(0.95f,0.32f,0.7f)),
+            (new(0.74f,-0.1f,0.03f), new(0.62f,0.27f,0.54f)),
+            (new(-0.26f,0.21f,0.08f), new(0.58f,0.5f,0.51f)),
+            (new(0.3f,0.12f,-0.2f), new(0.51f,0.4f,0.55f)),
+            (new(-0.14f,-0.08f,-0.6f), new(0.58f,0.26f,0.49f)),
+            (new(0.25f,-0.07f,0.57f), new(0.6f,0.29f,0.5f))
+        }) Add(Cloud, CloudMaterial, center + offset * size, scale * size);
     }
 
     private static MaterialData Solid(float r, float g, float b) =>

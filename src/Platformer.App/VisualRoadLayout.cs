@@ -121,10 +121,15 @@ internal sealed class VisualRoadLayout
             {
                 if (MathF.Abs(Area(Clip(patch.Polygon, Rectangle(x * Pitch, z * Pitch, (x + 1) * Pitch, (z + 1) * Pitch)))) < 1e-8f) continue;
                 float left = (x - 1) * Pitch, near = (z - 1) * Pitch;
-                var footprint = Clip(patch.Polygon, Rectangle(left, near, left + 3 * Pitch, near + 3 * Pitch));
                 var shadowVertices = new List<Vertex>(); var shadowIndices = new List<uint>();
-                AddPolygon(footprint, patch, 0.004f, p => new((p.X - left) / (3 * Pitch), 1 - (p.Y - near) / (3 * Pitch)),
-                    shadowVertices, shadowIndices);
+                // Тень принадлежит тем же неперекрывающимся частям, что и Top.
+                // Иначе при подъезде к стыку она закрашивала соседнюю платформу.
+                foreach (var piece in pieces)
+                {
+                    var footprint = Clip(Clip(piece, patch.Polygon), Rectangle(left, near, left + 3 * Pitch, near + 3 * Pitch));
+                    AddPolygon(footprint, patch, 0.004f, p => new((p.X - left) / (3 * Pitch), 1 - (p.Y - near) / (3 * Pitch)),
+                        shadowVertices, shadowIndices);
+                }
                 if (shadowVertices.Count > 0) patch.Shadows.Add((x, z), new(shadowVertices, shadowIndices));
             }
         }

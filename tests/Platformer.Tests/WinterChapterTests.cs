@@ -67,7 +67,7 @@ public sealed class WinterChapterTests
             case "winter-aurora":
                 Go(0, 0); Go(10, 0); Cross("snowball-summit", 16, 0); Go(22, 0); Go(22, 5); Go(22, 10);
                 Go(26, 10); Cross("ice-press-summit", 29, 10); Go(35.5f, 10);
-                Hop(37, Vector2.UnitX, 40, 10); Go(43, 10); break;
+                Hop(37, Vector2.UnitX, 40, 10); Hop(41.5f, Vector2.UnitX, 44.5f, 10); Go(45.2f, 10); break;
         }
     }
 

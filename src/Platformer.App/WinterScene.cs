@@ -37,12 +37,15 @@ internal sealed partial class VisualScene
          new(new(1.2f, 1.65f, -0.95f), new(0, 0), -Vector3.UnitZ),
          new(new(-1.2f, 1.65f, -0.95f), new(1, 0), -Vector3.UnitZ),
          new(new(0, 2.31f, -0.95f), new(0.5f, 1), -Vector3.UnitZ)], [0, 1, 2, 3, 4, 5]);
-    private static readonly MaterialData WinterSky = Textured(Texture(8, 256, (_, y) =>
-        Vector3.Lerp(new(19, 35, 75), new(160, 208, 230), y / 255f)));
-    private static readonly MaterialData Aurora = Textured(Texture(128, 64, (x, y) =>
+    private static readonly MaterialData WinterSky = Textured(Texture(512, 256, (x, y) =>
     {
-        float ribbons = 0.5f + 0.5f * MathF.Sin(x * 0.11f + MathF.Sin(y * 0.12f) * 2);
-        return Vector3.Lerp(new(88, 106, 204), new(94, 239, 203), ribbons);
+        var sky = Vector3.Lerp(new(19, 35, 75), new(160, 208, 230), y / 255f);
+        // Сияние — мягкая дальняя завеса в самом небе, а не цепочка твёрдых балок.
+        float longitude = x * MathF.Tau / 512;
+        float curtain = 62 + 12 * MathF.Sin(longitude * 3) + 6 * MathF.Sin(longitude * 7);
+        float distance = (y - curtain) / 13;
+        float glow = MathF.Exp(-distance * distance) * (0.2f + 0.16f * MathF.Sin(longitude * 19));
+        return Vector3.Lerp(sky, new(104, 224, 195), glow);
     }));
     private static readonly Lazy<TextureData[]> WinterContactFrames = new(() => VisualContactShadow.CreateFrames(WinterSnow.Texture!));
     private readonly List<(SceneObject Object, Vector3 Origin)> _snowflakes = [];
@@ -53,7 +56,6 @@ internal sealed partial class VisualScene
         _scene.Lighting.AmbientColor = new(0.64f, 0.73f, 0.87f);
         _scene.Lighting.DirectionalColor = new(0.39f, 0.43f, 0.52f);
         Add(Sky, WinterSky, new(middle.X, 4, middle.Y), new(105));
-        Add(Cloud, Solid(239, 248, 255), new(middle.X - 30, 27, middle.Y - 43), new(3.4f));
         // Отдельные заснеженные островки не пересекают трассу или ход механизмов.
         foreach (var offset in new[] { new Vector2(-9, -4), new(8, -9), new(17, 9), new(-6, 16), new(6, 23), new(28, 22) })
         {
@@ -65,6 +67,8 @@ internal sealed partial class VisualScene
 
             Pine(site + new Vector3(1.4f, 0, -1.1f), 3.6f);
             SnowLodge(site + new Vector3(0.3f, 0.04f, 1.1f), 0.65f);
+            Gift(site+new Vector3(-1.6f,0.04f,1.4f),0.55f,true);
+            Gift(site+new Vector3(-1.05f,0.04f,1.75f),0.4f,false);
         }
         for (int i = 0; i < 7; i++)
         {
@@ -75,12 +79,7 @@ internal sealed partial class VisualScene
             Add(WinterRidge.Rock, WinterRock, foot, scale).Transform.Rotation = rotation;
             Add(WinterRidge.Snow, WinterSnow, foot, scale).Transform.Rotation = rotation;
         }
-        // Непрозрачные ленты северного сияния далеко за трассой, без alpha-blend артефактов.
-        for (int i = 0; i < 8; i++)
-        {
-            var ribbon = Add(SoftBox, Aurora, new(middle.X - 23 + i * 6, 23 + MathF.Sin(i * 0.8f) * 4, middle.Y - 45), new(7, 0.6f, 0.3f));
-            ribbon.Transform.Rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitZ, MathF.Cos(i * 0.8f) * 0.5f);
-        }
+        CreateWinterParade(middle);
         for (int i = 0; i < 72; i++)
         {
             float u = (i * 0.618034f) % 1, v = (i * 0.414214f) % 1;
@@ -101,10 +100,12 @@ internal sealed partial class VisualScene
                 Vector3 position = foot + Vector3.UnitY * (height * (0.2f + tier * 0.23f));
                 Add(Cone, WinterPine, position, new(size, height * 0.55f, size));
                 Add(Cone, WinterSnow, position + Vector3.UnitY * height * 0.15f, new(size * 0.8f, height * 0.4f, size * 0.8f));
-                for (int bulb=0;bulb<4;bulb++)
+                for (int segment=0;segment<8;segment++)
                 {
-                    float angle=bulb*MathF.Tau/4+tier;
-                    Add(Cloud,bulb%2==0?Solid(235,72,83):WinterGlow,position+new Vector3(MathF.Cos(angle)*size*0.48f,height*0.13f,MathF.Sin(angle)*size*0.48f),new(0.09f));
+                    float angle=segment*MathF.Tau/8+tier, next=(segment+1)*MathF.Tau/8+tier;
+                    Vector3 Ring(float a)=>position+new Vector3(MathF.Cos(a)*size*0.55f,height*0.13f,MathF.Sin(a)*size*0.55f);
+                    Wire(Ring(angle),Ring(next));
+                    if(segment%2==0) FestiveLight(Ring(angle),0.075f,segment+tier);
                 }
             }
         }
@@ -112,9 +113,10 @@ internal sealed partial class VisualScene
 
     private void AnimateSnow(double seconds)
     {
+        AnimateWinterParade(seconds);
         for (int j=0;j<_bulbs.Count;j++)
         {
-            var bulb=_bulbs[j]; float intensity=0.45f+0.55f*(0.5f+0.5f*MathF.Sin((float)(seconds%20)*2.4f+j*0.8f));
+            var bulb=_bulbs[j]; float intensity=0.45f+0.55f*(0.5f+0.5f*MathF.Sin((float)Math.IEEERemainder(seconds*2.4,Math.Tau)+j*0.8f));
             bulb.Material.BaseColor=new(bulb.Color.R*intensity,bulb.Color.G*intensity,bulb.Color.B*intensity);
         }
         for (int i = 0; i < _snowflakes.Count; i++)
@@ -136,6 +138,34 @@ internal sealed partial class VisualScene
         SnowLodge(foot + Vector3.UnitY * 0.04f, 1);
     }
 
+    private void FestiveLight(Vector3 position, float radius, int index)
+    {
+        var shell=index%3==0?Solid(244,86,83):index%3==1?Solid(255,219,114):Solid(68,222,170);
+        _bulbs.Add((shell,shell.BaseColor));
+        Add(Cloud,shell,position,new(radius));
+        var core=Solid(255,248,211);
+        _bulbs.Add((core,core.BaseColor));
+        Add(Cloud,core,position+Vector3.UnitZ*radius*0.7f,new(radius*0.35f));
+    }
+
+    private void Wire(Vector3 from, Vector3 to)
+    {
+        var direction=to-from; float length=direction.Length();
+        if(length<0.001f)return;
+        var axis=direction/length;float dot=Math.Clamp(Vector3.Dot(Vector3.UnitY,axis),-1,1);
+        var item=Add(GameMeshes.Box,WinterTrunk,(from+to)/2,new(0.018f,length,0.018f));
+        item.Transform.Rotation=dot>0.99999f?Quaternion.Identity:dot< -0.99999f
+            ?Quaternion.CreateFromAxisAngle(Vector3.UnitX,MathF.PI)
+            :Quaternion.CreateFromAxisAngle(Vector3.Normalize(Vector3.Cross(Vector3.UnitY,axis)),MathF.Acos(dot));
+    }
+
+    private void Gift(Vector3 foot, float size, bool red)
+    {
+        var paint=red?Solid(185,53,72):Solid(38,133,127);
+        Add(SoftBox,paint,foot+Vector3.UnitY*size*0.5f,new(size));
+        Add(SoftBox,WinterGlow,foot+Vector3.UnitY*size*0.51f,new(size*1.01f,size*1.02f,size*0.12f));
+        Add(SoftBox,WinterGlow,foot+Vector3.UnitY*size*0.51f,new(size*0.12f,size*1.02f,size*1.01f));
+    }
     private void Garland(Vector3 from, Vector3 to)
     {
         foreach (var anchor in new[]{from,to}) Add(SoftBox,WinterRoof,anchor,new(0.12f));

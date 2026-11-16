@@ -123,6 +123,14 @@ dotnet run предназначен для диагностики. Счётчи�
 
 ## Работа и проверки
 
+Контактная тень дороги строится только по тем же неперекрывающимся частям, что и
+VisualRoadLayout.Top. IsBarrier (включая металлические основания ловушек), лёд и
+скрытые платформы исключены из дорожной контактной текстуры. Не накладывай снежную
+дорожную текстуру на опоры. Гирлянды ёлок меняют яркость по времени симуляции,
+останавливаясь в паузе; это материалы, без дополнительных источников света движка.
+В Aurora Summit между last-ice и финишной платформой оставлен зазор 1,8 единицы;
+реальный маршрут с двумя прыжками проверяется в WinterChapterTests.
+
 Перед правками: `git status --short --branch`, diff, `git fetch --prune`; работай в ветке задачи от актуального main.
 Не делать pull при локальных изменениях, force-push и разрушительные Git-операции.
 Используй существующий .NET 10 SDK согласно global.json. Не понижай target framework ради окружения.
@@ -169,3 +177,7 @@ WinterChallengeLevels добавляет3длинныхмаршрута с Power
 Доработка16.11: free-floating гирлянды наостровахудалены; фасадныеGarland имеют2anchors, bulb/corematerialsмигаютпоSimulationSeconds (стилизованнаяяркость, безpointlight/bloom). Pausefreezes/Restartresets tested. Pressоснованиеfloor−.34..−.02, guidebottomfloor−.22, нетвисящихстолбов. IceTraction<1исключаетсяизVisualContactShadow. НовыекартыCrystal/Gifts/Midnight имеютфинальныегапы7ед/разгонShift+HighJump; Giftступени2ед. Бонусыимонетыдистанция>0.8,бонусыдругкдругу>0.9 tested. Сохранения/ID/coinscountsнеизменны. Realinputуспешныймаршрут458наборпроверокпробуетдо30начальныхфазвремени, не телепортируетшар; negativeproofnormalShiftfails7gap/poweredlands.
 
 16.11 solid supports: GameLevels явно вызывает Core TrapStructures.Attach ровноодинраз/карта, добавляя structure:<hazardId>:part IsBarrierSurfaces. Pressbase/head/guides, ExpertShuttle rails/endstops и RotationaxleрисуютсятемжеSurfaceObjects/SetBounds, старыеdecorдубликатыубраны. PendulumGantryужеCore. Стойки/основаниятеперьблокируютшар, неубивают. Physics/renderboundsсвереныиsideapproachчерезBallSimulatorпроверенвTrapStructureTests. DirectauthorLevelDefinition безAttachнеполучаетопорыавтоматически.
+
+WinterSkyParade — App-only зимняя упряжка (Санта/4оленя/сани/звёздный след), время SimulationSeconds, Pause freeze/Restart reset; объекты создаются до кадрового цикла. Облака7объёмных долей; сияние в WinterSky texture, отдельные Aurora-бруски и одиночная белая сфера удалены. Не добавлять коллизии декора или новые движковые API ради этого оформления. Проверки — WinterSkyTests и native кадры.
+
+Стартовая фаза WinterSkyParade случайна при новой сцене, фиксирована в ней для Restart; Pause сохраняет позу. DeerPose/двухзвенные ноги используют общие hip/knee pivots, head nod и отдельные фазы. Все зимние монеты должны находиться до финиша с расстоянием от OBB > radius+0.55; 12 IDs/coins на карту неизменны. Контракты проверяет WinterSkyTests, маршруты — прежние real-input tests.

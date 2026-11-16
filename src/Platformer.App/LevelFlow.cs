@@ -190,6 +190,7 @@ public sealed class LevelFlow
     {
         var next = new GameSession(level, settings);
         var presenter = new GameScenePresenter(level, visual);
+        presenter.SetPreferences(UserSettings);
         presenter.Apply(next.Snapshot, GameSkins.Get(UserSettings.SkinId));
         return (next, presenter);
     }

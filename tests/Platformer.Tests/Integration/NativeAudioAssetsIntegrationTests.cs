@@ -13,6 +13,28 @@ namespace Platformer.Tests.Integration;
 public sealed class NativeAudioAssetsIntegrationTests
 {
     [TestMethod]
+    public void NewSoundscapeAssetsLoadAndStopAcrossChaptersPauseAndMixChanges()
+    {
+        using var device=AudioDevice.Create(new AudioOptions());device.MasterVolume=0;
+        using var playback=new NativeAudioPlayback(device,Path.Combine(AppContext.BaseDirectory,"Assets","Audio"));
+        var settings=new UserSettings();
+        foreach(var id in new[]{"level1","level2","winter-snowbound","winter-crystal","winter-glacier-ferries"})
+        {
+            var level=GameLevels.CreateCatalog().Get(id);var snapshot=new GameSession(level,SimulationSettings.Default).Snapshot;
+            var falling=snapshot.Ball with{Grounded=false,GroundNormal=System.Numerics.Vector3.Zero,Velocity=new(3,-8,0)};
+            playback.UpdateSoundscape(level,new(snapshot.SessionId,id,0,0,SessionPhase.Running,falling,[],snapshot.Hazards,snapshot.Platforms),AppScreen.Playing,settings);
+            var grounded=snapshot.Ball with{Velocity=new(3,0,0)};
+            playback.UpdateSoundscape(level,new(snapshot.SessionId,id,1,.01,SessionPhase.Running,grounded,[],snapshot.Hazards,snapshot.Platforms),AppScreen.Playing,settings);
+            playback.SetMix(.3f,.4f);
+            playback.UpdateSoundscape(level,snapshot,AppScreen.Paused,settings);
+            playback.PauseSoundscape();
+        }
+        foreach(var file in new[]{"winter-air","tropical-air"})
+            using(device.LoadWave(Path.Combine(AppContext.BaseDirectory,"Assets","Audio",file+".wav"))){}
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(()=>playback.SetMix(float.NaN,1));
+    }
+
+    [TestMethod]
     public void BundledAudioLoadsFromBaseDirectoryThroughPublicAudioDevice()
     {
         // Program строит путь от AppContext.BaseDirectory; LoadWave разбирает WAV и в silent fallback.

@@ -24,13 +24,11 @@ public sealed class SurfaceOverlayTests
         var finish=summit.Surfaces.Single(s=>s.Id=="finish-platform").Bounds;
         Assert.AreEqual(1.8f,finish.Center.X-finish.HalfExtents.X-(last.Center.X+last.HalfExtents.X),0.001f);
     }    [TestMethod]
-    public void ContactPatchesStayOnVisibleRoadGeometryAcrossAllTwentyLevels()
+    public void NoBallShadowIsRenderedAcrossTheLevelCatalog()
     {
         foreach(var level in GameLevels.CreateCatalog().Levels)
         {
             var presenter=new GameScenePresenter(level,true);
-            var tops=presenter.Scene.Objects.Where(o=>o.Transform.Position==Vector3.Zero && o.Transform.Scale==Vector3.One
-                && o.Material.Texture is {Width:128,Height:64} or {Width:128,Height:128}).Select(o=>o.Mesh).ToArray();
             long tick=0;Guid session=Guid.NewGuid();
             foreach(var surface in level.Surfaces.Where(s=>!s.IsBarrier&&s.CollapseDelaySeconds==0&&s.Traction==1))
             {
@@ -43,29 +41,10 @@ public sealed class SurfaceOverlayTests
                         new(center,Vector3.Zero,0.5f,true,normal,0,0),[],level.Hazards.Select(h=>HazardMotion.Evaluate(h,seconds)).ToArray(),
                         level.Surfaces.Where(s=>s.CollapseDelaySeconds>0).Select(s=>new CrumblingPlatformState(s.Id,null,false)).ToArray());
                     presenter.Apply(snapshot,GameSkins.All[0]);
-                    foreach(var item in presenter.Scene.Objects.Where(o=>o.Material.Texture is {Width:192,Height:192}))
-                    for(int i=0;i<item.Mesh.IndexCount;i+=3)
-                    {
-                        var a=item.Mesh.Vertices[(int)item.Mesh.Indices[i]];var b=item.Mesh.Vertices[(int)item.Mesh.Indices[i+1]];var c=item.Mesh.Vertices[(int)item.Mesh.Indices[i+2]];
-                        Vector3 point=(a.Position+b.Position+c.Position)/3-a.Normal*0.002f;
-                        Assert.IsTrue(tops.Any(mesh=>Covers(mesh,point)),level.Id+" "+surface.Id+" contact patch outside visible road");
-                    }
+                    Assert.IsFalse(presenter.Scene.Objects.Any(o=>o.Material.Texture is {Width:192,Height:192}),
+                        level.Id+" "+surface.Id+" must not render a ball shadow");
                 }
             }
-        }
-        static bool Covers(MeshData mesh,Vector3 point)
-        {
-            for(int i=0;i<mesh.IndexCount;i+=3)
-            {
-                var a=mesh.Vertices[(int)mesh.Indices[i]].Position;var b=mesh.Vertices[(int)mesh.Indices[i+1]].Position;var c=mesh.Vertices[(int)mesh.Indices[i+2]].Position;
-                var u=b-a;var v=c-a;var w=point-a;var n=Vector3.Cross(u,v);
-                if(n.LengthSquared()<1e-12f||MathF.Abs(Vector3.Dot(w,Vector3.Normalize(n)))>0.0001f)continue;
-                float uu=Vector3.Dot(u,u),uv=Vector3.Dot(u,v),vv=Vector3.Dot(v,v),wu=Vector3.Dot(w,u),wv=Vector3.Dot(w,v),denom=uu*vv-uv*uv;
-                if(MathF.Abs(denom)<1e-12f)continue;
-                float x=(wu*vv-wv*uv)/denom,y=(wv*uu-wu*uv)/denom;
-                if(x>=-0.0001f&&y>=-0.0001f&&x+y<=1.0001f)return true;
-            }
-            return false;
         }
     }
 
@@ -111,9 +90,6 @@ public sealed class SurfaceOverlayTests
         var presenter=new GameScenePresenter(level,true);
         presenter.Apply(new GameSession(level,SimulationSettings.Default).Snapshot,GameSkins.All[0]);
         var shadows=presenter.Scene.Objects.Where(o=>o.Material.Texture is {Width:192,Height:192}).ToArray();
-        Assert.HasCount(1,shadows);
-        var shadow=shadows[0];
-        foreach(var vertex in shadow.Mesh.Vertices)
-            Assert.IsGreaterThanOrEqualTo(2f-0.0001f,vertex.Position.X,"Second platform must not cover the first platform's top");
+        Assert.HasCount(0,shadows,"Тень шара отключена по замечаниям игрока");
     }
 }

@@ -112,12 +112,11 @@ public sealed class VisualSceneTests
     }
 
     [TestMethod]
-    public void ContactDarkeningClipsToTheActualFloorRampAndBridgeAndReusesResourcesAfterReset()
+    public void BallDoesNotCreateShadowLayersOnFloorRampOrBridgeAfterReset()
     {
         var level = TrainingTrack.Create();
         var presenter = new GameScenePresenter(level, visual: true);
         var scenery = presenter.Scene.Objects.ToHashSet();
-        var seen = new Dictionary<(string Surface, Vector2 Offset), (MeshData Mesh, TextureData? Texture)>();
         Guid session = Guid.NewGuid();
         long tick = 0;
         for (int retry = 0; retry < 3; retry++)
@@ -131,20 +130,8 @@ public sealed class VisualSceneTests
                     offset.Y * bounds.HalfExtents.Z));
                 var ball = new BallState(foot + normal * 0.501f, Vector3.Zero, 0.5f, true, normal, 0, 0);
                 Apply(ball);
-                var shadow = presenter.Scene.Objects.Except(scenery).Single();
-                foreach (var vertex in shadow.Mesh.Vertices)
-                {
-                    Vector3 local = bounds.ToLocal(Vector3.Transform(vertex.Position, shadow.Transform.GetModelMatrix()));
-                    Assert.IsLessThanOrEqualTo(bounds.HalfExtents.X + 0.0001f, MathF.Abs(local.X));
-                    Assert.IsLessThanOrEqualTo(bounds.HalfExtents.Z + 0.0001f, MathF.Abs(local.Z));
-                    Assert.AreEqual(bounds.HalfExtents.Y + 0.004f, local.Y, 0.0001f);
-                }
-                if (seen.TryGetValue((surface.Id, offset), out var previous))
-                {
-                    Assert.AreSame(previous.Mesh, shadow.Mesh);
-                    Assert.AreSame(previous.Texture, shadow.Material.Texture);
-                }
-                else seen.Add((surface.Id, offset), (shadow.Mesh, shadow.Material.Texture));
+                CollectionAssert.AreEquivalent(scenery.ToArray(), presenter.Scene.Objects.ToArray(),
+                    "Moving the ball must not add a contact shadow");
                 Apply(ball with { Grounded = false, GroundNormal = Vector3.Zero });
                 CollectionAssert.AreEquivalent(scenery.ToArray(), presenter.Scene.Objects.ToArray(),
                     "A jump removes the contact layer without leaving stale objects");

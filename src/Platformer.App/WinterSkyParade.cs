@@ -207,8 +207,8 @@ internal sealed partial class VisualScene
             var offset = new Vector3(-4.4f, -0.3f + MathF.Sin(index * 2.4f) * age * 0.3f, MathF.Cos(index * 1.7f) * age * 0.38f);
             spark.Transform.Position = previous.Position + Vector3.Transform(offset, previous.Rotation);
             spark.Transform.Rotation = Quaternion.CreateFromYawPitchRoll(age * 2, age * 3, index);
-            spark.Transform.Scale = new(0.02f + 0.1f * MathF.Sin(age * MathF.PI / 1.8f));
-            float pulse = 0.55f + 0.45f * MathF.Sin(age * MathF.PI / 1.8f);
+            spark.Transform.Scale = new(_preferences?.ReducedEffects==true?0.001f:0.02f + 0.1f * MathF.Sin(age * MathF.PI / 1.8f));
+            float pulse = _preferences?.FlashingEnabled==false?0.8f:0.55f + 0.45f * MathF.Sin(age * MathF.PI / 1.8f);
             material.BaseColor = index % 3 == 0 ? new(0.51f * pulse, 0.93f * pulse, 0.87f * pulse) : new(pulse, 0.88f * pulse, 0.58f * pulse);
         }
     }

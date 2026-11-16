@@ -122,3 +122,5 @@ Presenter (#7) владеет 3D-представлением; UI (#19) рису
 и [зимней главе](winter-chapter.md). Core владеет таймерами/ID/сбором, BallSimulator
 применяет усиления и Traction, App только показывает жетоны и цветные полоски HUD.
 Новых сторонних зависимостей или engine API нет.
+
+Расширение [Winter Expedition](winter-expedition.md): LevelDefinition дополнен SpringPad/WindZone, SurfaceDefinition — PlatformMotion/BoundsAt. BallSimulator.StepAt обрабатывает кинематические опоры; App обновляет те же bounds и декоративные эффекты. Settings v1 расширен совместимыми полями, NativeInputAdapter переназначает только игровые действия через публичный InputKey.

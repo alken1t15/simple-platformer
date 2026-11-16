@@ -9,10 +9,8 @@ namespace Platformer.App;
 internal sealed partial class VisualScene
 {
     private readonly Scene _scene;
-    private readonly VisualContactShadow _contactShadow;
     private readonly VisualRoadLayout _roads;
     private readonly bool _winter;
-    private readonly HashSet<int> _unshadowedSurfaces = [];
     private readonly (Vector2 Center, Vector2 Half)[] _movingPropZones;
     private readonly Vector2 _routeMin;
     private readonly Vector2 _routeMax;
@@ -37,7 +35,6 @@ internal sealed partial class VisualScene
         float light = (local < 3 || y < 3) ? 1.035f : 1f;
         return color * light * (bevel < 1 ? 0.88f : 1f);
     }));
-    private static readonly Lazy<TextureData[]> ContactFrames = new(() => VisualContactShadow.CreateFrames(RoadTiles.Texture!));
     public static MaterialData Track { get; } = Textured(Texture(8, 128, (_, y) =>
     {
         float t = 1 - y / 127f;
@@ -79,11 +76,19 @@ internal sealed partial class VisualScene
     private static readonly MaterialData OrangeBall = Textured(SkinTextures.StarBall(new(255, 157, 48)));
     private static readonly Lazy<TextureData> BluePreview = new(() => SkinTextures.Preview(BlueBall));
     private static readonly Lazy<TextureData> OrangePreview = new(() => SkinTextures.Preview(OrangeBall));
-    private static readonly MaterialData SkyMaterial = Textured(Texture(8, 256, (_, y) =>
+    private static readonly MaterialData SkyMaterial = Textured(Texture(1536, 768, (x, y) =>
     {
-        float t = y / 255f;
-        return t < 0.5f ? Vector3.Lerp(new(35, 164, 224), new(161, 237, 247), t * 2)
+        float t = y / 767f;
+        Vector3 sky=t < 0.5f ? Vector3.Lerp(new(35, 164, 224), new(161, 237, 247), t * 2)
             : Vector3.Lerp(new(161, 237, 247), new(54, 162, 231), Math.Clamp((t - 0.5f) * 2.7f, 0, 1));
+        // TextureData хранит верхнюю строку первой; uploader разворачивает её для UV.
+        float latitude=t*MathF.PI,longitude=x/1536f*MathF.Tau;
+        Vector3 direction=new(MathF.Sin(latitude)*MathF.Cos(longitude),MathF.Cos(latitude),MathF.Sin(latitude)*MathF.Sin(longitude));
+        float angle=MathF.Acos(Math.Clamp(Vector3.Dot(direction,Vector3.Normalize(new Vector3(-33,31,-48))),-1,1));
+        float halo=MathF.Exp(-angle*angle/0.012f)*0.65f;
+        sky=Vector3.Lerp(sky,new(255,237,184),halo);
+        float disk=1-Math.Clamp((angle-0.037f)/0.007f,0,1);
+        return Vector3.Lerp(sky,new(255,253,232),disk);
     }));
 
     // Тяжёлые CPU-ассеты создаются при первом включении режима.
@@ -115,14 +120,11 @@ internal sealed partial class VisualScene
         }
         _routeMin = surfaces.Count == 0 ? new(-2) : minimum;
         _routeMax = surfaces.Count == 0 ? new(2) : maximum;
-        for (int i=0;i<surfaces.Count;i++) if (surfaces[i].IsBarrier) _unshadowedSurfaces.Add(i);
         _roads = VisualRoadLayout.Get(surfaces);
-        _contactShadow = new(scene, _roads, winter ? WinterContactFrames.Value : ContactFrames.Value);
         ConfigureLighting(scene);
         Vector2 middle = (_routeMin + _routeMax) / 2;
         if (winter) { CreateWinterLandscape(middle); return; }
         Add(Sky, SkyMaterial, new(middle.X, 4, middle.Y), new(105));
-        Add(Cloud, Solid(255, 243, 164), new(-33, 31, -48), new(4.3f));
 
         Village(new(-8.5f, -1.8f, 1), 4.1f, 3.4f, 2, 0.3f, CoralRoof);
         Village(new(15.8f, -1.8f, 5.8f), 5.2f, 4.4f, 3, 1.2f, TealRoof);
@@ -172,11 +174,10 @@ internal sealed partial class VisualScene
         _ => skin.Preview,
     };
 
-    public void UpdateContactShadow(BallState ball, double seconds, IReadOnlySet<int>? hidden = null)
+    public void AnimateScene(double seconds)
     {
-        var excluded = hidden is null ? new HashSet<int>(_unshadowedSurfaces) : hidden.Concat(_unshadowedSurfaces).ToHashSet();
-        _contactShadow.Apply(ball, excluded);
         AnimateLandmarks(seconds);
+        AnimateEnvironment(seconds);
         if (_winter) AnimateSnow(seconds);
     }
 
@@ -193,7 +194,6 @@ internal sealed partial class VisualScene
 
     public void SurfaceDetail(int index, OrientedBox bounds, bool fragile = false, bool slippery = false)
     {
-        if (slippery) _unshadowedSurfaces.Add(index);
         if (_roads.Patches[index].Top is { } top)
             Add(top, _winter ? slippery ? WinterIce : fragile ? WinterCrackedIce : WinterSnow : fragile ? FragileTiles : RoadTiles, Vector3.Zero, Vector3.One);
         if (!fragile && bounds.HalfExtents.X >= 1.9f && bounds.HalfExtents.Z >= 1.9f)

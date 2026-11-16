@@ -181,3 +181,16 @@ WinterChallengeLevels добавляет3длинныхмаршрута с Power
 WinterSkyParade — App-only зимняя упряжка (Санта/4оленя/сани/звёздный след), время SimulationSeconds, Pause freeze/Restart reset; объекты создаются до кадрового цикла. Облака7объёмных долей; сияние в WinterSky texture, отдельные Aurora-бруски и одиночная белая сфера удалены. Не добавлять коллизии декора или новые движковые API ради этого оформления. Проверки — WinterSkyTests и native кадры.
 
 Стартовая фаза WinterSkyParade случайна при новой сцене, фиксирована в ней для Restart; Pause сохраняет позу. DeerPose/двухзвенные ноги используют общие hip/knee pivots, head nod и отдельные фазы. Все зимние монеты должны находиться до финиша с расстоянием от OBB > radius+0.55; 12 IDs/coins на карту неизменны. Контракты проверяет WinterSkyTests, маршруты — прежние real-input tests.
+
+Расширение Winter Expedition: каталог23 (13+10),299монет/69звёзд. Три длинныхмаршрута — Springlight Trail/Glacier Ferries/Windward Journey. Motion/BoundsAt/SpringPad/WindZone и StepAt — Core, перенос входит вPath; Presenter/Camera/Soundscape используюттуже позу. Settings v1 additive: mix/effects/rebind; главное менюне менять. Миниатюры Levels — CPUкартыгеометрии. У AudioVoiceнетgainsetter: MusicVolumeперезапускаетloop, Fxновыеvoices. Подробные контракты/ограничения — docs/winter-expedition.md. Старые20/246/60сводкивышеисторические.
+
+Корректировка оформления: тень шара удалена полностью (VisualContactShadow и генерация
+shadow meshes удалены); старые требования контактной тени выше исторические.
+Солнце тропиков — диск/ореол в SkyMaterial, без отдельной сферы. Landing — мягкий
+фильтрованный шум без тональной составляющей. На трёх Expedition-картах по4ловушки
+(2pressFail+2rotatingKnockback); старые карты не усложнять. Снег показывает общий
+ветер во всей winter; физические WindZone отдельно обозначены флажками на стойках,
+без плавающих белых штрихов. Подробности docs/winter-expedition.md.
+По следующим замечаниям landing sound удалён полностью: нет land.wav, preload, генератора или вызова при приземлении. Перенесены11монетзимнейглавыотловушек (6новыхкарт+5старых), ID/count/saveне меняются. Аудитвсех10winterкартпроверяет staticstructures+128hazardphases; real-commandroutesallcoinsобязательны.
+
+GameComplete после Next в конце главы использует ChapterCompletionLayout600×320 с Finishbadge/Adventurestars/короткойподсказкой/2кнопкамирядом. РанняяветкаMenuLayoutпослеzero-sizeguard; прогресс/переходы/MainMenu прежние. Проверки — ChapterCompletionTests.

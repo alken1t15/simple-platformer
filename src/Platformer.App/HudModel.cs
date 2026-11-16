@@ -50,6 +50,9 @@ public sealed record HudModel(string LevelName, int CoinCount, int TotalCoins,
 
     internal static string LevelNameFor(string id) => id switch
     {
+        "winter-spring-trail"=>"Springlight Trail",
+        "winter-glacier-ferries"=>"Glacier Ferries",
+        "winter-windward"=>"Windward Journey",
         "winter-crystal" => "Crystal Run",
         "winter-gifts" => "Gift Ascent",
         "winter-midnight" => "Midnight Trial",

@@ -29,6 +29,16 @@ public sealed class AudioCoordinator : IDisposable
 
     public AudioCoordinator(IGameAudioPlayback playback) => this.playback = playback ?? throw new ArgumentNullException(nameof(playback));
 
+    public void UpdateSoundscape(LevelDefinition level,SessionSnapshot? snapshot,AppScreen screen,UserSettings settings)
+    {
+        if(playback is not IGameSoundscape sounds)return;
+        if(sounds.SetMix(settings.MusicVolume,settings.EffectsVolume))
+        {
+            music?.Dispose();music=null; // Текущий API voice не имеет gain setter; новый loop стартует с выбранной громкостью.
+        }
+        sounds.UpdateSoundscape(level,snapshot,screen,settings);
+    }
+
     /// <summary>Меняет только фон; в Pause новый voice создаётся лишь после Continue.</summary>
     public void SelectMusic(string trackId)
     {
@@ -92,6 +102,7 @@ public sealed class AudioCoordinator : IDisposable
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         if (paused == value) return;
+        if(value&&playback is IGameSoundscape sounds)sounds.PauseSoundscape();
         paused = value;
         foreach (var voice in effects)
             if (value) voice.Pause(); else voice.Resume();
@@ -102,6 +113,7 @@ public sealed class AudioCoordinator : IDisposable
     /// <summary>Переход останавливает voices, но не забывает уже проигранные Sequence.</summary>
     public void Stop()
     {
+        if(playback is IGameSoundscape sounds)sounds.PauseSoundscape();
         ObjectDisposedException.ThrowIf(disposed, this);
         music?.Dispose();
         music = null;

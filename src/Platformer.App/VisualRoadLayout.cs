@@ -24,7 +24,6 @@ internal sealed class VisualRoadLayout
         public Vector2[] Polygon { get; }
         public Vector2[] OuterPolygon { get; }
         public MeshData? Top { get; set; }
-        public Dictionary<(int X, int Z), MeshData> Shadows { get; } = new();
 
         public Patch(OrientedBox bounds)
         {
@@ -113,25 +112,6 @@ internal sealed class VisualRoadLayout
             }
             patch.Top = vertices.Count == 0 ? null : new(vertices, indices);
 
-            // Ограниченный набор обрезанных контактных мешей создаётся до игрового цикла.
-            if (patch.Polygon.Length == 0) continue;
-            var cells = CellRange(patch.Polygon);
-            for (int z = cells.MinZ; z <= cells.MaxZ; z++)
-            for (int x = cells.MinX; x <= cells.MaxX; x++)
-            {
-                if (MathF.Abs(Area(Clip(patch.Polygon, Rectangle(x * Pitch, z * Pitch, (x + 1) * Pitch, (z + 1) * Pitch)))) < 1e-8f) continue;
-                float left = (x - 1) * Pitch, near = (z - 1) * Pitch;
-                var shadowVertices = new List<Vertex>(); var shadowIndices = new List<uint>();
-                // Тень принадлежит тем же неперекрывающимся частям, что и Top.
-                // Иначе при подъезде к стыку она закрашивала соседнюю платформу.
-                foreach (var piece in pieces)
-                {
-                    var footprint = Clip(Clip(piece, patch.Polygon), Rectangle(left, near, left + 3 * Pitch, near + 3 * Pitch));
-                    AddPolygon(footprint, patch, 0.004f, p => new((p.X - left) / (3 * Pitch), 1 - (p.Y - near) / (3 * Pitch)),
-                        shadowVertices, shadowIndices);
-                }
-                if (shadowVertices.Count > 0) patch.Shadows.Add((x, z), new(shadowVertices, shadowIndices));
-            }
         }
     }
 

@@ -48,3 +48,5 @@ Music by Cleyton Kauffman — https://soundcloud.com/cleytonkauffman.
 Значок в `assets/branding` создан для проекта встроенным imagegen без сторонних
 изображений-референсов и включён под MIT проекта. Это иллюстрация для ярлыка, не кадр игры.
 Исходный промпт и сведения о преобразовании в ICO — [рядом с ассетами](assets/branding/README.md).
+
+Звуки winter-air/tropical-air.wav — собственные процедурные PCM16 проекта (MIT). Воспроизводимый генератор — scripts/generate_soundscape.py; внешние записи не использованы.

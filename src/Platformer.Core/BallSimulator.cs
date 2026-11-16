@@ -58,8 +58,56 @@ public sealed class BallSimulator
 
     public BallStepResult Step(BallState before, GameCommand command) => Step(before, command, null);
 
-    internal bool HasSupport(BallState ball, IReadOnlySet<string> removed) =>
-        ProbeGround(ball.Center, ball.Velocity, removed) != Vector3.Zero;
+    internal BallStepResult StepAt(BallState before, GameCommand command, IReadOnlySet<string>? removed, double seconds)
+    {
+        if (!level.Surfaces.Any(s => s.Motion is not null)) return Step(before, command, removed);
+        float dt = settings.FixedStepSeconds;
+        var sampled = level.Surfaces.Select(s => new SurfaceDefinition(s.Id, s.BoundsAt(seconds + dt),
+            s.CollapseDelaySeconds, s.IsBarrier, s.Traction)).ToArray();
+        Vector3 transported = before.Center;
+        if (before.Grounded)
+        {
+            var support = level.Surfaces.FirstOrDefault(s => s.Motion is not null
+                && (removed is null || !removed.Contains(s.Id))
+                && SphereGeometry.Contact(s.BoundsAt(seconds), before.Center, before.Radius).Separation < settings.SkinWidth * 4
+                && SphereGeometry.Contact(s.BoundsAt(seconds), before.Center, before.Radius).Normal.Y > minimumGroundY);
+            if (support is not null)
+            {
+                Vector3 delta = support.BoundsAt(seconds + dt).Center - support.BoundsAt(seconds).Center;
+                float fraction = 1;
+                foreach (var other in sampled.Where(s => s.Id != support.Id && (removed is null || !removed.Contains(s.Id))))
+                    if (SphereGeometry.Sweep(other.Bounds, transported, delta, before.Radius, out double hit, out _))
+                        fraction = MathF.Min(fraction, MathF.Max(0, (float)hit - settings.PositionEpsilon));
+                transported += delta * fraction;
+            }
+        }
+        // Боковая посадка на движущуюся опору также не должна начинать tick в проникновении.
+        for (int pass = 0; pass < settings.MaxContactIterations; pass++)
+        {
+            bool corrected = false;
+            foreach (var surface in sampled)
+            {
+                if(removed?.Contains(surface.Id)==true)continue;
+                var contact = SphereGeometry.Contact(surface.Bounds, transported, before.Radius);
+                if (contact.Separation >= -settings.PositionEpsilon) continue;
+                transported += contact.Normal * (-contact.Separation + settings.SkinWidth);
+                corrected = true;
+            }
+            if (!corrected) break;
+        }
+        var frozen = new LevelDefinition(level.Id, level.Spawn, level.KillY, level.Finish, sampled, level.Coins,
+            level.Hazards, level.Powerups, level.Springs, level.Winds);
+        var result = new BallSimulator(frozen, settings).Step(before with { Center = transported }, command, removed);
+        if (transported == before.Center) return result;
+        var path = new List<MotionSegment> { new(before.Center, transported, 0, 0.5f) };
+        path.AddRange(result.Path.Select(p => new MotionSegment(p.Start, p.End, 0.5f + p.StartFraction * 0.5f, 0.5f + p.EndFraction * 0.5f)));
+        return new(result.Ball, path);
+    }
+
+    internal bool HasSupport(BallState ball, IReadOnlySet<string> removed, double seconds=0) =>
+        level.Surfaces.Any(surface=>!removed.Contains(surface.Id)
+            && SphereGeometry.Contact(surface.BoundsAt(seconds),ball.Center,ball.Radius+settings.SkinWidth*2).Separation<=0
+            && SphereGeometry.Contact(surface.BoundsAt(seconds),ball.Center,ball.Radius+settings.SkinWidth*2).Normal.Y>=minimumGroundY);
 
     internal BallStepResult Step(BallState before, GameCommand command, IReadOnlySet<string>? removed)
     {
@@ -121,10 +169,24 @@ public sealed class BallSimulator
         }
         else
         {
-            Vector3 horizontal = Approach(new Vector3(velocity.X, 0f, velocity.Z), desired,
-                acceleration * settings.AirControlFactor * dt);
+            bool inWind=level.Winds.Any(w=>SphereGeometry.Contact(w.Bounds,before.Center,before.Radius).Separation<=0);
+            Vector3 horizontal = inWind && move==Vector2.Zero ? new(velocity.X,0,velocity.Z)
+                : Approach(new Vector3(velocity.X, 0f, velocity.Z), desired, acceleration * settings.AirControlFactor * dt);
             velocity = new Vector3(horizontal.X, MathF.Max(-settings.MaxFallSpeed, velocity.Y - settings.Gravity * dt), horizontal.Z);
         }
+
+        foreach (var wind in level.Winds)
+            if (SphereGeometry.Contact(wind.Bounds, before.Center, before.Radius).Separation <= 0)
+                velocity += wind.Acceleration * (grounded ? 0.15f : 1) * dt;
+        if (before.Velocity.Y <= 0)
+            foreach (var spring in level.Springs)
+            {
+                var contact = SphereGeometry.Contact(spring.Bounds, before.Center, before.Radius + 0.035f);
+                if (contact.Separation > 0 || contact.Normal.Y < 0.7f) continue;
+                velocity.Y = spring.LaunchSpeed;
+                grounded = false;
+                break;
+            }
 
         double distance = Math.Sqrt((double)velocity.X * velocity.X + (double)velocity.Y * velocity.Y
             + (double)velocity.Z * velocity.Z) * dt;

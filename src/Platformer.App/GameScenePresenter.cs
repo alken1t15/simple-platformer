@@ -18,7 +18,6 @@ public sealed partial class GameScenePresenter
     private readonly VisualScene? _visual;
     private readonly Dictionary<string, (int Index, SceneObject[] Parts, MaterialData[] Materials)> _fragile = new(StringComparer.Ordinal);
     private readonly HashSet<string> _hiddenPlatforms = new(StringComparer.Ordinal);
-    private readonly HashSet<int> _unshadowedSurfaceIndices = [];
     private static readonly MaterialData FragileBody = new() { BaseColor = new(1f, 0.72f, 0.35f) };
     private static readonly MaterialData WarningA = new() { BaseColor = new(1f, 0.43f, 0.12f) };
     private static readonly MaterialData WarningB = new() { BaseColor = new(1f, 0.8f, 0.18f) };
@@ -61,10 +60,9 @@ public sealed partial class GameScenePresenter
                 surface.IsBarrier ? visual ? support.Material : accent : winter ? track : fragile ? FragileBody : track);
             SetBounds(item, surface.Bounds);
             _surfaces.Add(surface.Id, item);
-            if (!surface.IsBarrier) _visual?.SurfaceDetail(surfaceIndex, surface.Bounds, fragile, surface.Traction < 1);
+            if (!surface.IsBarrier && surface.Motion is null) _visual?.SurfaceDetail(surfaceIndex, surface.Bounds, fragile, surface.Traction < 1);
             if (fragile)
             {
-                _unshadowedSurfaceIndices.Add(surfaceIndex);
                 var parts = Scene.Objects.Skip(firstPart).ToArray();
                 _fragile.Add(surface.Id, (surfaceIndex, parts, parts.Select(part => part.Material).ToArray()));
             }
@@ -104,6 +102,7 @@ public sealed partial class GameScenePresenter
             new Vector3(level.Finish.HalfExtents.X * 2f + thickness, thickness, thickness));
         FinishObjects = frame.AsReadOnly();
         _visual?.FinishDetail(level.Finish);
+        CreateTraversalArt();
         BallObject = Add(visual ? VisualScene.Ball : GameMeshes.Sphere,
             visual ? VisualScene.BallMaterial(GameSkins.All[0]) : GameSkins.All[0].Material);
         BallObject.Transform.Position = level.Spawn;
@@ -187,14 +186,13 @@ public sealed partial class GameScenePresenter
             {
                 foreach (var part in group.Parts) Scene.Remove(part);
                 _hiddenPlatforms.Add(state.Id);
-                _unshadowedSurfaceIndices.Add(group.Index);
             }
             else if (!state.Collapsed && wasHidden)
             {
                 foreach (var part in group.Parts) Scene.Add(part);
                 _hiddenPlatforms.Remove(state.Id);
             }
-            bool flash = ((int)((snapshot.SimulationSeconds - (state.TriggeredAtSeconds ?? 0)) * 8) & 1) == 0;
+            bool flash = _preferences?.FlashingEnabled==false || ((int)((snapshot.SimulationSeconds - (state.TriggeredAtSeconds ?? 0)) * 8) & 1) == 0;
             for (int i = 0; i < group.Parts.Length; i++)
                 group.Parts[i].Material = state.TriggeredAtSeconds is null ? group.Materials[i]
                     : _visual is not null ? (flash ? VisualScene.CrumbleWarningA : VisualScene.CrumbleWarningB)
@@ -235,8 +233,9 @@ public sealed partial class GameScenePresenter
         if (_visual is not null)
         {
             VisualScene.AnimateCoins(_coins, snapshot.SimulationSeconds);
-            _visual.UpdateContactShadow(snapshot.Ball, snapshot.SimulationSeconds, _unshadowedSurfaceIndices);
+            _visual.AnimateScene(snapshot.SimulationSeconds);
         }
+        AnimateTraversal(snapshot);
         _sessionId = snapshot.SessionId;
         _tick = snapshot.Tick;
         _lastBall = snapshot.Ball;
@@ -253,7 +252,7 @@ public sealed partial class GameScenePresenter
         var position = Vector3.Lerp(_previousPosition, _lastBall.Center, alpha);
         BallObject.Transform.Position = position;
         BallObject.Transform.Rotation = Quaternion.Slerp(_previousRotation, _currentRotation, alpha);
-        _visual?.UpdateContactShadow(_lastBall with { Center = position }, _simulationSeconds, _unshadowedSurfaceIndices);
+        _visual?.AnimateScene(_simulationSeconds);
     }
 
     /// <summary>Переход/restart не интерполирует между разными попытками или через паузу.</summary>

@@ -24,14 +24,16 @@ public sealed class LevelDifficultyMenuTests
         foreach (var size in new[] { (800f, 450f), (1280f, 720f), (1920f, 1080f) })
         {
             var view = menu.BuildView(size.Item1, size.Item2);
-            Assert.HasCount(39, view.Images);
+            Assert.HasCount(52, view.Images); // 13 миниатюр и 39 звёзд.
             Assert.IsFalse(view.Texts.Any(t => t.Text.Contains('[') || t.Text.Contains("coins", StringComparison.OrdinalIgnoreCase)
                 || t.Text.Contains("Not completed", StringComparison.Ordinal)));
             foreach (var control in view.Controls.Where(c => c.Kind == MenuControlKind.Level))
             {
                 var label = view.Texts.Single(t => t.Kind == MenuTextKind.Difficulty && control.Bounds.Contains(t.Position));
                 StringAssert.StartsWith(label.Text, "Difficulty: ");
-                var images = view.Images.Where(i => control.Bounds.Contains(new(i.Bounds.X, i.Bounds.Y))).ToArray();
+                var allImages = view.Images.Where(i => control.Bounds.Contains(new(i.Bounds.X, i.Bounds.Y))).ToArray();
+                Assert.HasCount(4, allImages);
+                var images=allImages.Skip(1).ToArray();
                 Assert.HasCount(3, images);
                 int rating = progress.StarsFor(control.Id["level:".Length..]);
                 for (int i = 0; i < images.Length; i++)

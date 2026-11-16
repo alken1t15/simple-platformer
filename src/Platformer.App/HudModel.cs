@@ -9,6 +9,7 @@ public enum BoostStatus { Ready, Active, Cooldown }
 public sealed record HudModel(string LevelName, int CoinCount, int TotalCoins,
     BoostStatus Boost, float RemainingSeconds, bool ShowHelp, string? Hint = null)
 {
+    public string CollectibleLabel { get; init; } = "Coins";
     public float JumpPowerSeconds { get; init; }
     public float SpeedPowerSeconds { get; init; }
     public string BoostText => Boost switch
@@ -45,7 +46,12 @@ public sealed record HudModel(string LevelName, int CoinCount, int TotalCoins,
                 "clockwork-summit" => "Time the stone and pusher, then chain the final jumps.",
                 "sky-storm" => "Climb the loop. Cracked tiles crumble after touch: keep moving!",
                 _ => null,
-            }) { JumpPowerSeconds = ball.JumpPowerSeconds, SpeedPowerSeconds = ball.SpeedPowerSeconds };
+            })
+        {
+            CollectibleLabel = GameChapters.For(level.Id) == GameChapter.Winter ? "Gifts" : "Coins",
+            JumpPowerSeconds = ball.JumpPowerSeconds,
+            SpeedPowerSeconds = ball.SpeedPowerSeconds,
+        };
     }
 
     internal static string LevelNameFor(string id) => id switch

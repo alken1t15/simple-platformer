@@ -93,7 +93,7 @@ internal static class MenuLayout
         {
             panels.Add(new(Rect(24f, 24f, 336f, 108f), new(0.025f, 0.04f, 0.07f, 0.85f), MenuPanelKind.Sheet));
             Text(hud.LevelName, 44f, 38f, 22f);
-            Text($"Coins {hud.CoinCount}/{hud.TotalCoins}", 44f, 72f, 18f);
+            Text($"{hud.CollectibleLabel} {hud.CoinCount}/{hud.TotalCoins}", 44f, 72f, 18f);
             Text(hud.BoostText, 44f, 100f, 16f, Accent);
             int powerRow = 0;
             foreach (var power in new[] { ("HIGH JUMP",hud.JumpPowerSeconds,new ColorRgba(0.8f,0.4f,1)), ("SPEED",hud.SpeedPowerSeconds,new ColorRgba(0.2f,1,0.75f)) })

@@ -6,10 +6,11 @@ namespace Platformer.Core;
 /// <summary>Три протяжённых маршрута: освоение пружин, паромов и воздушных потоков.</summary>
 public static class WinterExpeditionLevels
 {
+    private const float FerrySpeedMultiplier = 1.5f;
     private static SpringPad Spring(string id, float x, float top, float z = 0) =>
         new(id, new(new(x, top - 0.04f, z), new(1, 0.04f, 1.3f), Quaternion.Identity), 13.5f);
     private static SurfaceDefinition Ferry(string id, float x) =>
-        new(id, new(new(x, -0.2f, 0), new(2, 0.2f, 2.5f), Quaternion.Identity), motion: new(new(4, 0, 0), 20));
+        new(id, new(new(x, -0.2f, 0), new(2, 0.2f, 2.5f), Quaternion.Identity), motion: new(new(4, 0, 0), 20 / FerrySpeedMultiplier));
     private static HazardDefinition Press(string id,float x,float top,float phase=0)=>
         new(id,new(x,top+2.5f,0),Vector3.UnitY,Vector3.Zero,new(.6f,.65f,2.1f),Quaternion.Identity,
             1.1f,phase,HazardResponse.Fail,HazardMotionKind.Shuttle,1.8f);
@@ -46,7 +47,7 @@ public static class WinterExpeditionLevels
          Flat("high-ridge",61,3,0,30,4),Flat("wind-ridge-a",82,3,0,12,2.4f),
          Flat("wind-ridge-b",96,3,0,12,2.4f),Flat("wind-ridge-c",110,3,0,12,2.4f),
          Flat("spring-rest",121,3,0,10,6),Flat("last-ridge",143,6,0,30,4),
-         new("wind-ferry",new(new(161,5.8f,0),new(1.5f,0.2f,2),Quaternion.Identity),motion:new(new(2,0,0),16)),
+         new("wind-ferry",new(new(161,5.8f,0),new(1.5f,0.2f,2),Quaternion.Identity),motion:new(new(2,0,0),16 / FerrySpeedMultiplier)),
          Flat("home",170,6,0,12,6)],
         Coins(new(0,0,0),new(12,0,0),new(26,0,0),new(41,0,0),new(49,3,0),new(58,3,0),
             new(70,3,0),new(80,3,0),new(86,3,0),new(98,3,0),new(108,3,0),new(122,3,0),

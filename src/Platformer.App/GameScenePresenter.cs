@@ -67,9 +67,11 @@ public sealed partial class GameScenePresenter
                 _fragile.Add(surface.Id, (surfaceIndex, parts, parts.Select(part => part.Material).ToArray()));
             }
         }
+        int coinIndex = 0;
         foreach (var coin in level.Coins)
         {
-            var item = Add(visual ? VisualScene.Coin : GameMeshes.Coin, gold);
+            var item = Add(winter ? WinterGifts.Mesh : visual ? VisualScene.Coin : GameMeshes.Coin,
+                winter ? WinterGifts.MaterialFor(coinIndex++) : gold);
             item.Transform.Position = coin.Center;
             item.Transform.Scale = new Vector3(coin.Radius);
             _coins.Add(coin.Id, item);

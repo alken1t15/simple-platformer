@@ -56,8 +56,8 @@ public sealed class GameSession
                 && seconds >= triggered + fragile.First(surface => surface.Id == state.Id).CollapseDelaySeconds),
         }).ToArray();
         var removed = platformStates.Where(state => state.Collapsed).Select(state => state.Id).ToHashSet(StringComparer.Ordinal);
-        bool canJump = before.Ball.Grounded && (removed.Count == 0 || simulator.HasSupport(before.Ball, removed));
-        var result = simulate is null ? simulator.Step(before.Ball, command, removed) : simulate(before.Ball, command);
+        bool canJump = before.Ball.Grounded && (removed.Count == 0 || simulator.HasSupport(before.Ball, removed,before.SimulationSeconds));
+        var result = simulate is null ? simulator.StepAt(before.Ball, command, removed, before.SimulationSeconds) : simulate(before.Ball, command);
         // Смертельная опасность сохраняет приоритет, даже если в том же tick
         // присутствует другая балка с отскоком.
         bool hazardHit = hazards.Any(hazard => hazard.Response == HazardResponse.Fail && (!IsVerticalPress(hazard) || Crushes(hazard, before)) &&

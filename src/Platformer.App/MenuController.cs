@@ -19,6 +19,7 @@ public sealed class MenuController
     private int selectedIndex;
     private bool confirmingMainMenu;
     private bool showingControls;
+    private string settingsPage = "";
     private GameChapter selectedChapter;
     private int controlsReturnSelection;
     private int returnSelection;
@@ -98,7 +99,9 @@ public sealed class MenuController
         if (menu.BackPressed)
         {
             bool resetInput = false;
-            if (showingControls) { ShowControls(false); resetInput = true; }
+            if(flow.Screen == AppScreen.Settings && settingsPage != "")
+            { settingsPage = settingsPage == "bindings" ? "extras" : ""; selectedIndex=0; resetInput=true; }
+            else if (showingControls) { ShowControls(false); resetInput = true; }
             else if (confirmingMainMenu) { CancelMainMenu(); resetInput = true; }
             else if (flow.Screen is AppScreen.Failed or AppScreen.LevelResult)
             { RequestMainMenu(); resetInput = true; }
@@ -143,6 +146,8 @@ public sealed class MenuController
             Window.ToggleMode();
         if (menu.HorizontalStep != 0 && option.Action == MenuAction.Music)
             flow.UserSettings.MusicTrackId = MusicTracks.Cycle(flow.UserSettings.MusicTrackId, menu.HorizontalStep);
+        if (menu.HorizontalStep != 0 && option.Action is MenuAction.MusicVolume or MenuAction.EffectsVolume or MenuAction.BindKey)
+            ChangeExtra(option, menu.HorizontalStep);
         return default;
     }
 
@@ -151,6 +156,20 @@ public sealed class MenuController
         if (!option.Enabled) return false;
         switch (option.Action)
         {
+            case MenuAction.MoreSettings: settingsPage = "extras"; selectedIndex = 0; break;
+            case MenuAction.Bindings: settingsPage = "bindings"; selectedIndex = 0; break;
+            case MenuAction.ResetBindings: flow.UserSettings.Bindings = new(); break;
+            case MenuAction.MusicVolume: case MenuAction.EffectsVolume:
+                if(click is {} valuePoint)
+                {
+                    float gain=Math.Clamp(MathF.Round((valuePoint.X-bounds.X)/bounds.Width*20)/20,0,1);
+                    if(option.Action==MenuAction.MusicVolume)flow.UserSettings.MusicVolume=gain;else flow.UserSettings.EffectsVolume=gain;
+                }
+                else ChangeExtra(option,1);
+                break;
+            case MenuAction.BindKey: ChangeExtra(option,1); break;
+            case MenuAction.ReducedEffects: flow.UserSettings.ReducedEffects = !flow.UserSettings.ReducedEffects; break;
+            case MenuAction.Flashing: flow.UserSettings.FlashingEnabled = !flow.UserSettings.FlashingEnabled; break;
             case MenuAction.Music:
                 flow.UserSettings.MusicTrackId = MusicTracks.Cycle(flow.UserSettings.MusicTrackId, 1);
                 break;
@@ -173,7 +192,8 @@ public sealed class MenuController
             case MenuAction.Skins: flow.OpenSkins(); break;
             case MenuAction.Controls: ShowControls(true); break;
             case MenuAction.Back:
-                if (showingControls) ShowControls(false);
+                if (settingsPage != "") { settingsPage = settingsPage == "bindings" ? "extras" : ""; selectedIndex = 0; }
+                else if (showingControls) ShowControls(false);
                 else flow.Back();
                 break;
             case MenuAction.MainMenu: RequestMainMenu(); break;
@@ -205,6 +225,14 @@ public sealed class MenuController
         flow.UserSettings.Muted = false;
         flow.UserSettings.MasterVolume = value;
         ApplyVolume();
+    }
+
+    private void ChangeExtra(MenuOption option, int step)
+    {
+        var user = flow.UserSettings;
+        if (option.Action == MenuAction.BindKey) user.Bindings = user.Bindings.Cycle(Enum.Parse<GameAction>(option.Value!),step);
+        else if (option.Action == MenuAction.MusicVolume) user.MusicVolume = Math.Clamp(user.MusicVolume + Math.Sign(step)*0.05f,0,1);
+        else user.EffectsVolume = Math.Clamp(user.EffectsVolume + Math.Sign(step)*0.05f,0,1);
     }
 
     private void ApplyVolume() => applyMasterVolume(EffectiveVolume);
@@ -249,6 +277,7 @@ public sealed class MenuController
         selectedIndex = 0;
         confirmingMainMenu = false;
         showingControls = false;
+        settingsPage = "";
         pointer = null;
         pressedId = null;
         if (flow.Screen == AppScreen.Settings) Window.SelectActual();
@@ -261,9 +290,21 @@ public sealed class MenuController
         MenuOption Main() => Button("main-menu", "Main menu", MenuAction.MainMenu);
         MenuOption Retry() => Button("retry", "Retry", MenuAction.Restart);
         var settings = flow.UserSettings;
+        if(flow.Screen == AppScreen.Settings && settingsPage == "extras")
+            return new("Sound and effects", ["Left / Right changes the selected setting."],
+                [new("music-volume",$"Music volume: {MathF.Round(settings.MusicVolume*100):0}%",MenuAction.MusicVolume,MenuControlKind.Volume,Volume:settings.MusicVolume),
+                 new("effects-volume",$"Effects volume: {MathF.Round(settings.EffectsVolume*100):0}%",MenuAction.EffectsVolume,MenuControlKind.Volume,Volume:settings.EffectsVolume),
+                 Button("reduced-effects",$"Reduced effects: {(settings.ReducedEffects?"ON":"OFF")}",MenuAction.ReducedEffects),
+                 Button("flashing",$"Blinking lights: {(settings.FlashingEnabled?"ON":"OFF")}",MenuAction.Flashing),
+                 Button("bindings","Change gameplay keys",MenuAction.Bindings),Back()]);
+        if(flow.Screen == AppScreen.Settings && settingsPage == "bindings")
+            return new("Gameplay keys", ["Left / Right chooses an unused key.","Esc / Tab remain reserved for menus."],
+                Enum.GetValues<GameAction>().Select(action=>new MenuOption("bind:"+action,
+                    $"{action}: < {settings.Bindings.For(action)} >",MenuAction.BindKey,Value:action.ToString()))
+                    .Concat([Button("reset-bindings","Restore default keys",MenuAction.ResetBindings),Back()]).ToArray());
         if (showingControls && flow.Screen == AppScreen.Settings)
-            return new("Controls", ["WASD - roll / move", "Mouse - rotate camera",
-                "Space - jump (hold to repeat)", "Shift - short boost", "R - restart level",
+            return new("Controls", [settings.Bindings==new ControlBindings()?"WASD - roll / move":$"{settings.Bindings.Forward}/{settings.Bindings.Left}/{settings.Bindings.Backward}/{settings.Bindings.Right} - roll / move", "Mouse - rotate camera",
+                $"{settings.Bindings.Jump} - jump (hold to repeat)", $"{(settings.Bindings.Boost==Engine3D.OpenGL.InputKey.LeftShift?"Shift":settings.Bindings.Boost)} - short boost", $"{settings.Bindings.Restart} - restart level",
                 "Esc - pause / back", "Up / Down, Tab / Shift+Tab - menu",
                 "Left / Right - change setting", "Enter / Space / Mouse click - select"], [Back()], IsControlsPage: true);
         if (confirmingMainMenu)
@@ -292,7 +333,7 @@ public sealed class MenuController
              Button("display-mode", $"Display: < {(Window.SelectedFullscreen ? "Fullscreen" : "Windowed")} >", MenuAction.DisplayMode),
              Button("resolution", $"Resolution: < {Window.Selected} >", MenuAction.Resolution),
              Button("apply-resolution", "Apply resolution", MenuAction.ApplyResolution),
-             Button("controls", "Controls", MenuAction.Controls), Back()]),
+             Button("controls", "Controls", MenuAction.Controls), Button("more-settings","Sound and effects / Keys",MenuAction.MoreSettings), Back()]),
             AppScreen.SkinSelect => new("Choose a skin", ["Select a skin to apply immediately."],
                 GameSkins.All.Select(skin => new MenuOption($"skin:{skin.Id}",
                     (skin.Id == settings.SkinId ? "[x] " : "[ ] ") + skin.DisplayName

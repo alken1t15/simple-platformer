@@ -126,7 +126,7 @@ public sealed class WinterChapterTests
             Assert.IsTrue(new ProgressStore(path).Save(oldProgress));
             var loaded = new ProgressStore(path).Load(catalog);
             CollectionAssert.AreEquivalent(oldProgress.BestCoins.ToArray(), loaded.BestCoins.ToArray());
-            Assert.AreEqual(39, loaded.TotalStars); Assert.AreEqual(60, loaded.MaximumStars);
+            Assert.AreEqual(39, loaded.TotalStars); Assert.AreEqual(69, loaded.MaximumStars);
             Assert.IsTrue(loaded.IsLevelUnlocked(GameLevels.FinalLevelId));
             var fresh = new PlayerProgress(catalog);
             foreach (string id in Ids) fresh.RecordCompletion(id, 12);
@@ -155,7 +155,7 @@ public sealed class WinterChapterTests
                 var view = menu.BuildView(width, height);
                 var chapter = cycle % 2 == 0 ? GameChapter.Tropical : GameChapter.Winter;
                 Assert.IsTrue(view.Texts.Any(t => t.Text == GameChapters.Name(chapter)));
-                Assert.HasCount(chapter == GameChapter.Winter ? 7 : 13, view.Controls.Where(c => c.Kind == MenuControlKind.Level).ToArray());
+                Assert.HasCount(chapter == GameChapter.Winter ? 10 : 13, view.Controls.Where(c => c.Kind == MenuControlKind.Level).ToArray());
                 foreach (var control in view.Controls)
                 {
                     var b = control.Bounds;

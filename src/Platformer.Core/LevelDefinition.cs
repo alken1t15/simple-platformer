@@ -13,10 +13,13 @@ public sealed class LevelDefinition
     public IReadOnlyList<CoinDefinition> Coins { get; }
     public IReadOnlyList<HazardDefinition> Hazards { get; }
     public IReadOnlyList<PowerupDefinition> Powerups { get; }
+    public IReadOnlyList<SpringPad> Springs { get; }
+    public IReadOnlyList<WindZone> Winds { get; }
 
     public LevelDefinition(string id, Vector3 spawn, float killY, OrientedBox finish,
         IReadOnlyList<SurfaceDefinition> surfaces, IReadOnlyList<CoinDefinition> coins,
-        IReadOnlyList<HazardDefinition> hazards, IReadOnlyList<PowerupDefinition>? powerups = null)
+        IReadOnlyList<HazardDefinition> hazards, IReadOnlyList<PowerupDefinition>? powerups = null,
+        IReadOnlyList<SpringPad>? springs = null, IReadOnlyList<WindZone>? winds = null)
     {
         Id = LevelValidation.Id(id, nameof(id));
         LevelValidation.Position(spawn, nameof(spawn));
@@ -30,6 +33,8 @@ public sealed class LevelDefinition
         Coins = Copy(coins, coin => coin.Id, ids, nameof(coins));
         Hazards = Copy(hazards, hazard => hazard.Id, ids, nameof(hazards));
         Powerups = Copy(powerups ?? [], powerup => powerup.Id, ids, nameof(powerups));
+        Springs = Copy(springs ?? [], item => item.Id, ids, nameof(springs));
+        Winds = Copy(winds ?? [], item => item.Id, ids, nameof(winds));
     }
 
     private static IReadOnlyList<T> Copy<T>(IReadOnlyList<T> source, Func<T, string> getId,

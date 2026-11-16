@@ -35,6 +35,6 @@ public static class TrapStructures
             else if (hazard.MotionKind == HazardMotionKind.Rotation)
                 Part("axle",hazard.Pivot-Vector3.UnitY*0.25f,new(0.12f,0.5f,0.12f));
         }
-        return new(level.Id,level.Spawn,level.KillY,level.Finish,level.Surfaces.Concat(parts).ToArray(),level.Coins,level.Hazards,level.Powerups);
+        return new(level.Id,level.Spawn,level.KillY,level.Finish,level.Surfaces.Concat(parts).ToArray(),level.Coins,level.Hazards,level.Powerups,level.Springs,level.Winds);
     }
 }

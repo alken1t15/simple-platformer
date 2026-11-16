@@ -29,7 +29,7 @@ public sealed class CameraRig
         TargetObstructed = CastBudgetLimited = false;
     }
 
-    public CameraPose Update(Vector2 relativeMouseDelta, Vector3 target, LevelDefinition level, float frameSeconds, IReadOnlyList<CrumblingPlatformState>? platforms = null)
+    public CameraPose Update(Vector2 relativeMouseDelta, Vector3 target, LevelDefinition level, float frameSeconds, IReadOnlyList<CrumblingPlatformState>? platforms = null, double simulationSeconds=0)
     {
         ArgumentNullException.ThrowIfNull(level);
         if (!float.IsFinite(frameSeconds) || frameSeconds < 0f)
@@ -52,7 +52,7 @@ public sealed class CameraRig
         foreach (var surface in level.Surfaces)
         {
             if (platforms is not null && platforms.Any(state => state.Id == surface.Id && state.Collapsed)) continue;
-            float contact = Cast(surface.Bounds, target, direction);
+            float contact = Cast(surface.BoundsAt(simulationSeconds), target, direction);
             allowed = MathF.Min(allowed, contact < DefaultDistance ? MathF.Max(0f, contact - WallGap) : DefaultDistance);
         }
         Distance = allowed < Distance ? allowed

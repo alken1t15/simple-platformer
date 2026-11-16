@@ -10,6 +10,8 @@ internal static class LevelDifficulties
     internal static LevelDifficulty For(string id) => id switch
     {
         "level1" => LevelDifficulty.Easy,
+        "winter-spring-trail" or "winter-glacier-ferries"=>LevelDifficulty.Hard,
+        "winter-windward"=>LevelDifficulty.VeryHard,
         "winter-snowbound" => LevelDifficulty.Normal,
         "winter-icicle" or "winter-lake" => LevelDifficulty.Hard,
         "winter-crystal" or "winter-gifts" => LevelDifficulty.Hard,

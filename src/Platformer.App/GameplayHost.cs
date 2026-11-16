@@ -23,7 +23,7 @@ public sealed class GameplayHost
     public MenuController Menu { get; }
     public MenuView View { get; private set; }
     public Scene Scene { get; } = new();
-    public Camera Camera { get; } = new() { NearPlane = 0.05f, FarPlane = 150f };
+    public Camera Camera { get; } = new() { NearPlane = 0.05f, FarPlane = 450f };
     public bool CloseRequested => Menu.CloseRequested;
     public bool CaptureRequested => !CloseRequested && Flow.Screen == AppScreen.Playing && Frames.CaptureRequested;
 
@@ -47,7 +47,7 @@ public sealed class GameplayHost
         if (visual)
         {
             VisualScene.ConfigureLighting(Scene);
-            Camera.FarPlane = 220f;
+            Camera.FarPlane = 450f;
         }
         ApplyCamera(Frames.Camera.Update(Vector2.Zero, Target, CurrentLevel, 0f));
         SynchronizeScene();
@@ -67,7 +67,7 @@ public sealed class GameplayHost
             _resetMenuPointer = false;
         }
 
-        GameplayFrameResult result = Frames.Advance(input, frameSeconds, Target, CurrentLevel, Flow.Step, Flow.Snapshot?.Platforms);
+        GameplayFrameResult result = Frames.Advance(input, frameSeconds, Target, CurrentLevel, Flow.Step, Flow.Snapshot?.Platforms,Flow.Snapshot?.SimulationSeconds??0);
         var menuResult = Menu.Handle(result.Input, clientWidth, clientHeight, input.IsFocused);
         bool resetCamera = menuResult.ResetCamera;
         if (wasPlaying && Flow.Screen != AppScreen.Playing) _resetMenuPointer = true;
@@ -83,7 +83,7 @@ public sealed class GameplayHost
         {
             var target = Flow.Presenter is { } current
                 ? current.BallObject.Transform.Position + new Vector3(0, 0.3f, 0) : Target;
-            var pose = Frames.Camera.Update(Vector2.Zero, target, CurrentLevel, 0f, Flow.Snapshot?.Platforms);
+            var pose = Frames.Camera.Update(Vector2.Zero, target, CurrentLevel, 0f, Flow.Snapshot?.Platforms,Flow.Snapshot?.SimulationSeconds??0);
             ApplyCamera(pose);
             result = result with { Camera = pose };
         }
@@ -91,6 +91,7 @@ public sealed class GameplayHost
         RefreshView(clientWidth, clientHeight);
         if (_audio is not null)
         {
+            _audio.UpdateSoundscape(CurrentLevel,Flow.Snapshot,Flow.Screen,Flow.UserSettings);
             _audio.SelectMusic(Flow.UserSettings.MusicTrackId);
             if (Flow.Snapshot is { } snapshot) _audio.Consume(snapshot.SessionId, Flow.DrainEvents());
             _audio.SetScreen(Flow.Screen);

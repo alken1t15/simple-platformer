@@ -27,7 +27,7 @@ public sealed class MenuInkAlignmentTests
                     + OverlayTextMetrics.MeasureInkBounds(t.Text, t.PixelHeight).Height).ToArray();
                 Assert.AreEqual(control.Bounds.Y + control.Bounds.Height / 2, (tops.Min() + bottoms.Max()) / 2, 1e-4f);
                 foreach (var line in lines)
-                    Assert.AreEqual(control.Bounds.X + (skins ? 60 : 14), line.Position.X);
+                    Assert.AreEqual(control.Bounds.X + (skins ? 60 : 56), line.Position.X);
             }
             flow.Back();
         }

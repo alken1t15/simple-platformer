@@ -9,8 +9,11 @@ public sealed class SurfaceDefinition
     /// <summary>Сплошной борт: те же OBB для физики и отдельное оформление в App.</summary>
     public bool IsBarrier { get; }
     public float Traction { get; }
+    public PlatformMotion? Motion { get; }
+    public OrientedBox BoundsAt(double seconds) => Motion is null ? Bounds
+        : new(Bounds.Center + Motion.Offset(seconds), Bounds.HalfExtents, Bounds.Orientation);
 
-    public SurfaceDefinition(string id, OrientedBox bounds, float collapseDelaySeconds = 0f, bool isBarrier = false, float traction = 1f)
+    public SurfaceDefinition(string id, OrientedBox bounds, float collapseDelaySeconds = 0f, bool isBarrier = false, float traction = 1f, PlatformMotion? motion = null)
     {
         Id = LevelValidation.Id(id, nameof(id));
         ArgumentNullException.ThrowIfNull(bounds);
@@ -22,5 +25,7 @@ public sealed class SurfaceDefinition
         IsBarrier = isBarrier;
         if (!float.IsFinite(traction) || traction is < 0.05f or > 1f) throw new ArgumentOutOfRangeException(nameof(traction));
         Traction = traction;
+        if (motion is not null && (isBarrier || collapseDelaySeconds > 0)) throw new ArgumentException("Подвижная опора не может быть разрушаемой или бортом", nameof(motion));
+        Motion = motion;
     }
 }

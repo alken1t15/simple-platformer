@@ -6,20 +6,30 @@ namespace Platformer.App;
 public sealed record StoredSettings(string SkinId, float MasterVolume, bool Muted, string MusicTrackId,
     WindowResolution WindowedResolution, bool Fullscreen)
 {
+    public float MusicVolume { get; init; } = 1;
+    public float EffectsVolume { get; init; } = 1;
+    public bool ReducedEffects { get; init; }
+    public bool FlashingEnabled { get; init; } = true;
+    public ControlBindings Bindings { get; init; } = new();
     public static StoredSettings Default { get; } = new("classic-blue", 1f, false, MusicTracks.OriginalId, new(960, 640), false);
     public UserSettings CreateUserSettings() => new()
     {
         SkinId = SkinId, MasterVolume = MasterVolume, Muted = Muted, MusicTrackId = MusicTrackId,
+        MusicVolume = MusicVolume, EffectsVolume = EffectsVolume, ReducedEffects = ReducedEffects,
+        FlashingEnabled = FlashingEnabled, Bindings = Bindings,
     };
     public static StoredSettings Capture(UserSettings user, WindowSettings window) => new(user.SkinId,
-        user.MasterVolume, user.Muted, user.MusicTrackId, window.WindowedActual, window.ActualFullscreen);
+        user.MasterVolume, user.Muted, user.MusicTrackId, window.WindowedActual, window.ActualFullscreen)
+        { MusicVolume=user.MusicVolume,EffectsVolume=user.EffectsVolume,ReducedEffects=user.ReducedEffects,
+            FlashingEnabled=user.FlashingEnabled,Bindings=user.Bindings };
 }
 
 /// <summary>Личный профиль рядом с progress-v1.json; повреждение настроек не затрагивает звёзды.</summary>
 public sealed class SettingsStore
 {
     private sealed record SaveData(int Version, string SkinId, float MasterVolume, bool Muted, string MusicTrackId,
-        int WindowWidth, int WindowHeight, bool Fullscreen);
+        int WindowWidth, int WindowHeight, bool Fullscreen, float MusicVolume=1, float EffectsVolume=1,
+        bool ReducedEffects=false, bool FlashingEnabled=true, ControlBindings? Bindings=null);
     private readonly string path;
     public string? Diagnostic { get; private set; }
     public static string DefaultPath => Path.Combine(Path.GetDirectoryName(ProgressStore.DefaultPath)!, "settings-v1.json");
@@ -58,7 +68,17 @@ public sealed class SettingsStore
                 && width.TryGetInt32(out int w) && w is > 0 and <= 16384
                 && root.TryGetProperty("WindowHeight", out var height) && height.ValueKind == JsonValueKind.Number
                 && height.TryGetInt32(out int h) && h is > 0 and <= 16384) size = new(w, h);
-            return new(skin, volume, Flag("Muted"), music, size, Flag("Fullscreen"));
+            float Gain(string key) => root.TryGetProperty(key,out var element) && element.ValueKind==JsonValueKind.Number && element.TryGetSingle(out float v)
+                && float.IsFinite(v) && v is >=0 and <=1 ? v : 1;
+            ControlBindings bindings = new();
+            if(root.TryGetProperty("Bindings",out var keys) && keys.ValueKind==JsonValueKind.Object)
+            {
+                try { var savedKeys=keys.Deserialize<ControlBindings>(); if(savedKeys is {IsValid:true}) bindings=savedKeys; }
+                catch(JsonException) { }
+            }
+            return new(skin, volume, Flag("Muted"), music, size, Flag("Fullscreen"))
+            { MusicVolume=Gain("MusicVolume"),EffectsVolume=Gain("EffectsVolume"),ReducedEffects=Flag("ReducedEffects"),
+                FlashingEnabled=!root.TryGetProperty("FlashingEnabled",out var flash) || flash.ValueKind!=JsonValueKind.False,Bindings=bindings };
         }
         catch (Exception error) when (IsStorageError(error))
         {
@@ -76,7 +96,8 @@ public sealed class SettingsStore
         {
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             byte[] json = JsonSerializer.SerializeToUtf8Bytes(new SaveData(1, settings.SkinId, settings.MasterVolume,
-                settings.Muted, settings.MusicTrackId, settings.WindowedResolution.Width, settings.WindowedResolution.Height, settings.Fullscreen));
+                settings.Muted, settings.MusicTrackId, settings.WindowedResolution.Width, settings.WindowedResolution.Height, settings.Fullscreen,
+                settings.MusicVolume,settings.EffectsVolume,settings.ReducedEffects,settings.FlashingEnabled,settings.Bindings));
             using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
                 stream.Write(json);

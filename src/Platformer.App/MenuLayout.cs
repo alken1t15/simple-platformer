@@ -5,9 +5,10 @@ using Engine3D.OpenGL;
 namespace Platformer.App;
 
 internal enum MenuAction { Play, Levels, Settings, Skins, Exit, ChooseLevel, Back, Volume, Mute,
-    ChooseSkin, Continue, Restart, MainMenu, Next, Resolution, ApplyResolution, DisplayMode, CancelMainMenu, ConfirmMainMenu, Music, Controls, Chapter }
+    ChooseSkin, Continue, Restart, MainMenu, Next, Resolution, ApplyResolution, DisplayMode, CancelMainMenu, ConfirmMainMenu, Music, Controls, Chapter,
+    MoreSettings, MusicVolume, EffectsVolume, ReducedEffects, Flashing, Bindings, BindKey, ResetBindings }
 internal sealed record MenuOption(string Id, string Label, MenuAction Action,
-    MenuControlKind Kind = MenuControlKind.Button, string? Value = null, ColorRgba? Swatch = null, bool Enabled = true, string? Detail = null, bool Locked = false, int? Rating = null, LevelDifficulty? Difficulty = null);
+    MenuControlKind Kind = MenuControlKind.Button, string? Value = null, ColorRgba? Swatch = null, bool Enabled = true, string? Detail = null, bool Locked = false, int? Rating = null, LevelDifficulty? Difficulty = null, float? Volume = null);
 internal sealed record GameplayDialogSummary(string LevelName, int BestStars, int? FinishStars = null);
 internal sealed record MenuPage(string Title, IReadOnlyList<string> Details, IReadOnlyList<MenuOption> Options,
     bool IsControlsPage = false, GameplayDialogSummary? Status = null, bool IsLeaveConfirmation = false);
@@ -34,6 +35,8 @@ internal static class MenuLayout
         var texts = new List<MenuText>();
         var images = new List<MenuImage>();
         if (width == 0f || height == 0f) return new(screen, new(width, height), controls, panels, texts);
+        if(screen==AppScreen.GameComplete)
+            return ChapterCompletionLayout.Build(page,selectedIndex,pointer,pressedId,width,height);
         if (page.IsLeaveConfirmation)
             return LeaveConfirmationLayout.Build(screen, page, selectedIndex, pointer, pressedId, width, height);
         if (page.Status is not null)
@@ -129,9 +132,9 @@ internal static class MenuLayout
             float y = skinGrid ? (card ? 210f + i / 2 * skinRow : 574f)
                 : levelGrid ? (card ? 210f + i / 2 * levelRow : 574f)
                 : levels ? (card ? 210f + i * 54f : 218f + cards * 54f)
-                : page.IsControlsPage ? 574f : settings ? 224f + 50f * i : 238f + row * i;
+                : page.IsControlsPage ? 574f : settings ? 214f + MathF.Min(50f, 410f / page.Options.Count) * i : 238f + row * i;
             float buttonHeight = skinGrid ? (card ? skinRow - 7f : 40f) : levelGrid ? (card ? levelRow - 10f : 40f) : levels ? (card ? 46f : 40f)
-                : settings ? 44f : row - 12;
+                : settings ? MathF.Min(44f, 410f / page.Options.Count - 6) : row - 12;
             bool chapterFooter = levels && page.Options.Any(o => o.Action == MenuAction.Chapter) && !card;
             if (chapterFooter) { x = 376 + (i - cards) * 264; y = 574; buttonHeight = 40; }
             var bounds = Rect(x, y, chapterFooter || paired ? 252f : 528f, buttonHeight);
@@ -157,8 +160,10 @@ internal static class MenuLayout
             }
             else if (option.Kind == MenuControlKind.Level)
             {
-                CardText(option.Label, option.Detail ?? "", x + 14, y, buttonHeight,
-                    3, levelGrid ? 25 : 26, levelGrid ? 17 : 19, levelGrid ? 12 : 14,
+                images.Add(new(Rect(x+6,y+5,42,MathF.Min(34,buttonHeight-10)),LevelThumbnails.For(option.Value!)));
+                string title=levelGrid&&option.Label.Length>19?option.Label[..16]+"...":option.Label;
+                CardText(title, option.Detail ?? "", x + 56, y, buttonHeight,
+                    3, levelGrid ? 25 : 26, levelGrid ? 13 : 19, levelGrid ? 10 : 14,
                     ink, LevelDifficulties.Color(option.Difficulty ?? LevelDifficulty.Normal), MenuTextKind.Difficulty);
                 for (int star = 0; star < 3; star++)
                     images.Add(new(Rect(x + (levelGrid ? 184 : 430) + star * (levelGrid ? 19 : 28), y + 8,
@@ -171,7 +176,7 @@ internal static class MenuLayout
             if (valueBounds is { } track)
             {
                 panels.Add(new(track, new(0.2f, 0.25f, 0.33f), MenuPanelKind.Track));
-                panels.Add(new(track with { Width = track.Width * volume }, Accent, MenuPanelKind.Fill));
+                panels.Add(new(track with { Width = track.Width * (option.Volume??volume) }, Accent, MenuPanelKind.Fill));
             }
         }
         return new(screen, new(width, height), controls, panels, texts, images);

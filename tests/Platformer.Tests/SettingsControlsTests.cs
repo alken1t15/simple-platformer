@@ -82,12 +82,12 @@ public sealed class SettingsControlsTests
         {
             host.RefreshView(width, height);
             float scale = width / 1280;
-            Assert.HasCount(8, host.View.Controls);
+            Assert.HasCount(9, host.View.Controls);
             for (int i = 0; i < host.View.Controls.Count; i++)
             {
                 var control = host.View.Controls[i];
                 var b = control.Bounds;
-                Assert.AreEqual(44 * scale, b.Height);
+                Assert.AreEqual((410f / 9 - 6) * scale, b.Height,0.0001f);
                 var text = host.View.Texts.Single(t => t.Text == control.Label);
                 var ink = OverlayTextMetrics.MeasureInkBounds(text.Text, text.PixelHeight);
                 Assert.IsTrue(text.Position.Y > b.Y && text.Position.Y + text.PixelHeight < b.Y + b.Height);

@@ -101,11 +101,11 @@ jobs:
           timeout 60s xvfb-run -a dotnet run --project src/Platformer.App -c Release --no-build -- --play --smoke
           timeout 60s xvfb-run -a dotnet run --project src/Platformer.App -c Release --no-build -- --legacy --smoke
       - name: Check native input, menus, HUD and camera on X11
-        timeout-minutes: 2
-        run: timeout 60s xvfb-run -a -s '-screen 0 1280x800x24' python3 scripts/check_gameplay_x11.py
+        timeout-minutes: 3
+        run: timeout 120s xvfb-run -a -s '-screen 0 1280x800x24' python3 scripts/check_gameplay_x11.py
       - name: Check tropical menus and native controls
-        timeout-minutes: 2
-        run: timeout 90s xvfb-run -a -s '-screen 0 1280x800x24' python3 scripts/check_gameplay_x11.py --visual --verify-settings --verify-labels --output artifacts/tropical-menu
+        timeout-minutes: 4
+        run: timeout 180s xvfb-run -a -s '-screen 0 1280x800x24' python3 scripts/check_gameplay_x11.py --visual --verify-settings --verify-labels --output artifacts/tropical-menu
       - name: Check detached Linux launcher and quiet normal exit
         timeout-minutes: 2
         run: timeout 30s xvfb-run -a python3 scripts/check_launch_x11.py

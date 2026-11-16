@@ -47,7 +47,6 @@ internal sealed partial class VisualScene
         float glow = MathF.Exp(-distance * distance) * (0.2f + 0.16f * MathF.Sin(longitude * 19));
         return Vector3.Lerp(sky, new(104, 224, 195), glow);
     }));
-    private static readonly Lazy<TextureData[]> WinterContactFrames = new(() => VisualContactShadow.CreateFrames(WinterSnow.Texture!));
     private readonly List<(SceneObject Object, Vector3 Origin)> _snowflakes = [];
     private readonly List<(MaterialData Material, ColorRgba Color)> _bulbs = [];
 
@@ -55,7 +54,8 @@ internal sealed partial class VisualScene
     {
         _scene.Lighting.AmbientColor = new(0.64f, 0.73f, 0.87f);
         _scene.Lighting.DirectionalColor = new(0.39f, 0.43f, 0.52f);
-        Add(Sky, WinterSky, new(middle.X, 4, middle.Y), new(105));
+        float landscapeRadius=MathF.Max(105,(_routeMax-_routeMin).Length()+40);
+        Add(Sky, WinterSky, new(middle.X, 4, middle.Y), new(landscapeRadius));
         // Отдельные заснеженные островки не пересекают трассу или ход механизмов.
         foreach (var offset in new[] { new Vector2(-9, -4), new(8, -9), new(17, 9), new(-6, 16), new(6, 23), new(28, 22) })
         {
@@ -70,10 +70,23 @@ internal sealed partial class VisualScene
             Gift(site+new Vector3(-1.6f,0.04f,1.4f),0.55f,true);
             Gift(site+new Vector3(-1.05f,0.04f,1.75f),0.4f,false);
         }
+        if(_routeMax.X-_routeMin.X>100)
+        for(int station=0;station<4;station++)
+        {
+            Vector3 requested=new(_routeMin.X+(_routeMax.X-_routeMin.X)*(0.1f+station*0.26f),-1.6f,
+                middle.Y+(station%2==0?-11:11));
+            if(!TryDecorationSite(requested,4,4,20,out var foot))continue;
+            Add(Island,WinterRock,foot,new(3.4f,4,3.4f));
+            Add(Grass,WinterSnow,foot,new(3.4f,1,3.4f));
+            Pine(foot+new Vector3(-1.1f,0,-0.7f),3.2f);
+            SnowLodge(foot+new Vector3(0.6f,0.04f,0.8f),0.7f);
+            Gift(foot+new Vector3(-0.9f,0.04f,1.1f),0.5f,true);
+        }
         for (int i = 0; i < 7; i++)
         {
             float angle = i * MathF.Tau / 7;
-            Vector3 foot = new(middle.X + MathF.Cos(angle) * 73, -29, middle.Y + MathF.Sin(angle) * 73);
+            float ridgeRadius=MathF.Max(73,(_routeMax-_routeMin).Length()*0.5f+48);
+            Vector3 foot = new(middle.X + MathF.Cos(angle) * ridgeRadius, -29, middle.Y + MathF.Sin(angle) * ridgeRadius);
             Vector3 scale = new(28 + i % 3 * 3, 35 + i % 3 * 3, 20);
             Quaternion rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, -angle + MathF.PI / 2);
             Add(WinterRidge.Rock, WinterRock, foot, scale).Transform.Rotation = rotation;
@@ -116,15 +129,18 @@ internal sealed partial class VisualScene
         AnimateWinterParade(seconds);
         for (int j=0;j<_bulbs.Count;j++)
         {
-            var bulb=_bulbs[j]; float intensity=0.45f+0.55f*(0.5f+0.5f*MathF.Sin((float)Math.IEEERemainder(seconds*2.4,Math.Tau)+j*0.8f));
+            var bulb=_bulbs[j]; float intensity=_preferences?.FlashingEnabled==false?0.85f:0.45f+0.55f*(0.5f+0.5f*MathF.Sin((float)Math.IEEERemainder(seconds*2.4,Math.Tau)+j*0.8f));
             bulb.Material.BaseColor=new(bulb.Color.R*intensity,bulb.Color.G*intensity,bulb.Color.B*intensity);
         }
         for (int i = 0; i < _snowflakes.Count; i++)
         {
             var (flake, origin) = _snowflakes[i];
-            float phase = (float)(seconds % 20);
-            flake.Transform.Position = origin + new Vector3(MathF.Sin(phase * 0.6f + i) * 0.45f,
-                -((phase * (0.55f + i % 3 * 0.12f) + i * 0.31f) % 10), 0);
+            flake.Transform.Scale=new(_preferences?.ReducedEffects==true&&i%4!=0?0.001f:0.055f);
+            float fall=(float)((seconds*(0.55f+i%3*0.12f)+i*0.31f)%10);
+            float gust=MathF.Sin((float)Math.IEEERemainder(seconds*.6,Math.Tau));
+            float breeze=(_gusty?1.2f:.4f)*(fall*.22f+gust*.25f);
+            flake.Transform.Position = origin + new Vector3(breeze,
+                -fall, 0);
         }
     }
 

@@ -389,7 +389,8 @@ def main():
             click_control("confirm-main-menu", "MainMenu")
         click_control("levels", "LevelSelect")
         click_control("chapter", "LevelSelect")
-        winter_ids = ("winter-snowbound", "winter-icicle", "winter-lake", "winter-aurora", "winter-crystal", "winter-gifts", "winter-midnight")
+        winter_ids = ("winter-snowbound", "winter-icicle", "winter-lake", "winter-aurora", "winter-crystal", "winter-gifts", "winter-midnight",
+                      "winter-spring-trail", "winter-glacier-ferries", "winter-windward")
         assert [c["id"] for c in latest()["controls"] if c["id"].startswith("level:")] == ["level:" + name for name in winter_ids]
         capture("winter-levels")
         for level_id in winter_ids:
@@ -430,6 +431,27 @@ def main():
         press("Right")
         until(lambda f: "Music: < Exploration Theme >" in f["uiTexts"], "next music by keyboard")
         print("PASS: Settings music original default, click/Left/Right choose bundled Exploration Theme")
+        click_control("more-settings", "Settings")
+        click_control("music-volume", "Settings")
+        until(lambda f: "Music volume: 50%" in f["uiTexts"], "independent music slider")
+        click_control("effects-volume", "Settings")
+        until(lambda f: "Effects volume: 50%" in f["uiTexts"], "independent effects slider")
+        click_control("reduced-effects", "Settings")
+        until(lambda f: "Reduced effects: ON" in f["uiTexts"], "reduced effects setting")
+        click_control("flashing", "Settings")
+        until(lambda f: "Blinking lights: OFF" in f["uiTexts"], "steady lights setting")
+        click_control("bindings", "Settings")
+        click_control("bind:Forward", "Settings")
+        until(lambda f: "Forward: < Up >" in f["uiTexts"], "rebind forward to an unused key")
+        capture("settings-bindings")
+        click_control("reset-bindings", "Settings")
+        until(lambda f: "Forward: < W >" in f["uiTexts"], "restore default bindings")
+        press("Escape")
+        until(lambda f: any(c["id"] == "music-volume" for c in f["controls"]), "bindings back to extra settings")
+        capture("settings-effects")
+        press("Escape")
+        until(lambda f: any(c["id"] == "volume" for c in f["controls"]), "extras back to Settings")
+        print("PASS: independent mix sliders, reduced effects, steady lights and key rebinding subpages")
         click_control("volume", "Settings")
         until(lambda f: abs(f["audioVolume"] - 0.5) < 0.02, "volume slider -> AudioDevice")
         press("Left")
@@ -653,6 +675,33 @@ def main():
         click_control("confirm-main-menu", "MainMenu")
         press("Escape")
         assert all(f["screen"] == "MainMenu" for f in collect()), "Escape закрыл MainMenu"
+        click_control("settings", "Settings")
+        click_control("more-settings", "Settings")
+        click_control("bindings", "Settings")
+        click_control("bind:Forward", "Settings")
+        until(lambda f: "Forward: < Up >" in f["uiTexts"], "choose remapped forward")
+        press("Escape"); collect()
+        press("Escape"); collect()
+        click_control("back", "MainMenu")
+        remapped_start = click_control("play", "Playing")
+        key("w", True)
+        assert all(f["moveZ"] == 0 for f in collect(0.12)), "Old W still moves after rebinding"
+        key("w", False)
+        key("Up", True)
+        until(lambda f: f["moveZ"] < -0.9 and f["z"] < remapped_start["z"] - 0.03, "new Up binding drives actual physics")
+        key("Up", False)
+        press("Escape")
+        until(lambda f: f["screen"] == "Paused", "remapped run pause")
+        click_control("main-menu", "Paused")
+        click_control("confirm-main-menu", "MainMenu")
+        click_control("settings", "Settings")
+        click_control("more-settings", "Settings")
+        click_control("bindings", "Settings")
+        click_control("reset-bindings", "Settings")
+        press("Escape"); collect()
+        press("Escape"); collect()
+        click_control("back", "MainMenu")
+        print("PASS: remapped Up moves the ball through native input; old W no longer moves it")
         expected_preferences = latest()
         click_control("exit", "MainMenu")
         assert process.wait(timeout=5) == 0, "Нештатный exit"
@@ -662,6 +711,8 @@ def main():
             profile = Path(progress_directory.name) / "BallAdventure" / "settings-v1.json"
             for iteration in range(2):
                 saved = json.loads(profile.read_text())
+                assert abs(saved["MusicVolume"] - 0.5) < 0.001 and abs(saved["EffectsVolume"] - 0.5) < 0.001
+                assert saved["ReducedEffects"] and not saved["FlashingEnabled"]
                 assert saved["SkinId"] == expected_preferences["skin"] and saved["MusicTrackId"] == expected_preferences["music"]
                 assert abs(saved["MasterVolume"] - expected_preferences["volume"]) < 0.0001 and saved["Muted"] == expected_preferences["muted"]
                 assert saved["Fullscreen"] == expected_preferences["fullscreen"]

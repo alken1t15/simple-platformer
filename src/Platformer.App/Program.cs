@@ -8,7 +8,7 @@ try
     if (args is ["--help"])
     {
         Console.WriteLine("""
-            Ball Adventure: two chapters, twenty levels, fourteen ball skins, menus, HUD and game audio.
+            Ball Adventure: two chapters, twenty-three levels, fourteen ball skins, menus, HUD and game audio.
             Usage: Platformer.App [--play | --legacy | --presenter [--skin ID] [--overview] [--still]] [--visual] [--smoke]
             Skins: classic-blue, orange, emerald, violet, basketball, football, neon, aurora, champion.
             Default / --play: open Main Menu. Arrows/Tab: choose; Enter/Space or mouse click: select.
@@ -109,7 +109,7 @@ try
                     engine.SetFullscreen(true);
                     restoreFullscreen = false;
                 }
-                var appInput = NativeInputAdapter.Map(input);
+                var appInput = NativeInputAdapter.Map(input, game.Flow.Screen == AppScreen.Playing ? game.Flow.UserSettings.Bindings : null);
                 var client = engine.ClientSize;
                 var limits = engine.WindowedClientSizeLimits;
                 var fullscreenSize = engine.FullscreenSize;

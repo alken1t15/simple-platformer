@@ -12,6 +12,7 @@ public static class GameLevels
         CoralAscent.Create(), WindmillPass.Create(), LavaCauseway.Create(), CrumbleCanyon.Create(), TempleGauntlet.Create(),
         PendulumGorge.Create(), PistonFoundry.Create(), ClockworkSummit.Create(), SkyStorm.Create(),
         WinterLevels.SnowboundPass(), WinterLevels.IcicleCanyon(), WinterLevels.FrozenLake(), WinterLevels.AuroraSummit(),
-        WinterChallengeLevels.CrystalRun(), WinterChallengeLevels.GiftAscent(), WinterChallengeLevels.MidnightTrial() }
+        WinterChallengeLevels.CrystalRun(), WinterChallengeLevels.GiftAscent(), WinterChallengeLevels.MidnightTrial(),
+        WinterExpeditionLevels.SpringTrail(), WinterExpeditionLevels.GlacierFerries(), WinterExpeditionLevels.WindwardJourney() }
         .Select(level => TrapStructures.Attach(level, GameChapters.For(level.Id) == GameChapter.Winter)).ToArray());
 }
